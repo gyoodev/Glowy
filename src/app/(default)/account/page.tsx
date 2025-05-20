@@ -92,6 +92,7 @@ export default function AccountPage() {
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error); 
+
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
@@ -110,8 +111,7 @@ export default function AccountPage() {
         } finally {
           setIsLoading(false);
         }
-      } else {
-          router.push('/login');
+
         } else if (user && !user.email) {
           console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
           setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."})
@@ -124,6 +124,7 @@ export default function AccountPage() {
         setBookings([]);
         setIsLoading(false);
         router.push('/login');
+
       }
     });
 
