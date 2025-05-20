@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; 
 import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
 import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
@@ -47,6 +47,7 @@ export default function RegisterPage() {
     },
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Define showConfirmPassword
   const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
@@ -203,7 +204,7 @@ export default function RegisterPage() {
                   <FormControl>
                     <div className="relative">
                       <Input type="password" placeholder="••••••••" {...field} />
-                      <Button
+                      <Button 
                         type="button"
                         variant="ghost"
                         size="icon"
@@ -211,7 +212,7 @@ export default function RegisterPage() {
                         // Add visibility toggle if needed
                         onClick={() => alert('Password visibility toggle not implemented yet')} // Placeholder
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />} 
                       </Button>
                     </div>
                   </FormControl>
