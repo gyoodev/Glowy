@@ -14,12 +14,18 @@ import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, T
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
+interface FirebaseError extends Error {
+  code?: string;
+  customMessage?: string;
+  details?: string;
+}
+
 export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); 
-  const [fetchError, setFetchError] = useState<any | null>(null);
+  const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const router = useRouter();
   const firestore = getFirestore();
 
@@ -27,34 +33,40 @@ export default function AccountPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null); 
-      if (user && user.uid) { // Ensure user and user.uid exist
+      if (user && user.email) { 
         setCurrentUser(user);
         try {
-          // Query for the user document by email
           const usersCollectionRef = collection(firestore, 'users');
           const q = query(usersCollectionRef, where('email', '==', user.email));
           const querySnapshot = await getDocs(q);
 
           let userDocSnap;
-          let userIdForProfile = user.uid; // Default to auth UID for new profiles
+          let userIdForProfile = user.uid; 
 
-          if (!querySnapshot.empty && querySnapshot.docs.find(doc => doc.id === user.uid)) {
-            // Assuming email is unique, take the first document
+          if (!querySnapshot.empty) {
+            // Try to find the document that matches the auth UID, in case multiple accounts share an email (though unlikely with unique email constraint)
             userDocSnap = querySnapshot.docs.find(doc => doc.id === user.uid);
-            if (!userDocSnap) throw new Error("User document found by email but not by UID, which is unexpected.");
-            userIdForProfile = userDocSnap.id; // Use the ID from the found document (should be user.uid)
-            const data = userDocSnap.data();
-            setUserProfile({
-              id: userIdForProfile,
-              name: data.displayName || user.displayName || 'Потребител',
-              email: data.email || user.email || '', // Keep email for display/form
-              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
-              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              // userId: data.userId || userIdForProfile, // Ensure userId is populated
-            });
-          } else {
-            console.log("User document not found for email:", user.email, ". Creating default profile in Firestore using UID:", user.uid);
-            // Create a new profile document using user.uid as the document ID
+            if (userDocSnap) {
+                userIdForProfile = userDocSnap.id;
+                const data = userDocSnap.data();
+                setUserProfile({
+                  id: userIdForProfile,
+                  name: data.displayName || user.displayName || 'Потребител',
+                  email: data.email || user.email || '',
+                  profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
+                  preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
+                  userId: data.userId || userIdForProfile,
+                });
+            } else {
+                 // If no doc matches UID but email matches, this is an edge case.
+                 // For now, we'll proceed to create a new profile linked to the UID.
+                 console.warn("User document found by email but ID did not match UID. Will create a new profile for UID:", user.uid);
+                 userDocSnap = undefined; // Force creation path
+            }
+          }
+          
+          if (!userDocSnap) { // If still no userDocSnap (either query was empty, or ID didn't match UID)
+            console.log("User document not found for email:", user.email, "and UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
             const dataToSave = {
               userId: user.uid,
@@ -62,10 +74,9 @@ export default function AccountPage() {
               displayName: user.displayName || 'Потребител',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              createdAt: Timestamp.fromDate(new Date()), // Use Firestore Timestamp\
+              createdAt: Timestamp.fromDate(new Date()),
               profileType: 'customer', 
             };
-
             await setDoc(newUserDocRef, dataToSave);
             setUserProfile({ 
               id: user.uid,
@@ -73,58 +84,54 @@ export default function AccountPage() {
               email: dataToSave.email,
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
-              // userId: dataToSave.userId,
+              userId: dataToSave.userId,
             });
-
           }
 
-          // Fetch bookings (mocked for now, but could be real)
-          // If bookings are tied to userId, ensure it's the correct one (user.uid)
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
           bookingSnapshot.forEach((doc) => {
             fetchedBookings.push({
-              id: doc.id, // Use doc.id from the booking document
+              id: doc.id, 
               ...doc.data()
             } as Booking);
           });
           setBookings(fetchedBookings);
 
         } catch (error: any) {
-          console.error("Error fetching/creating user profile or bookings:", error); // This is line 92 now
-          setFetchError(error); 
+          console.error("Error fetching/creating user profile or bookings:", error); 
+          setFetchError(error as FirebaseError); 
 
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
-          if (error.message) { // This is line 96 now
+          if (error.message) { 
             console.error("Firebase error message:", error.message);
           }
           if (error.details) {
             console.error("Firebase error details:", error.details);
-          } // This is line 100 now
-          if (error.code === 'failed-precondition') { // This is line 101 now
+          } 
+          if (error.code === 'failed-precondition') { 
             console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it. The query was likely on the 'email' field in the 'users' collection.");
-            setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
+            setFetchError({ ...error, customMessage: "A database index is required for querying by email. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           }
           setUserProfile(null);
           setBookings([]);
         } finally {
           setIsLoading(false);
         }
-      } else if (user && !user.email) { // This is line 115 now
+      } else if (user && !user.email) { 
         console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
-        setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."}); // Added semicolon
-        setIsLoading(false); // Added semicolon
+        setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."});
+        setIsLoading(false);
       }
-      else { // User is null
+      else { 
         setCurrentUser(null);
         setUserProfile(null);
         setBookings([]);
         setIsLoading(false);
-        router.push('/login'); // Added semicolon
-
+        router.push('/login');
       }
     });
 
@@ -180,28 +187,41 @@ export default function AccountPage() {
                     <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
                 </div>
                 {fetchError && fetchError.code === 'permission-denied' ? (
-                  <div className="text-sm">
-                    <p className="font-bold mb-2">Липсват или са недостатъчни права за достъп до Firestore!</p>
-                    <p className="mb-1">
-                      Системата засече, че нямате необходимите права за достъп до Вашите данни в Firestore.
+                  <div className="text-sm text-left space-y-3 p-4 bg-destructive/5 border border-destructive/30 rounded-md">
+                    <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore!</p>
+                    <p className="text-destructive-foreground/90">
+                      Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
+                      Това е проблем с конфигурацията на **Firestore Security Rules** във Вашия Firebase проект.
                     </p>
-                    <p className="mb-3">
-                      Това обикновено се дължи на конфигурацията на **Firestore Security Rules** във Вашия Firebase проект. Моля, уверете се, че правилата Ви позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users' (документ ID трябва да е UID на потребителя).
+                    <p className="text-destructive-foreground/90">
+                      <strong>За да разрешите това, МОЛЯ, направете следното във Вашата Firebase конзола:</strong>
                     </p>
-                    <p className="font-semibold">Необходими правила (в Firebase Console &gt; Firestore &gt; Rules):</p>
-                    <pre className="text-xs bg-muted text-muted-foreground p-2 rounded-md overflow-x-auto text-left my-2">
+                    <ol className="list-decimal list-inside space-y-1 text-destructive-foreground/90 pl-4">
+                      <li>Отворете <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground">Firebase Console</a> и изберете Вашия проект (<code>glowy-gyoodev</code>).</li>
+                      <li>В лявото меню отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
+                      <li>Изберете таба <strong>Rules</strong>.</li>
+                      <li>Заменете съществуващите правила със следните:</li>
+                    </ol>
+                    <pre className="text-xs bg-card text-card-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
                       <code>
-                        rules_version = '2';<br/>
-                        service cloud.firestore &#123;<br/>
-                        &nbsp;&nbsp;match /databases/&#123;database&#125;/documents &#123;<br/>
-                        &nbsp;&nbsp;&nbsp;&nbsp;match /users/&#123;userId&#125; &#123;<br/>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null && request.auth.uid == userId;<br/>
-                        &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br/>
-                        &nbsp;&nbsp;&#125;<br/>
-                        &#125;
+                        rules_version = '2';{'\n'}
+                        service cloud.firestore {'{\n'}
+                        {'  '}match /databases/{'{database}'}/documents {'{\n'}
+                        {'    '}// Позволява на удостоверен потребител да чете и пише своя собствен документ{'\n'}
+                        {'    '}// в колекцията 'users', където ID на документа е UID на потребителя.{'\n'}
+                        {'    '}match /users/{'{userId}'} {'{\n'}
+                        {'      '}allow read, write: if request.auth != null && request.auth.uid == userId;{'\n'}
+                        {'    '}{'}\n'}
+                        {'  '}{'}\n'}
+                        {'}'}
                       </code>
                     </pre>
-                    <p>След като актуализирате и публикувате тези правила, моля, <strong className="text-foreground">презаредете тази страница</strong>.</p>
+                    <p className="text-destructive-foreground/90">
+                      5. Натиснете бутона <strong>Publish</strong>.
+                    </p>
+                    <p className="font-semibold text-destructive-foreground">
+                      След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
+                    </p>
                   </div>
                 ) : fetchError && fetchError.customMessage ? (
                   <p>{fetchError.customMessage}</p>
