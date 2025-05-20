@@ -52,24 +52,16 @@ export function Header() {
     }
   };
 
-  const accountLinkOrAction = isLoggedIn ? (
+  // This definition is for when the user IS logged in
+  const myAccountLinkDesktop = (
     <Button variant="ghost" asChild>
       <Link href="/account">Моят Акаунт</Link>
     </Button>
-  ) : (
-    // If not logged in, "Моят Акаунт" still leads to login
-    <Button variant="ghost" onClick={() => router.push('/login')}>
-      Моят Акаунт
-    </Button>
   );
 
-  const accountLinkOrActionMobile = isLoggedIn ? (
+  const myAccountLinkMobile = (
      <Button variant="ghost" asChild className="justify-start">
         <Link href="/account">Моят Акаунт</Link>
-    </Button>
-  ) : (
-    <Button variant="ghost" onClick={() => router.push('/login')} className="justify-start">
-        Моят Акаунт
     </Button>
   );
 
@@ -102,7 +94,7 @@ export function Header() {
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
-          {accountLinkOrAction}
+          {isLoggedIn && myAccountLinkDesktop}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
@@ -139,7 +131,7 @@ export function Header() {
                     <Link href={item.href}>{item.label}</Link>
                   </Button>
                 ))}
-                {accountLinkOrActionMobile}
+                {isLoggedIn && myAccountLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (
                   <Button variant="outline" onClick={handleLogout} className="justify-start text-base py-3">
