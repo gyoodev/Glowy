@@ -88,7 +88,7 @@ export default function AccountPage() {
           setBookings(fetchedBookings);
 
         } catch (error) {
-          console.error("Error fetching/creating user profile or bookings:", error);
+          console.error("Error fetching/creating user profile or bookings:", error, { user: user?.uid, email: user?.email }); // Log detailed error
           setUserProfile(null); // Fallback if error
           setBookings([]); // Clear bookings on error too
         } finally {
