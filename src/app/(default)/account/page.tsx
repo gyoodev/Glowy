@@ -7,7 +7,7 @@ import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // import { mockBookings } from '@/lib/mock-data'; // Bookings will be fetched or mocked later
 import type { UserProfile, Booking } from '@/types';
-import { UserCircle, History, Edit3 } from 'lucide-react';
+import { UserCircle, History, Edit3, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { auth } from '@/lib/firebase'; // Firebase auth
@@ -57,7 +57,7 @@ export default function AccountPage() {
             };
             
             const { id: _id, name: _name, ...dataToSave } = defaultProfileData;
-            if (user.email && !dataToSave.email) {
+            if (user.email && !(dataToSave as any).email) { // check if email exists before assigning
               (dataToSave as any).email = user.email;
             }
 
@@ -85,6 +85,7 @@ export default function AccountPage() {
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error); 
+          // Enhanced error logging
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
@@ -154,14 +155,42 @@ export default function AccountPage() {
           ) : userProfile ? (
             <UserProfileForm userProfile={userProfile} />
           ) : (
-             <div className="text-center text-destructive py-8">
-                <h3 className="text-xl font-semibold mb-2">Грешка при зареждане на профила</h3>
+             <div className="text-center text-destructive py-8 border border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto">
+                <div className="flex items-center justify-center mb-3">
+                    <AlertTriangle className="w-8 h-8 mr-2 text-destructive" />
+                    <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
+                </div>
                 {fetchError && fetchError.code === 'permission-denied' ? (
-                  <p>
-                    Изглежда има проблем с правата за достъп до Вашите данни. <br/>
-                    Моля, уверете се, че Firestore Security Rules във Вашия Firebase проект позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users'. <br/>
-                    Примерни правила: <code>match /users/&#123;userId&#125; &#123; allow read, write: if request.auth != null && request.auth.uid == userId; &#125;</code>
-                  </p>
+                  <div className="text-sm">
+                    <p className="font-bold mb-2">Липсват или са недостатъчни права!</p>
+                    <p className="mb-1">
+                      Системата засече, че нямате необходимите права за достъп до Вашите данни в Firestore.
+                    </p>
+                    <p className="mb-3">
+                      Това обикновено се дължи на конфигурацията на Firestore Security Rules във Вашия Firebase проект.
+                    </p>
+                    <p className="font-semibold">Какво да направите:</p>
+                    <ol className="list-decimal list-inside text-left mt-1 mb-3 mx-auto max-w-md bg-background/50 p-3 rounded">
+                        <li>Отворете <strong className="text-foreground">Firebase Console</strong>.</li>
+                        <li>Изберете Вашия проект: <strong className="text-foreground">glowy-gyoodev</strong>.</li>
+                        <li>Навигирайте до <strong className="text-foreground">Firestore Database</strong> &gt; <strong className="text-foreground">Rules</strong> таб.</li>
+                        <li>Уверете се, че правилата позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users'.</li>
+                    </ol>
+                     <p className="mb-1">Примерни правила (копирайте и поставете в Firebase Console):</p>
+                    <pre className="text-xs bg-muted text-muted-foreground p-2 rounded-md overflow-x-auto text-left my-2">
+                      <code>
+                        rules_version = '2';<br/>
+                        service cloud.firestore &#123;<br/>
+                        &nbsp;&nbsp;match /databases/&#123;database&#125;/documents &#123;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;match /users/&#123;userId&#125; &#123;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;allow read, write: if request.auth != null && request.auth.uid == userId;<br/>
+                        &nbsp;&nbsp;&nbsp;&nbsp;&#125;<br/>
+                        &nbsp;&nbsp;&#125;<br/>
+                        &#125;
+                      </code>
+                    </pre>
+                    <p>След като актуализирате и публикувате правилата, моля, опитайте отново.</p>
+                  </div>
                 ) : (
                   <p>
                     Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
