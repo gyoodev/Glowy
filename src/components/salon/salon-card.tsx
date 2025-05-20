@@ -1,8 +1,9 @@
+
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Salon } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button'; // Added Button import
 import { Star, MapPin } from 'lucide-react';
 
 interface SalonCardProps {
@@ -10,11 +11,12 @@ interface SalonCardProps {
 }
 
 export function SalonCard({ salon }: SalonCardProps) {
-  const priceRangeTranslations = {
-    cheap: 'евтино',
-    moderate: 'умерено',
-    expensive: 'скъпо',
-  };
+  // Price range translations are no longer needed here
+  // const priceRangeTranslations = {
+  //   cheap: 'евтино',
+  //   moderate: 'умерено',
+  //   expensive: 'скъпо',
+  // };
 
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full">
@@ -47,9 +49,13 @@ export function SalonCard({ salon }: SalonCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize">
+        {/* Removed Badge component */}
+        {/* <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize">
           {priceRangeTranslations[salon.priceRange] || salon.priceRange}
-        </Badge>
+        </Badge> */}
+        <Button asChild className="w-full">
+          <Link href={`/salons/${salon.id}`}>Виж Повече</Link>
+        </Button>
       </CardFooter>
     </Card>
   );
