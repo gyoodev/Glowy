@@ -141,68 +141,68 @@ export default function RegisterPage() {
           <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
         </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
+ <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Пълно име</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Вашето пълно име" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="vashiat.email@example.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="phoneNumber"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
-                  <FormControl>
-                    <Input type="tel" placeholder="0881234567" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center">
-                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола
-                  </FormLabel>
-                  <div className="relative">
-                    <FormControl>
-                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
-                      {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
+ <FormField
+ control={form.control}
+ name="name"
+ render={({ field }) => (
+ <FormItem>
+ <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Пълно име</FormLabel>
+ <FormControl>
+ <Input placeholder="Вашето пълно име" {...field} />
+ </FormControl>
+ <FormMessage />
+ </FormItem>
+ )}
+ />
+ <FormField
+ control={form.control}
+ name="email"
+ render={({ field }) => (
+ <FormItem>
+ <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
+ <FormControl>
+ <Input type="email" placeholder="vashiat.email@example.com" {...field} />
+ </FormControl>
+ <FormMessage />
+ </FormItem>
+ )}
+ />
+ <FormField
+ control={form.control}
+ name="phoneNumber"
+ render={({ field }) => (
+ <FormItem>
+ <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+ <FormControl>
+ <Input type="tel" placeholder="0881234567" {...field} />
+ </FormControl>
+ <FormMessage />
+ </FormItem>
+ )}
+ />
+ <FormField
+ control={form.control}
+ name="password"
+ render={({ field }) => (
+ <FormItem>
+ <FormLabel className="flex items-center">
+ <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола
+ </FormLabel>
+ <div className="relative">
+ <FormControl>
+ <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+ </FormControl>
+ <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+ {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+ </button>
+ </div>
+ <FormMessage />
+ </FormItem>
+ )}
+ />
+ <FormField
  control={form.control}
               name="confirmPassword" 
               render={({ field }) => (
@@ -210,10 +210,10 @@ export default function RegisterPage() {
                   <FormLabel className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Потвърди парола</FormLabel> 
                   <div className="relative">
                     <FormControl>
-                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+ <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
                     </FormControl>
-                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
-                      {showConfirmPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
+ <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+ {showConfirmPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
                     </button>
                   </div>
                   <FormMessage />
@@ -225,14 +225,15 @@ export default function RegisterPage() {
               name="profileType"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Тип профил</FormLabel>
-                  <FormControl>
+ <FormLabel>Тип профил</FormLabel>
+ <FormControl>
                     <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-gray-800 dark:border-gray-700">
                       <option value="customer">Клиент</option>
                       <option value="business">Бизнес</option>
                     </select>
                   </FormControl>
                 </FormItem>
+ )}
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
