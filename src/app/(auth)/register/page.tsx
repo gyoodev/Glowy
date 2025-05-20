@@ -111,6 +111,7 @@ export default function RegisterPage() {
         if (!docSnap.exists()) {
           await setDoc(userRef, {
             email: user.email,
+ userId: user.uid, // Explicitly add userId for Google sign-ups
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
             createdAt: new Date(),
