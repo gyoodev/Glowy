@@ -1,3 +1,4 @@
+
 import type { Review } from '@/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +14,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
     <Card className="shadow-sm">
       <CardHeader className="flex flex-row items-center space-x-3 pb-3">
         <Avatar>
-          <AvatarImage src={review.userAvatar || `https://placehold.co/40x40.png?text=${review.userName.charAt(0)}`} alt={review.userName} data-ai-hint="person portrait" />
+          <AvatarImage src={review.userAvatar || 'https://placehold.co/40x40.png'} alt={review.userName} data-ai-hint="person portrait" />
           <AvatarFallback>{review.userName.charAt(0).toUpperCase()}</AvatarFallback>
         </Avatar>
         <div>
