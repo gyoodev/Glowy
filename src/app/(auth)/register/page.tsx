@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast'; 
 import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Moved Eye, EyeOff import here
-import Link from 'next/link';
+import { useState } from 'react';
 import { collection, doc, setDoc } from 'firebase/firestore'; // Import firestore functions
 import { useRouter } from 'next/navigation'; 
 import { auth } from '@/lib/firebase';
