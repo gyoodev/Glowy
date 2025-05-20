@@ -32,7 +32,7 @@ export default function RecommendationsPage() {
   };
 
   return (
-    <div className="container mx-auto py-12 px-4">
+    <div className="container mx-auto py-10 px-6">
       <header className="mb-12 text-center">
         <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4 flex items-center justify-center">
          <Wand2 className="w-12 h-12 mr-3 text-primary" />

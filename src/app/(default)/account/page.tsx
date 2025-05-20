@@ -26,7 +26,7 @@ export default function AccountPage() {
   }, []);
 
   return (
-    <div className="container mx-auto py-12 px-4">
+    <div className="container mx-auto py-10 px-6">
       <header className="mb-12">
         <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3 flex items-center">
           <UserCircle className="w-10 h-10 mr-3 text-primary" />
