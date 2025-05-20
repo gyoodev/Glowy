@@ -11,7 +11,7 @@ import { UserCircle, History, Edit3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { auth } from '@/lib/firebase'; // Firebase auth
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; // Firestore functions
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'; // Firestore functions
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -69,6 +69,19 @@ export default function AccountPage() {
               preferences: defaultProfileData.preferences,
             });
           }
+
+          // Fetch user bookings
+          const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
+          const bookingSnapshot = await getDocs(bookingsQuery);
+          const fetchedBookings: Booking[] = [];
+          bookingSnapshot.forEach((doc) => {
+            fetchedBookings.push({
+              id: doc.id,
+              ...doc.data()
+            } as Booking); // Cast to Booking type, assuming data matches
+          });
+          setBookings(fetchedBookings);
+
         } catch (error) {
           console.error("Error fetching/creating user profile:", error);
           setUserProfile(null); // Fallback if error
@@ -88,17 +101,8 @@ export default function AccountPage() {
     return () => unsubscribe();
   }, [firestore, router]);
 
-  useEffect(() => {
-    // Simulate API call for bookings - this can remain for now
-    // This part could also be fetched from Firestore if bookings were stored there
-    if (userProfile) { // Only "load" bookings if a profile is present
-        setTimeout(() => {
-            setBookings(mockBookings);
-        }, 300); // Shorter delay as profile is the main focus
-    } else {
-        setBookings([]); // Clear bookings if no user profile
-    }
-  }, [userProfile]);
+  // Remove the old useEffect that simulated booking data
+  // The booking data is now fetched within the main useEffect
 
   return (
     <div className="container mx-auto py-10 px-6">
