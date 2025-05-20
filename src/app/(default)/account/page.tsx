@@ -76,6 +76,8 @@ export default function AccountPage() {
               // userId: dataToSave.userId,
             });
 
+          }
+
           // Fetch bookings (mocked for now, but could be real)
           // If bookings are tied to userId, ensure it's the correct one (user.uid)
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
@@ -83,26 +85,26 @@ export default function AccountPage() {
           const fetchedBookings: Booking[] = [];
           bookingSnapshot.forEach((doc) => {
             fetchedBookings.push({
-              id: doc.id,
+              id: doc.id, // Use doc.id from the booking document
               ...doc.data()
             } as Booking);
           });
           setBookings(fetchedBookings);
 
         } catch (error: any) {
-          console.error("Error fetching/creating user profile or bookings:", error);
+          console.error("Error fetching/creating user profile or bookings:", error); // This is line 92 now
           setFetchError(error); 
 
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
-          if (error.message) {
+          if (error.message) { // This is line 96 now
             console.error("Firebase error message:", error.message);
           }
           if (error.details) {
             console.error("Firebase error details:", error.details);
-          }
-          if (error.code === 'failed-precondition') {
+          } // This is line 100 now
+          if (error.code === 'failed-precondition') { // This is line 101 now
             console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it. The query was likely on the 'email' field in the 'users' collection.");
             setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           }
@@ -111,19 +113,17 @@ export default function AccountPage() {
         } finally {
           setIsLoading(false);
         }
-
-        } else if (user && !user.email) {
-          console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
-          setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."})
-          setIsLoading(false);
-        }
+      } else if (user && !user.email) { // This is line 115 now
+        console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
+        setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."}); // Added semicolon
+        setIsLoading(false); // Added semicolon
       }
       else { // User is null
         setCurrentUser(null);
         setUserProfile(null);
         setBookings([]);
         setIsLoading(false);
-        router.push('/login');
+        router.push('/login'); // Added semicolon
 
       }
     });
