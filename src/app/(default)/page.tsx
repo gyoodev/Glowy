@@ -15,6 +15,15 @@ const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const ANY_PRICE_VALUE = "--any-price--";
 
+const allBulgarianCities: string[] = [
+  "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", 
+  "Плевен", "Сливен", "Добрич", "Шумен", "Перник", "Хасково", 
+  "Ямбол", "Пазарджик", "Благоевград", "Велико Търново", "Враца", 
+  "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали", 
+  "Търговище", "Ловеч", "Силистра", "Разград", "Смолян"
+];
+
+
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
@@ -35,10 +44,11 @@ export default function SalonDirectoryPage() {
     }, 1000);
   }, []);
 
-  const uniqueCities = useMemo(() => {
-    const cities = new Set(salons.map(salon => salon.city));
-    return Array.from(cities);
-  }, [salons]);
+  // This is no longer used for the filter's city list, but kept in case it's needed elsewhere or for future dynamic city lists based on actual salon data.
+  // const uniqueCities = useMemo(() => {
+  //   const cities = new Set(salons.map(salon => salon.city));
+  //   return Array.from(cities);
+  // }, [salons]);
 
   const uniqueServiceTypes = useMemo(() => {
     const serviceNames = new Set(mockServices.map(service => service.name));
@@ -103,7 +113,7 @@ export default function SalonDirectoryPage() {
         <aside className="lg:col-span-1">
           <FilterSidebar 
             onFilterChange={handleFilterChange} 
-            cities={uniqueCities}
+            cities={allBulgarianCities} // Use the comprehensive list here
             serviceTypes={uniqueServiceTypes}
           />
         </aside>
