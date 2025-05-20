@@ -1,6 +1,7 @@
 
 'use client';
 
+import React from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { LogIn, Mail, KeyRound, Chrome } from 'lucide-react';
+import { LogIn, Mail, KeyRound, Chrome, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
@@ -63,6 +64,7 @@ export default function LoginPage() {
       const user = result.user;
       console.log('Google Sign-In successful:', user);
       localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
+      toast({ // Ensure this is correctly calling toast as a function with an object
         title: 'Влизане с Google успешно',
         description: `Добре дошли, ${user.displayName || user.email}!`,
       });
@@ -109,18 +111,18 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола</FormLabel>
                   <FormControl>
-<div className="relative">
-                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
-                      onClick={() => setShowPassword((prev) => !prev)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                    </Button>
-</div>
+                    <div className="relative">
+                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>

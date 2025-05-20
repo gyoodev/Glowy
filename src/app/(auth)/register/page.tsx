@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState } from 'react'; // Moved import here
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,15 +10,13 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast'; 
-import { UserPlus, User, Mail, KeyRound, Phone, Chrome } from 'lucide-react';
+import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Moved Eye, EyeOff import here
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const registerSchema = z.object({
-import { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
   phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
