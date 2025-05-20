@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -6,20 +7,25 @@ import { z } from 'zod';
 import type { UserProfile } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2 } from 'lucide-react';
+import { UserCircle2, X } from 'lucide-react';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { mockServices, allBulgarianCities } from '@/lib/mock-data'; // Import services and cities
+import { useState } from 'react';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
   profilePhotoUrl: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
-  favoriteServices: z.string().optional(),
+  favoriteServices: z.array(z.string()).optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
-  preferredLocations: z.string().optional(),
+  preferredLocations: z.array(z.string()).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
@@ -30,15 +36,18 @@ interface UserProfileFormProps {
 
 export function UserProfileForm({ userProfile }: UserProfileFormProps) {
   const { toast } = useToast();
+  const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
+  const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: userProfile.name || '',
       email: userProfile.email || '',
       profilePhotoUrl: userProfile.profilePhotoUrl || '',
-      favoriteServices: userProfile.preferences?.favoriteServices?.join(', ') || '',
+      favoriteServices: userProfile.preferences?.favoriteServices || [],
       priceRange: userProfile.preferences?.priceRange || '',
-      preferredLocations: userProfile.preferences?.preferredLocations?.join(', ') || '',
+      preferredLocations: userProfile.preferences?.preferredLocations || [],
     },
   });
 
@@ -110,20 +119,72 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               )}
             />
             <h3 className="text-lg font-semibold pt-4 border-t mt-6">Предпочитания</h3>
+            
             <FormField
               control={form.control}
               name="favoriteServices"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>Любими услуги</FormLabel>
-                  <FormControl>
-                    <Input placeholder="напр. Подстригване, Маникюр, Процедура за лице" {...field} />
-                  </FormControl>
-                  <FormDescription>Разделете услугите със запетая.</FormDescription>
+                  <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={servicePopoverOpen} className="w-full justify-between">
+                        {field.value?.length ? `${field.value.length} избран${field.value.length > 1 ? 'и':''} услуги` : "Изберете услуги..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Търсене на услуги..." />
+                        <CommandList>
+                          <CommandEmpty>Няма намерени услуги.</CommandEmpty>
+                          <CommandGroup>
+                            {mockServices.map((service) => {
+                              const isSelected = field.value?.includes(service.name);
+                              return (
+                                <CommandItem
+                                  key={service.id}
+                                  value={service.name}
+                                  onSelect={() => {
+                                    const currentServices = field.value || [];
+                                    if (isSelected) {
+                                      form.setValue('favoriteServices', currentServices.filter(s => s !== service.name), { shouldDirty: true });
+                                    } else {
+                                      form.setValue('favoriteServices', [...currentServices, service.name], { shouldDirty: true });
+                                    }
+                                  }}
+                                >
+                                  <Checkbox checked={isSelected} className="mr-2" />
+                                  {service.name}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>Изберете Вашите предпочитани услуги.</FormDescription>
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {field.value?.map(serviceName => (
+                      <Badge key={serviceName} variant="secondary" className="flex items-center">
+                        {serviceName}
+                        <button
+                          type="button"
+                          className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          onClick={() => {
+                             form.setValue('favoriteServices', (field.value || []).filter(s => s !== serviceName), { shouldDirty: true });
+                          }}
+                        >
+                          <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="priceRange"
@@ -140,16 +201,67 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                 </FormItem>
               )}
             />
-             <FormField
+
+            <FormField
               control={form.control}
               name="preferredLocations"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Предпочитани местоположения (Градове/Квартали)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="напр. Център, Северен квартал" {...field} />
-                  </FormControl>
-                   <FormDescription>Разделете местоположенията със запетая.</FormDescription>
+                <FormItem className="flex flex-col">
+                  <FormLabel>Предпочитани местоположения (Градове)</FormLabel>
+                   <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" role="combobox" aria-expanded={locationPopoverOpen} className="w-full justify-between">
+                        {field.value?.length ? `${field.value.length} избран${field.value.length > 1 ? 'и':''} град${field.value.length > 1 ? 'а':''}` : "Изберете градове..."}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Търсене на градове..." />
+                        <CommandList>
+                          <CommandEmpty>Няма намерени градове.</CommandEmpty>
+                          <CommandGroup>
+                            {allBulgarianCities.map((city) => {
+                              const isSelected = field.value?.includes(city);
+                              return (
+                                <CommandItem
+                                  key={city}
+                                  value={city}
+                                  onSelect={() => {
+                                    const currentCities = field.value || [];
+                                    if (isSelected) {
+                                      form.setValue('preferredLocations', currentCities.filter(c => c !== city), { shouldDirty: true });
+                                    } else {
+                                      form.setValue('preferredLocations', [...currentCities, city], { shouldDirty: true });
+                                    }
+                                  }}
+                                >
+                                  <Checkbox checked={isSelected} className="mr-2" />
+                                  {city}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>Изберете градовете, които предпочитате.</FormDescription>
+                   <div className="flex flex-wrap gap-1 pt-1">
+                    {field.value?.map(cityName => (
+                      <Badge key={cityName} variant="secondary" className="flex items-center">
+                        {cityName}
+                        <button
+                          type="button"
+                          className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                          onClick={() => {
+                             form.setValue('preferredLocations', (field.value || []).filter(c => c !== cityName), { shouldDirty: true });
+                          }}
+                        >
+                          <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}

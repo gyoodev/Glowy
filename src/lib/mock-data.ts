@@ -1,3 +1,4 @@
+
 import type { Salon, Service, Review, UserProfile, Booking } from '@/types';
 import { Scissors, Brush, Palette, Sparkles, Droplets, Sun } from 'lucide-react';
 
@@ -103,3 +104,11 @@ export const mockBookings: Booking[] = [
 ];
 
 export const getSalonById = (id: string): Salon | undefined => mockSalons.find(salon => salon.id === id);
+
+export const allBulgarianCities: string[] = [
+  "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", 
+  "Плевен", "Сливен", "Добрич", "Шумен", "Перник", "Хасково", 
+  "Ямбол", "Пазарджик", "Благоевград", "Велико Търново", "Враца", 
+  "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали", 
+  "Търговище", "Ловеч", "Силистра", "Разград", "Смолян"
+];
