@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
 import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
@@ -55,13 +55,25 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
+      // Fetch and increment user count
+      const counterDocRef = doc(firestore, 'counters', 'users');
+      const counterDocSnap = await getDoc(counterDocRef);
+      let newUserCount = 1;
+      if (counterDocSnap.exists()) {
+        newUserCount = counterDocSnap.data().count + 1;
+      }
+
+      // Update the counter document
+      await setDoc(counterDocRef, { count: newUserCount });
+
+
       if (user) {
         // Add user details to Firestore
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
-          userId: user.uid, // Add userId field
           email: user.email,
           displayName: data.name,
+          userId: newUserCount, // Use the incremented count as userId
           phoneNumber: data.phoneNumber,
           createdAt: new Date(),
           profileType: data.profileType,
@@ -98,7 +110,6 @@ export default function RegisterPage() {
 
         if (!docSnap.exists()) {
           await setDoc(userRef, {
-            userId: user.uid, // Add userId field
             email: user.email,
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly

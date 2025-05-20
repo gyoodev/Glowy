@@ -19,7 +19,7 @@ export default function AccountPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); 
-  const [fetchError, setFetchError] = useState<any | null>(null); 
+  const [fetchError, setFetchError] = useState<any | null>(null);
   const router = useRouter();
   const firestore = getFirestore();
 
@@ -27,7 +27,7 @@ export default function AccountPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null); 
-      if (user && user.email) { // Ensure user and user.email exist
+      if (user && user.uid) { // Ensure user and user.uid exist
         setCurrentUser(user);
         try {
           // Query for the user document by email
@@ -38,15 +38,16 @@ export default function AccountPage() {
           let userDocSnap;
           let userIdForProfile = user.uid; // Default to auth UID for new profiles
 
-          if (!querySnapshot.empty) {
+          if (!querySnapshot.empty && querySnapshot.docs.find(doc => doc.id === user.uid)) {
             // Assuming email is unique, take the first document
-            userDocSnap = querySnapshot.docs[0];
+            userDocSnap = querySnapshot.docs.find(doc => doc.id === user.uid);
+            if (!userDocSnap) throw new Error("User document found by email but not by UID, which is unexpected.");
             userIdForProfile = userDocSnap.id; // Use the ID from the found document (should be user.uid)
             const data = userDocSnap.data();
             setUserProfile({
               id: userIdForProfile,
               name: data.displayName || user.displayName || 'Потребител',
-              email: data.email || user.email || '',
+              email: data.email || user.email || '', // Keep email for display/form
               profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
               preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
               // userId: data.userId || userIdForProfile, // Ensure userId is populated
@@ -61,7 +62,7 @@ export default function AccountPage() {
               displayName: user.displayName || 'Потребител',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              createdAt: Timestamp.fromDate(new Date()), // Use Firestore Timestamp
+              createdAt: Timestamp.fromDate(new Date()), // Use Firestore Timestamp\
               profileType: 'customer', 
             };
 
@@ -74,7 +75,6 @@ export default function AccountPage() {
               preferences: dataToSave.preferences,
               // userId: dataToSave.userId,
             });
-          }
 
           // Fetch bookings (mocked for now, but could be real)
           // If bookings are tied to userId, ensure it's the correct one (user.uid)
@@ -85,7 +85,7 @@ export default function AccountPage() {
             fetchedBookings.push({
               id: doc.id,
               ...doc.data()
-            } as Booking); 
+            } as Booking);
           });
           setBookings(fetchedBookings);
 
@@ -105,23 +105,25 @@ export default function AccountPage() {
             console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it. The query was likely on the 'email' field in the 'users' collection.");
             setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           }
-          setUserProfile(null); 
-          setBookings([]); 
+          setUserProfile(null);
+          setBookings([]);
         } finally {
           setIsLoading(false);
         }
       } else {
-        setCurrentUser(null);
-        setUserProfile(null);
-        setBookings([]);
-        setIsLoading(false);
-        if (!user) { // Only redirect if user is truly null, not if email is missing
           router.push('/login');
         } else if (user && !user.email) {
           console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
           setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."})
           setIsLoading(false);
         }
+      }
+      else { // User is null
+        setCurrentUser(null);
+        setUserProfile(null);
+        setBookings([]);
+        setIsLoading(false);
+        router.push('/login');
       }
     });
 
