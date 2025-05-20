@@ -11,9 +11,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
-import { collection, doc, setDoc, getDoc, getFirestore, addDoc } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link'; // Added missing import
+import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 
@@ -42,7 +42,7 @@ export default function RegisterPage() {
       phoneNumber: '',
       password: '',
       confirmPassword: '',
- profileType: 'customer', // Default to customer
+      profileType: 'customer', // Default to customer
     },
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -50,19 +50,19 @@ export default function RegisterPage() {
   const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
- try {
+    try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
- if (user) {
- // Add user details to Firestore
+      if (user) {
+        // Add user details to Firestore
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
           email: user.email,
           displayName: data.name,
           phoneNumber: data.phoneNumber,
           createdAt: new Date(),
- profileType: data.profileType,
+          profileType: data.profileType,
         });
         
         localStorage.setItem('isUserLoggedIn', 'true'); 
@@ -100,6 +100,7 @@ export default function RegisterPage() {
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
             createdAt: new Date(),
+            profileType: 'customer', // Default to customer for Google sign-ups for now
           });
         }
         localStorage.setItem('isUserLoggedIn', 'true');
@@ -120,102 +121,102 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center space-y-6 p-4">
-      {/* Centered Logo Placeholder */}
-      <div className="text-center">
-        {/* Replace with your actual logo component or image */}
-        <h1 className="text-4xl font-bold text-primary">beautybook</h1>
-      </div>
-
-      {/* Explanatory Text */}
-      <div className="text-center text-lg text-muted-foreground max-w-md">
-        ✨ Регистрирайте се, за да откриете най-добрите салони и услуги! 📅 Лесно записване на часове. 💅 Поддържайте профила си с история на посещенията. Започнете своето преобразяване днес!
-      </div>
-
-      <Card className="shadow-xl w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold flex items-center justify-center">
-            <UserPlus className="mr-3 h-8 w-8 text-primary" />
-            Създаване на Акаунт
-          </CardTitle>
-          <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
-        </CardHeader>
+    <Card className="shadow-xl w-full">
+      <CardHeader className="text-center">
+        <CardTitle className="text-3xl font-bold flex items-center justify-center">
+          <UserPlus className="mr-3 h-8 w-8 text-primary" />
+          Създаване на Акаунт
+        </CardTitle>
+        <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
+      </CardHeader>
       <Form {...form}>
- <form onSubmit={form.handleSubmit(onSubmit)}>
-            <CardContent className="space-y-6">
- <FormField
- control={form.control}
- name="name"
- render={({ field }) => (
- <FormItem>
- <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Пълно име</FormLabel>
- <FormControl>
- <Input placeholder="Вашето пълно име" {...field} />
- </FormControl>
- <FormMessage />
- </FormItem>
- )}
- />
- <FormField
- control={form.control}
- name="email"
- render={({ field }) => (
- <FormItem>
- <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
- <FormControl>
- <Input type="email" placeholder="vashiat.email@example.com" {...field} />
- </FormControl>
- <FormMessage />
- </FormItem>
- )}
- />
- <FormField
- control={form.control}
- name="phoneNumber"
- render={({ field }) => (
- <FormItem>
- <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
- <FormControl>
- <Input type="tel" placeholder="0881234567" {...field} />
- </FormControl>
- <FormMessage />
- </FormItem>
- )}
- />
- <FormField
- control={form.control}
- name="password"
- render={({ field }) => (
- <FormItem>
- <FormLabel className="flex items-center">
- <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола
- </FormLabel>
- <div className="relative">
- <FormControl>
- <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
- </FormControl>
- <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
- {showPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
- </button>
- </div>
- <FormMessage />
- </FormItem>
- )}
- />
- <FormField
- control={form.control}
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <CardContent className="space-y-6">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Пълно име</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Вашето пълно име" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="vashiat.email@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="0881234567" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center">
+                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
               name="confirmPassword" 
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Потвърди парола</FormLabel> 
-                  <div className="relative">
-                    <FormControl>
- <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                    </FormControl>
- <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
- {showConfirmPassword ? <EyeOff className="h-5 w-5 text-muted-foreground" /> : <Eye className="h-5 w-5 text-muted-foreground" />}
-                    </button>
-                  </div>
+                  <FormControl>
+                    <div className="relative">
+                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -225,15 +226,16 @@ export default function RegisterPage() {
               name="profileType"
               render={({ field }) => (
                 <FormItem>
- <FormLabel>Тип профил</FormLabel>
- <FormControl>
-                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-gray-800 dark:border-gray-700">
+                  <FormLabel>Тип профил</FormLabel>
+                  <FormControl>
+                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-input dark:border-border">
                       <option value="customer">Клиент</option>
                       <option value="business">Бизнес</option>
                     </select>
                   </FormControl>
+                  <FormMessage />
                 </FormItem>
- )}
+              )}
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
@@ -257,7 +259,6 @@ export default function RegisterPage() {
           </CardFooter>
         </form>
       </Form>
-      </Card>
-    </div>
+    </Card>
   );
 }
