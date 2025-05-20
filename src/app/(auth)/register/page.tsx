@@ -123,6 +123,15 @@ export default function RegisterPage() {
   return (
     <Card className="shadow-xl w-full">
       <CardHeader className="text-center">
+        <div className="mb-4 text-sm text-muted-foreground">
+            <p className="font-semibold text-base text-foreground">Защо да се регистрирате?</p>
+            <ul className="list-disc list-inside text-left mt-1 space-y-0.5">
+                <li>Запазвайте лесно часове за салони.</li>
+                <li>Получавайте персонализирани AI препоръки.</li>
+                <li>Следете историята на резервациите си.</li>
+                <li>Управлявайте предпочитанията си за бъдещи посещения.</li>
+            </ul>
+        </div>
         <CardTitle className="text-3xl font-bold flex items-center justify-center">
           <UserPlus className="mr-3 h-8 w-8 text-primary" />
           Създаване на Акаунт
