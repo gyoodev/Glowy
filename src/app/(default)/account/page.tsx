@@ -5,12 +5,13 @@ import { useState, useEffect } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge'; // Import Badge component
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { auth } from '@/lib/firebase'; 
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'; 
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'; 
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +20,7 @@ interface FirebaseError extends Error {
   customMessage?: string;
   details?: string;
 }
+import { getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 
 export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -34,42 +36,18 @@ export default function AccountPage() {
       setIsLoading(true);
       setFetchError(null); 
       if (user && user.email) { 
-        setCurrentUser(user);
+        setCurrentUser(user); // Keep track of auth user
         try {
-          const usersCollectionRef = collection(firestore, 'users');
-          const q = query(usersCollectionRef, where('email', '==', user.email));
-          const querySnapshot = await getDocs(q);
+          // Use getUserProfile to fetch user data by UID
+          const profileData = await getUserProfile(user.uid);
 
-          let userDocSnap;
-          let userIdForProfile = user.uid; 
-
-          if (!querySnapshot.empty) {
-            // Try to find the document that matches the auth UID, in case multiple accounts share an email (though unlikely with unique email constraint)
-            userDocSnap = querySnapshot.docs.find(doc => doc.id === user.uid);
-            if (userDocSnap) {
-                userIdForProfile = userDocSnap.id;
-                const data = userDocSnap.data();
-                setUserProfile({
-                  id: userIdForProfile,
-                  name: data.displayName || user.displayName || 'Потребител',
-                  email: data.email || user.email || '',
-                  profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
-                  preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
-                  userId: data.userId || userIdForProfile,
-                });
-            } else {
-                 // If no doc matches UID but email matches, this is an edge case.
-                 // For now, we'll proceed to create a new profile linked to the UID.
-                 console.warn("User document found by email but ID did not match UID. Will create a new profile for UID:", user.uid);
-                 userDocSnap = undefined; // Force creation path
-            }
-          }
-          
-          if (!userDocSnap) { // If still no userDocSnap (either query was empty, or ID didn't match UID)
+          if (profileData) {
+            setUserProfile(profileData);
+          } else {
+            // If no profile exists, create a default one
             console.log("User document not found for email:", user.email, "and UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
             const dataToSave = {
-              userId: user.uid,
               email: user.email,
               displayName: user.displayName || 'Потребител',
               profilePhotoUrl: user.photoURL || '',
@@ -84,7 +62,7 @@ export default function AccountPage() {
               email: dataToSave.email,
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
-              userId: dataToSave.userId,
+ role: 'customer', // Assign a default role
             });
           }
 
@@ -146,6 +124,11 @@ export default function AccountPage() {
           <UserCircle className="w-10 h-10 mr-3 text-primary" />
           Моят Акаунт
         </h1>
+        {userProfile?.role && (
+ <Badge variant="secondary" className="text-lg">
+            Роля: {userProfile.role === 'admin' ? 'Администратор' : 'Потребител'}
+ </Badge>
+        )}
         <p className="text-lg text-muted-foreground">
           Управлявайте своя профил, предпочитания и преглеждайте историята на резервациите си.
         </p>
@@ -169,6 +152,8 @@ export default function AccountPage() {
                     <div className="space-y-2">
                         <Skeleton className="h-6 w-48" />
                         <Skeleton className="h-4 w-64" />
+ {/* Add skeleton for role badge */}
+ <Skeleton className="h-5 w-24 mt-2" />
                     </div>
                 </div>
                 <Skeleton className="h-10 w-full" />

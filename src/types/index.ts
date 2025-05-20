@@ -36,6 +36,7 @@ export interface UserProfile {
   id: string;
   name: string; // Ще бъде преведено в mock-data
   email: string;
+  role?: string;
   profilePhotoUrl?: string;
   preferences?: {
     favoriteServices?: string[]; // Ще бъде преведено в mock-data
