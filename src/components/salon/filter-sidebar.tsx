@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -15,11 +16,15 @@ interface FilterSidebarProps {
   serviceTypes: string[];
 }
 
+const ALL_CITIES_VALUE = "--all-cities--";
+const ALL_SERVICES_VALUE = "--all-services--";
+const ANY_PRICE_VALUE = "--any-price--";
+
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
-  const [location, setLocation] = useState('');
-  const [serviceType, setServiceType] = useState('');
+  const [location, setLocation] = useState(ALL_CITIES_VALUE);
+  const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
   const [rating, setRating] = useState([0]);
-  const [priceRange, setPriceRange] = useState('');
+  const [priceRange, setPriceRange] = useState(ANY_PRICE_VALUE);
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -31,11 +36,16 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
   };
 
   const handleClearFilters = () => {
-    setLocation('');
-    setServiceType('');
+    setLocation(ALL_CITIES_VALUE);
+    setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
-    setPriceRange('');
-    onFilterChange({});
+    setPriceRange(ANY_PRICE_VALUE);
+    onFilterChange({
+      location: ALL_CITIES_VALUE,
+      serviceType: ALL_SERVICES_VALUE,
+      minRating: 0,
+      priceRange: ANY_PRICE_VALUE,
+    });
   };
 
   return (
@@ -57,7 +67,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
               <SelectValue placeholder="Select city" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Cities</SelectItem>
+              <SelectItem value={ALL_CITIES_VALUE}>All Cities</SelectItem>
               {cities.map(city => (
                 <SelectItem key={city} value={city}>{city}</SelectItem>
               ))}
@@ -72,7 +82,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
               <SelectValue placeholder="Select service" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Services</SelectItem>
+              <SelectItem value={ALL_SERVICES_VALUE}>All Services</SelectItem>
                {serviceTypes.map(type => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
@@ -100,7 +110,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
               <SelectValue placeholder="Select price range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Any Price</SelectItem>
+              <SelectItem value={ANY_PRICE_VALUE}>Any Price</SelectItem>
               <SelectItem value="cheap">Cheap ($)</SelectItem>
               <SelectItem value="moderate">Moderate ($$)</SelectItem>
               <SelectItem value="expensive">Expensive ($$$)</SelectItem>

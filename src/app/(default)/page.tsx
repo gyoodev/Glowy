@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -10,18 +11,28 @@ import { Search, MapPin, VenetianMask } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const ALL_CITIES_VALUE = "--all-cities--";
+const ALL_SERVICES_VALUE = "--all-services--";
+const ANY_PRICE_VALUE = "--any-price--";
+
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [filters, setFilters] = useState<Record<string, any>>({
+    location: ALL_CITIES_VALUE,
+    serviceType: ALL_SERVICES_VALUE,
+    minRating: 0,
+    priceRange: ANY_PRICE_VALUE,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     // Simulate API call
     setTimeout(() => {
       setSalons(mockSalons);
-      setFilteredSalons(mockSalons);
+      // Initial filtering based on default filter values
+      // This will be handled by the main filtering useEffect
       setIsLoading(false);
     }, 1000);
   }, []);
@@ -50,10 +61,10 @@ export default function SalonDirectoryPage() {
       result = result.filter(salon => {
         const { location, serviceType, minRating, priceRange } = filters;
         let matches = true;
-        if (location && salon.city !== location) matches = false;
-        if (serviceType && !salon.services.some(s => s.name === serviceType)) matches = false;
-        if (minRating && salon.rating < minRating) matches = false;
-        if (priceRange && salon.priceRange !== priceRange) matches = false;
+        if (location && location !== ALL_CITIES_VALUE && salon.city !== location) matches = false;
+        if (serviceType && serviceType !== ALL_SERVICES_VALUE && !salon.services.some(s => s.name === serviceType)) matches = false;
+        if (minRating && salon.rating < minRating) matches = false; // minRating 0 means any
+        if (priceRange && priceRange !== ANY_PRICE_VALUE && salon.priceRange !== priceRange) matches = false;
         return matches;
       });
     }
