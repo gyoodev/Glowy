@@ -1,7 +1,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Menu, Search, Sparkles as AppIcon } from 'lucide-react'; // Using Sparkles as AppIcon
 
 const navItems = [
@@ -42,6 +42,7 @@ export function Header() {
               </Button>
             </SheetTrigger>
             <SheetContent side="right">
+              <SheetTitle className="sr-only">Меню за навигация</SheetTitle>
               <nav className="flex flex-col space-y-4 mt-6">
                 {navItems.map((item) => (
                   <Button key={item.label} variant="ghost" asChild className="justify-start">
