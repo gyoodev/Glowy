@@ -75,7 +75,7 @@ export default function RegisterPage() {
  description: error.message || 'Възникна грешка при регистрацията.',
  variant: 'destructive',
  });
- }
+ };
   };
 
   const handleGoogleSignUp = async () => {
