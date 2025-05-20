@@ -1,7 +1,6 @@
 
 'use client';
 
-import { Eye, EyeOff } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,13 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast'; 
-import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Moved Eye, EyeOff import here
+import { useToast } from '@/hooks/use-toast';
+import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
-import { collection, doc, setDoc } from 'firebase/firestore'; // Import firestore functions
-import { useRouter } from 'next/navigation'; 
+import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const registerSchema = z.object({
  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -45,6 +44,7 @@ export default function RegisterPage() {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
  try {
@@ -53,29 +53,29 @@ export default function RegisterPage() {
 
  if (user) {
  // Add user details to Firestore
- const userRef = doc(collection(getFirestore(), 'users'), user.uid);
- await setDoc(userRef, {
- email: user.email,
- displayName: data.name,
- phoneNumber: data.phoneNumber,
- // Add any other initial user data here
- createdAt: new Date(),
- });
+        const userRef = doc(collection(firestore, 'users'), user.uid);
+        await setDoc(userRef, {
+          email: user.email,
+          displayName: data.name,
+          phoneNumber: data.phoneNumber,
+          createdAt: new Date(),
+        });
         
- localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
- toast({
- title: 'Регистрацията е успешна',
- description: 'Вашият акаунт е създаден.',
- });
- router.push('/');;
- }
-  } catch (error: any) { // Added error handling
- toast({
- title: 'Регистрацията неуспешна',
- description: error.message || 'Възникна грешка при регистрацията.',
- variant: 'destructive',
- });
- };
+        localStorage.setItem('isUserLoggedIn', 'true'); 
+        toast({
+          title: 'Регистрацията е успешна',
+          description: 'Вашият акаунт е създаден.',
+        });
+        router.push('/');
+      }
+    } catch (error: any) {
+      console.error("Error during registration:", error);
+      toast({
+        title: 'Регистрацията неуспешна',
+        description: error.message || 'Възникна грешка при регистрацията.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleGoogleSignUp = async () => {
@@ -86,7 +86,7 @@ export default function RegisterPage() {
       console.log('Google Sign-Up successful:', user);
 
       if (user) {
- // Check if user already exists in Firestore, add if not
+        // Check if user already exists in Firestore, add if not
         const userRef = doc(collection(firestore, 'users'), user.uid);
         const docSnap = await getDoc(userRef);
 
@@ -94,13 +94,25 @@ export default function RegisterPage() {
           await setDoc(userRef, {
             email: user.email,
             displayName: user.displayName,
-            phoneNumber: user.phoneNumber, // Google might not provide phone number directly
+            phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
             createdAt: new Date(),
           });
         }
+        localStorage.setItem('isUserLoggedIn', 'true');
+        toast({
+          title: 'Регистрация с Google успешна',
+          description: `Добре дошли, ${user.displayName || user.email}!`,
+        });
+        router.push('/');
       }
+    } catch (error: any) {
+      console.error('Error during Google Sign-Up:', error);
+      toast({
+        title: 'Грешка при регистрация с Google',
+        description: error.message || 'Възникна неочаквана грешка.',
+        variant: 'destructive',
+      });
     }
-
   };
 
   return (
