@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
-import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getFirestore, addDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link'; // Added missing import
 import { auth } from '@/lib/firebase';
@@ -22,6 +22,7 @@ const registerSchema = z.object({
  email: z.string().email('Невалиден имейл адрес.'),
  phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
  password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
+ profileType: z.enum(['customer', 'business']),
  confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Паролите не съвпадат.',
@@ -41,6 +42,7 @@ export default function RegisterPage() {
       phoneNumber: '',
       password: '',
       confirmPassword: '',
+ profileType: 'customer', // Default to customer
     },
   });
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +62,7 @@ export default function RegisterPage() {
           displayName: data.name,
           phoneNumber: data.phoneNumber,
           createdAt: new Date(),
+ profileType: data.profileType,
         });
         
         localStorage.setItem('isUserLoggedIn', 'true'); 
@@ -117,17 +120,29 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card className="shadow-xl">
-      <CardHeader className="text-center">
-        <CardTitle className="text-3xl font-bold flex items-center justify-center">
-          <UserPlus className="mr-3 h-8 w-8 text-primary" />
-          Създаване на Акаунт
-        </CardTitle>
-        <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
-      </CardHeader>
+    <div className="flex flex-col items-center justify-center space-y-6 p-4">
+      {/* Centered Logo Placeholder */}
+      <div className="text-center">
+        {/* Replace with your actual logo component or image */}
+        <h1 className="text-4xl font-bold text-primary">beautybook</h1>
+      </div>
+
+      {/* Explanatory Text */}
+      <div className="text-center text-lg text-muted-foreground max-w-md">
+        ✨ Регистрирайте се, за да откриете най-добрите салони и услуги! 📅 Лесно записване на часове. 💅 Поддържайте профила си с история на посещенията. Започнете своето преобразяване днес!
+      </div>
+
+      <Card className="shadow-xl w-full max-w-md">
+        <CardHeader className="text-center">
+          <CardTitle className="text-3xl font-bold flex items-center justify-center">
+            <UserPlus className="mr-3 h-8 w-8 text-primary" />
+            Създаване на Акаунт
+          </CardTitle>
+          <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
+        </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+            <CardContent className="space-y-6">
             <FormField
               control={form.control}
               name="name"
@@ -188,7 +203,7 @@ export default function RegisterPage() {
               )}
             />
             <FormField
-              control={form.control}
+ control={form.control}
               name="confirmPassword" 
               render={({ field }) => (
                 <FormItem>
@@ -204,6 +219,20 @@ export default function RegisterPage() {
                   <FormMessage />
                 </FormItem>
               )}
+            />
+            <FormField
+              control={form.control}
+              name="profileType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Тип профил</FormLabel>
+                  <FormControl>
+                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-gray-800 dark:border-gray-700">
+                      <option value="customer">Клиент</option>
+                      <option value="business">Бизнес</option>
+                    </select>
+                  </FormControl>
+                </FormItem>
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
@@ -227,6 +256,7 @@ export default function RegisterPage() {
           </CardFooter>
         </form>
       </Form>
-    </Card>
+      </Card>
+    </div>
   );
 }
