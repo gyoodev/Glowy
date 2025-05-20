@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockBookings } from '@/lib/mock-data'; // mockBookings can still be used for now
+// import { mockBookings } from '@/lib/mock-data'; // Bookings will be fetched or mocked later
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,9 +25,9 @@ export default function AccountPage() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setIsLoading(true); // Set loading to true at the start of auth check / data fetch
       if (user) {
         setCurrentUser(user);
-        setIsLoading(true);
         try {
           const userDocRef = doc(firestore, 'users', user.uid);
           const docSnap = await getDoc(userDocRef);
@@ -35,42 +35,45 @@ export default function AccountPage() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUserProfile({
-              id: user.uid, // Ensure id is always included
-              name: data.displayName || user.displayName || '', // Ensure name is always included
-              email: data.email || user.email || '', // Ensure email is always included
-              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '', // Ensure profilePhotoUrl is always included
-              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] }, // Ensure preferences are always included
+              id: user.uid,
+              name: data.displayName || user.displayName || 'Потребител',
+              email: data.email || user.email || '',
+              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
+              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
             });
           } else {
-            // User document doesn't exist, create one with defaults from auth and some app defaults
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore.");
-            const defaultProfileData: UserProfile & { createdAt?: Date, profileType?: string, displayName?: string } = {
+            const defaultProfileData = {
               id: user.uid,
               name: user.displayName || 'Потребител',
               email: user.email || '',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              // Fields to save in Firestore, aligning with registration
-              displayName: user.displayName || 'Потребител',
+              displayName: user.displayName || 'Потребител', // For Firestore
               createdAt: new Date(),
               profileType: 'customer', // Default profile type
             };
             
-            // Data to actually save, excluding 'id' and 'name' if 'displayName' is preferred for storage
-            const { id: _, name: __, ...dataToSave } = defaultProfileData;
+            // Data to actually save (excluding derived id/name if displayName is primary)
+            const { id: _id, name: _name, ...dataToSave } = defaultProfileData;
+            // Ensure essential fields like email (which is from auth) are included
+            if (user.email && !dataToSave.email) {
+              (dataToSave as any).email = user.email;
+            }
 
 
             await setDoc(userDocRef, dataToSave);
             setUserProfile({ // Set state for the UI
-              id: defaultProfileData.id, // Ensure id is always included
-              name: defaultProfileData.name, // Ensure name is always included
-              email: defaultProfileData.email, // Ensure email is always included
-              profilePhotoUrl: defaultProfileData.profilePhotoUrl, // Ensure profilePhotoUrl is always included
-              preferences: defaultProfileData.preferences, // Ensure preferences are always included
+              id: defaultProfileData.id,
+              name: defaultProfileData.name,
+              email: defaultProfileData.email,
+              profilePhotoUrl: defaultProfileData.profilePhotoUrl,
+              preferences: defaultProfileData.preferences,
             });
           }
 
-          // Fetch user bookings
+          // Fetch user bookings (mocked for now, replace with actual fetch)
+          // Simulating fetching bookings, replace with your actual Firestore query for bookings
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
@@ -78,13 +81,16 @@ export default function AccountPage() {
             fetchedBookings.push({
               id: doc.id,
               ...doc.data()
-            } as Booking); // Cast to Booking type, assuming data matches
+            } as Booking); 
           });
+          // Fallback to mockBookings if Firestore fetch is empty and you want to show something
+          // For now, let's use what's fetched or an empty array.
           setBookings(fetchedBookings);
 
         } catch (error) {
-          console.error("Error fetching/creating user profile:", error);
+          console.error("Error fetching/creating user profile or bookings:", error);
           setUserProfile(null); // Fallback if error
+          setBookings([]); // Clear bookings on error too
         } finally {
           setIsLoading(false);
         }
@@ -92,8 +98,8 @@ export default function AccountPage() {
         // No user is signed in
         setCurrentUser(null);
         setUserProfile(null);
+        setBookings([]);
         setIsLoading(false);
-        // Optionally redirect to login
         router.push('/login');
       }
     });
@@ -101,8 +107,6 @@ export default function AccountPage() {
     return () => unsubscribe();
   }, [firestore, router]);
 
-  // Remove the old useEffect that simulated booking data
-  // The booking data is now fetched within the main useEffect
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -127,7 +131,7 @@ export default function AccountPage() {
         </TabsList>
 
         <TabsContent value="profile">
-          {isLoading && !userProfile ? (
+          {isLoading ? (
             <div className="space-y-4 max-w-2xl mx-auto">
                 <div className="flex items-center space-x-4 mb-6">
                     <Skeleton className="h-20 w-20 rounded-full" />
@@ -143,15 +147,19 @@ export default function AccountPage() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-12 w-32 mt-4" />
             </div>
-          ) : (
+          ) : userProfile ? (
             <UserProfileForm userProfile={userProfile} />
+          ) : (
+             <p className="text-center text-muted-foreground py-8">
+                Неуспешно зареждане на профила. Моля, проверете връзката си или опитайте да влезете отново.
+             </p>
           )}
         </TabsContent>
 
         <TabsContent value="bookings">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">Вашите минали и предстоящи резервации</h2>
-            {isLoading && bookings.length === 0 ? ( // Show skeletons for bookings only if profile is also loading or bookings not yet fetched
+            {isLoading && bookings.length === 0 ? (
                <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Card key={i} className="shadow-sm">
@@ -181,3 +189,4 @@ export default function AccountPage() {
     </div>
   );
 }
+
