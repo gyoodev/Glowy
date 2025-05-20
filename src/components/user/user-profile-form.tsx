@@ -78,6 +78,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
     try {
       const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
       const profileDataToSave = {
+        userId: auth.currentUser.uid, // Ensure userId is saved
         displayName: data.name, // Save as displayName in Firestore
         // email: data.email, // Avoid changing email directly without proper Firebase re-authentication flow
         profilePhotoUrl: data.profilePhotoUrl || null, // Store null if empty string for easier checks
@@ -88,6 +89,12 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
         },
         lastUpdatedAt: new Date(), // Good practice to track updates
       };
+
+      // Explicitly keep email if it exists, as it's not part of the form for editing but should persist
+      if (userProfile.email) {
+        (profileDataToSave as any).email = userProfile.email;
+      }
+
 
       await setDoc(userDocRef, profileDataToSave, { merge: true });
       

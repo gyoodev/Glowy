@@ -42,35 +42,35 @@ export default function AccountPage() {
               email: data.email || user.email || '',
               profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
               preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
+              // userId: data.userId || user.uid, // Ensure userId is populated for the UserProfile type
             });
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore.");
-            const defaultProfileData = {
-              id: user.uid,
-              name: user.displayName || 'Потребител',
+            // Data to be saved in Firestore
+            const dataToSave = {
+              userId: user.uid, // Explicitly add userId
               email: user.email || '',
+              displayName: user.displayName || 'Потребител',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              displayName: user.displayName || 'Потребител', // For Firestore
               createdAt: new Date(),
               profileType: 'customer', // Default profile type
             };
-            
-            const { id: _id, name: _name, ...dataToSave } = defaultProfileData;
-            if (user.email && !(dataToSave as any).email) { // check if email exists before assigning
-              (dataToSave as any).email = user.email;
-            }
 
             await setDoc(userDocRef, dataToSave);
+
+            // Data for client-side UserProfile state
             setUserProfile({ 
-              id: defaultProfileData.id,
-              name: defaultProfileData.name,
-              email: defaultProfileData.email,
-              profilePhotoUrl: defaultProfileData.profilePhotoUrl,
-              preferences: defaultProfileData.preferences,
+              id: user.uid,
+              name: dataToSave.displayName,
+              email: dataToSave.email,
+              profilePhotoUrl: dataToSave.profilePhotoUrl,
+              preferences: dataToSave.preferences,
+              // userId: dataToSave.userId,
             });
           }
 
+          // Fetch bookings (mocked for now, but could be real)
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
@@ -162,12 +162,12 @@ export default function AccountPage() {
                 </div>
                 {fetchError && fetchError.code === 'permission-denied' ? (
                   <div className="text-sm">
-                    <p className="font-bold mb-2">Липсват или са недостатъчни права!</p>
+                    <p className="font-bold mb-2">Липсват или са недостатъчни права за достъп до Firestore!</p>
                     <p className="mb-1">
                       Системата засече, че нямате необходимите права за достъп до Вашите данни в Firestore.
                     </p>
                     <p className="mb-3">
-                      Това обикновено се дължи на конфигурацията на Firestore Security Rules във Вашия Firebase проект.
+                      Това обикновено се дължи на конфигурацията на **Firestore Security Rules** във Вашия Firebase проект.
                     </p>
                     <p className="font-semibold">Какво да направите:</p>
                     <ol className="list-decimal list-inside text-left mt-1 mb-3 mx-auto max-w-md bg-background/50 p-3 rounded">
@@ -176,7 +176,7 @@ export default function AccountPage() {
                         <li>Навигирайте до <strong className="text-foreground">Firestore Database</strong> &gt; <strong className="text-foreground">Rules</strong> таб.</li>
                         <li>Уверете се, че правилата позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users'.</li>
                     </ol>
-                     <p className="mb-1">Примерни правила (копирайте и поставете в Firebase Console):</p>
+                     <p className="mb-1">Необходими правила (копирайте и поставете в Firebase Console -> Firestore -> Rules):</p>
                     <pre className="text-xs bg-muted text-muted-foreground p-2 rounded-md overflow-x-auto text-left my-2">
                       <code>
                         rules_version = '2';<br/>
@@ -189,7 +189,7 @@ export default function AccountPage() {
                         &#125;
                       </code>
                     </pre>
-                    <p>След като актуализирате и публикувате правилата, моля, опитайте отново.</p>
+                    <p>След като актуализирате и публикувате тези правила, моля, <strong className="text-foreground">презаредете тази страница</strong>.</p>
                   </div>
                 ) : (
                   <p>

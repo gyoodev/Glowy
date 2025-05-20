@@ -59,6 +59,7 @@ export default function RegisterPage() {
         // Add user details to Firestore
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
+          userId: user.uid, // Add userId field
           email: user.email,
           displayName: data.name,
           phoneNumber: data.phoneNumber,
@@ -97,6 +98,7 @@ export default function RegisterPage() {
 
         if (!docSnap.exists()) {
           await setDoc(userRef, {
+            userId: user.uid, // Add userId field
             email: user.email,
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
@@ -269,5 +271,4 @@ export default function RegisterPage() {
     </Card>
   );
 }
-
     
