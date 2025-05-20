@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 
 interface BookingCalendarProps {
   salonName: string;
@@ -29,7 +31,7 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
     }
   }, [selectedDate, availability]);
 
-  const handleBookSlot = () => {
+  const handleBookSlot = async () => {
     if (!selectedDate || !selectedTime) {
       toast({
         title: "Непълна селекция",
@@ -39,13 +41,44 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
       return;
     }
     
-    const bookingDetails = `Резервацията е потвърдена за ${serviceName || 'услуга'} в ${salonName} на ${selectedDate.toLocaleDateString('bg-BG')} в ${selectedTime}.`;
+    const bookingDetailsMessage = `Резервацията е потвърдена за ${serviceName || 'услуга'} в ${salonName} на ${selectedDate.toLocaleDateString('bg-BG')} в ${selectedTime}.`;
     toast({
       title: "Резервацията е успешна!",
-      description: bookingDetails,
+      description: bookingDetailsMessage,
     });
+    console.log(bookingDetailsMessage);
+
+    // Simulate sending review reminder email
+    try {
+      const reminderResult = await sendReviewReminderEmail({
+        salonName: salonName,
+        serviceName: serviceName,
+        bookingDate: selectedDate.toLocaleDateString('bg-BG'),
+        bookingTime: selectedTime,
+      });
+
+      if (reminderResult.success) {
+        toast({
+          title: "Покана за Отзив (Симулация)",
+          description: "Симулирано е изпращане на имейл с покана да оставите отзив за Вашето преживяване.",
+        });
+      } else {
+        toast({
+          title: "Грешка при Симулация на Отзив",
+          description: reminderResult.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Грешка при симулация на изпращане на напомняне за отзив:", error);
+      toast({
+        title: "Грешка",
+        description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
+        variant: "destructive",
+      });
+    }
+
     // Here you would typically call an API to finalize the booking
-    console.log(bookingDetails);
     setSelectedDate(undefined);
     setSelectedTime(undefined);
   };
@@ -120,3 +153,4 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
     </Card>
   );
 }
+
