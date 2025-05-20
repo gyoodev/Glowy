@@ -1,12 +1,13 @@
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, User } from 'lucide-react'; // Using Sparkles as AppIcon
+import { Menu, Search, Sparkles as AppIcon } from 'lucide-react'; // Using Sparkles as AppIcon
 
 const navItems = [
   { href: '/', label: 'Салони' },
   { href: '/recommendations', label: 'AI Препоръки' },
-  { href: '/account', label: 'Акаунт' },
+  { href: '/account', label: 'Моят Акаунт' }, // Changed from 'Акаунт' to 'Моят Акаунт' for consistency
 ];
 
 export function Header() {
@@ -30,6 +31,10 @@ export function Header() {
           <Button variant="ghost" size="icon" aria-label="Търсене">
             <Search className="h-5 w-5" />
           </Button>
+          {/* Placeholder for future user auth button/dropdown - for now, direct link to login */}
+          <Button variant="outline" asChild>
+            <Link href="/login">Вход</Link>
+          </Button>
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden" aria-label="Отвори менюто">
@@ -43,6 +48,9 @@ export function Header() {
                     <Link href={item.href}>{item.label}</Link>
                   </Button>
                 ))}
+                 <Button variant="outline" asChild className="justify-start">
+                    <Link href="/login">Вход / Регистрация</Link>
+                  </Button>
               </nav>
             </SheetContent>
           </Sheet>
