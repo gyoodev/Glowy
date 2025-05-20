@@ -68,7 +68,7 @@ export default function RegisterPage() {
  title: 'Регистрацията е успешна',
  description: 'Вашият акаунт е създаден.',
  });
- router.push('/');
+ router.push('/');;
  }
   };
 
