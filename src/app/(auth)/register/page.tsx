@@ -34,7 +34,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const { toast } = useToast();
-  const router = useRouter();
+  const router = useRouter(); // Use useRouter from next/navigation
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
