@@ -1,14 +1,16 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ListFilter, X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { ListFilter, X, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface FilterSidebarProps {
   onFilterChange: (filters: Record<string, any>) => void;
@@ -25,7 +27,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
   const [rating, setRating] = useState([0]);
   const [priceRange, setPriceRange] = useState(ANY_PRICE_VALUE);
-  const [citySearchTerm, setCitySearchTerm] = useState(''); // New state for city search
+  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -41,7 +43,6 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
     setPriceRange(ANY_PRICE_VALUE);
-    setCitySearchTerm(''); // Clear city search term
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
@@ -49,10 +50,11 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       priceRange: ANY_PRICE_VALUE,
     });
   };
-
-  const filteredCities = cities.filter(city =>
-    city.toLowerCase().includes(citySearchTerm.toLowerCase())
-  );
+  
+  const getCityLabel = (value: string) => {
+    if (value === ALL_CITIES_VALUE) return "Всички градове";
+    return cities.find(city => city === value) || "Изберете град";
+  }
 
   return (
     <Card className="sticky top-20 shadow-lg rounded-lg">
@@ -67,27 +69,64 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       </CardHeader>
       <CardContent className="space-y-6 p-4">
         <div>
-          <Label htmlFor="location-search" className="text-sm font-medium">Търсене на град</Label>
-          <Input
-            id="location-search"
-            type="text"
-            placeholder="Въведете за търсене..."
-            value={citySearchTerm}
-            onChange={(e) => setCitySearchTerm(e.target.value)}
-            className="mb-2"
-          />
-          <Label htmlFor="location" className="text-sm font-medium">Местоположение (Град)</Label>
-          <Select value={location} onValueChange={setLocation}>
-            <SelectTrigger id="location">
-              <SelectValue placeholder="Изберете град" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_CITIES_VALUE}>Всички градове</SelectItem>
-              {filteredCities.map(city => (
-                <SelectItem key={city} value={city}>{city}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="location-filter" className="text-sm font-medium">Местоположение (Град)</Label>
+          <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                id="location-filter"
+                variant="outline"
+                role="combobox"
+                aria-expanded={cityPopoverOpen}
+                className="w-full justify-between"
+              >
+                {getCityLabel(location)}
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+              <Command>
+                <CommandInput placeholder="Търсете град..." />
+                <CommandList>
+                  <CommandEmpty>Няма намерен град.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value={ALL_CITIES_VALUE}
+                      onSelect={(currentValue) => {
+                        setLocation(ALL_CITIES_VALUE);
+                        setCityPopoverOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          location === ALL_CITIES_VALUE ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      Всички градове
+                    </CommandItem>
+                    {cities.map((city) => (
+                      <CommandItem
+                        key={city}
+                        value={city}
+                        onSelect={(currentValue) => {
+                          setLocation(currentValue === location ? ALL_CITIES_VALUE : currentValue);
+                          setCityPopoverOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            location === city ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {city}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div>
