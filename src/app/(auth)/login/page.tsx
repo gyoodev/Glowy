@@ -13,7 +13,7 @@ import { LogIn, Mail, KeyRound, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
   email: z.string().email('Невалиден имейл адрес.'),
@@ -24,6 +24,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -35,14 +36,24 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
     console.log('Login data:', data);
-    // Here you would typically use Firebase signInWithEmailAndPassword
-    // For now, we keep the localStorage simulation for email/password
-    localStorage.setItem('isUserLoggedIn', 'true');
-    toast({
-      title: 'Влизане успешно',
-      description: 'Добре дошли отново!',
-    });
-    router.push('/');
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const user = userCredential.user;
+      console.log('Email/Password Sign-In successful:', user);
+      localStorage.setItem('isUserLoggedIn', 'true');
+      toast({
+        title: 'Влизане успешно',
+        description: 'Добре дошли отново!',
+      });
+      router.push('/');
+    } catch (error: any) {
+      console.error('Error during Email/Password Sign-In:', error);
+      toast({
+        title: 'Грешка при влизане',
+        description: error.message || 'Възникна неочаквана грешка.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -52,7 +63,6 @@ export default function LoginPage() {
       const user = result.user;
       console.log('Google Sign-In successful:', user);
       localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
-      toast({
         title: 'Влизане с Google успешно',
         description: `Добре дошли, ${user.displayName || user.email}!`,
       });
@@ -99,7 +109,18 @@ export default function LoginPage() {
                 <FormItem>
                   <FormLabel className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола</FormLabel>
                   <FormControl>
-                    <Input type="password" placeholder="••••••••" {...field} />
+<div className="relative">
+                    <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                    </Button>
+</div>
                   </FormControl>
                   <FormMessage />
                 </FormItem>
