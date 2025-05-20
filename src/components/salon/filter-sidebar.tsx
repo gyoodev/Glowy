@@ -25,6 +25,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
   const [rating, setRating] = useState([0]);
   const [priceRange, setPriceRange] = useState(ANY_PRICE_VALUE);
+  const [citySearchTerm, setCitySearchTerm] = useState(''); // New state for city search
 
   const handleApplyFilters = () => {
     onFilterChange({
@@ -40,6 +41,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
     setPriceRange(ANY_PRICE_VALUE);
+    setCitySearchTerm(''); // Clear city search term
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
@@ -47,6 +49,10 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       priceRange: ANY_PRICE_VALUE,
     });
   };
+
+  const filteredCities = cities.filter(city =>
+    city.toLowerCase().includes(citySearchTerm.toLowerCase())
+  );
 
   return (
     <Card className="sticky top-20 shadow-lg rounded-lg">
@@ -61,6 +67,15 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       </CardHeader>
       <CardContent className="space-y-6 p-4">
         <div>
+          <Label htmlFor="location-search" className="text-sm font-medium">Търсене на град</Label>
+          <Input
+            id="location-search"
+            type="text"
+            placeholder="Въведете за търсене..."
+            value={citySearchTerm}
+            onChange={(e) => setCitySearchTerm(e.target.value)}
+            className="mb-2"
+          />
           <Label htmlFor="location" className="text-sm font-medium">Местоположение (Град)</Label>
           <Select value={location} onValueChange={setLocation}>
             <SelectTrigger id="location">
@@ -68,7 +83,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL_CITIES_VALUE}>Всички градове</SelectItem>
-              {cities.map(city => (
+              {filteredCities.map(city => (
                 <SelectItem key={city} value={city}>{city}</SelectItem>
               ))}
             </SelectContent>
