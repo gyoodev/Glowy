@@ -20,12 +20,14 @@ export default function AccountPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // To store Firebase user object
+  const [fetchError, setFetchError] = useState<any | null>(null); // To store any error during data fetching
   const router = useRouter();
   const firestore = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setIsLoading(true); // Set loading to true at the start of auth check / data fetch
+      setIsLoading(true);
+      setFetchError(null); // Reset error on new auth state
       if (user) {
         setCurrentUser(user);
         try {
@@ -54,16 +56,13 @@ export default function AccountPage() {
               profileType: 'customer', // Default profile type
             };
             
-            // Data to actually save (excluding derived id/name if displayName is primary)
             const { id: _id, name: _name, ...dataToSave } = defaultProfileData;
-            // Ensure essential fields like email (which is from auth) are included
             if (user.email && !dataToSave.email) {
               (dataToSave as any).email = user.email;
             }
 
-
             await setDoc(userDocRef, dataToSave);
-            setUserProfile({ // Set state for the UI
+            setUserProfile({ 
               id: defaultProfileData.id,
               name: defaultProfileData.name,
               email: defaultProfileData.email,
@@ -72,8 +71,6 @@ export default function AccountPage() {
             });
           }
 
-          // Fetch user bookings (mocked for now, replace with actual fetch)
-          // Simulating fetching bookings, replace with your actual Firestore query for bookings
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
@@ -83,13 +80,11 @@ export default function AccountPage() {
               ...doc.data()
             } as Booking); 
           });
-          // Fallback to mockBookings if Firestore fetch is empty and you want to show something
-          // For now, let's use what's fetched or an empty array.
           setBookings(fetchedBookings);
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
-           // Enhanced error logging
+          setFetchError(error); 
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
@@ -97,15 +92,14 @@ export default function AccountPage() {
             console.error("Firebase error message:", error.message);
           }
           if (error.details) {
-            console.error("Firebase error details:", error.details); // This might be undefined for auth/permission errors
+            console.error("Firebase error details:", error.details);
           }
-          setUserProfile(null); // Fallback if error
-          setBookings([]); // Clear bookings on error too
+          setUserProfile(null); 
+          setBookings([]); 
         } finally {
           setIsLoading(false);
         }
       } else {
-        // No user is signed in
         setCurrentUser(null);
         setUserProfile(null);
         setBookings([]);
@@ -160,9 +154,21 @@ export default function AccountPage() {
           ) : userProfile ? (
             <UserProfileForm userProfile={userProfile} />
           ) : (
-             <p className="text-center text-muted-foreground py-8">
-                Неуспешно зареждане на профила. Моля, проверете връзката си или опитайте да влезете отново. Възможно е да има проблем с правата за достъп до данните.
-             </p>
+             <div className="text-center text-destructive py-8">
+                <h3 className="text-xl font-semibold mb-2">Грешка при зареждане на профила</h3>
+                {fetchError && fetchError.code === 'permission-denied' ? (
+                  <p>
+                    Изглежда има проблем с правата за достъп до Вашите данни. <br/>
+                    Моля, уверете се, че Firestore Security Rules във Вашия Firebase проект позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users'. <br/>
+                    Примерни правила: <code>match /users/&#123;userId&#125; &#123; allow read, write: if request.auth != null && request.auth.uid == userId; &#125;</code>
+                  </p>
+                ) : (
+                  <p>
+                    Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
+                    {fetchError?.message && <span className="block mt-2 text-sm">Детайли: {fetchError.message}</span>}
+                  </p>
+                )}
+             </div>
           )}
         </TabsContent>
 
