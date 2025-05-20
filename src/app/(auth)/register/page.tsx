@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { collection, doc, setDoc } from 'firebase/firestore'; // Import firestore functions
 import { useRouter } from 'next/navigation'; 
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, getAuth } from 'firebase/auth';
 
 const registerSchema = z.object({
  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -53,22 +53,29 @@ export default function RegisterPage() {
       const user = userCredential.user;
 
  if (user) {
-        // Add user details to Firestore
- const userRef = doc(collection(firestore, 'users'), user.uid);
+ // Add user details to Firestore
+ const userRef = doc(collection(getFirestore(), 'users'), user.uid);
  await setDoc(userRef, {
  email: user.email,
  displayName: data.name,
  phoneNumber: data.phoneNumber,
  // Add any other initial user data here
-          createdAt: new Date(),
+ createdAt: new Date(),
  });
-
+        
  localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
  toast({
  title: 'Регистрацията е успешна',
  description: 'Вашият акаунт е създаден.',
  });
  router.push('/');;
+ }
+  } catch (error: any) { // Added error handling
+ toast({
+ title: 'Регистрацията неуспешна',
+ description: error.message || 'Възникна грешка при регистрацията.',
+ variant: 'destructive',
+ });
  }
   };
 
@@ -80,7 +87,7 @@ export default function RegisterPage() {
       console.log('Google Sign-Up successful:', user);
 
       if (user) {
-        // Check if user already exists in Firestore, add if not
+ // Check if user already exists in Firestore, add if not
         const userRef = doc(collection(firestore, 'users'), user.uid);
         const docSnap = await getDoc(userRef);
 
