@@ -17,6 +17,7 @@ import Link from 'next/link';
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 
+// Define the schema for the registration form
 const registerSchema = z.object({
  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
  email: z.string().email('Невалиден имейл адрес.'),
@@ -46,7 +47,6 @@ export default function RegisterPage() {
     },
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
@@ -121,8 +121,8 @@ export default function RegisterPage() {
   };
 
   return (
- <Card className="w-full max-w-sm shadow-lg rounded-lg">
-      <CardHeader className="space-y-1 text-center">
+    <Card className="w-full max-w-sm shadow-lg rounded-lg">
+      <CardHeader className="space-y-1 text-center pb-4">
         <CardTitle className="text-2xl font-bold flex items-center justify-center">
           <UserPlus className="mr-3 h-8 w-8 text-primary" />
           Създаване на Акаунт
@@ -130,7 +130,7 @@ export default function RegisterPage() {
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+          <CardContent className="grid gap-6">
             <FormField
               control={form.control}
               name="name"
@@ -182,7 +182,7 @@ export default function RegisterPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
                         onClick={() => setShowPassword((prev) => !prev)}
                       >
@@ -196,19 +196,20 @@ export default function RegisterPage() {
             />
             <FormField
               control={form.control}
-              name="confirmPassword" 
+              name="confirmPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Потвърди парола</FormLabel> 
+                  <FormLabel>Потвърдете паролата</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Input type="password" placeholder="••••••••" {...field} />
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
-                        onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        // Add visibility toggle if needed
+                        onClick={() => alert('Password visibility toggle not implemented yet')} // Placeholder
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
@@ -225,7 +226,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Тип профил</FormLabel>
                   <FormControl>
-                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <select {...field} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                       <option value="customer">Клиент</option>
                       <option value="business">Бизнес</option>
                     </select>
@@ -234,7 +235,7 @@ export default function RegisterPage() {
                 </FormItem>
               )}
             />
-          </CardContent>
+           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? 'Регистриране...' : 'Регистрация'}
