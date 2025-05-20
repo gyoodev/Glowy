@@ -23,8 +23,7 @@ import { getFirestore, doc, setDoc } from 'firebase/firestore'; // Firestore fun
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
-  email: z.string().email('Невалиден имейл адрес.'), // Email is typically not changed without re-auth/verification
-  profilePhotoUrl: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
+  email: z.string().email('Невалиден имейл адрес.'), // Email is typically not changed without re-auth/verification: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
   favoriteServices: z.array(z.string()).optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   preferredLocations: z.array(z.string()).optional(),
