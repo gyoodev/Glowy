@@ -7,9 +7,9 @@ import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast'; 
-import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
 import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -47,7 +47,7 @@ export default function RegisterPage() {
     },
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Define showConfirmPassword
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
@@ -122,9 +122,18 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card className="w-full max-w-sm shadow-lg rounded-lg">
-      <CardHeader className="space-y-1 text-center pb-4">
-        <CardTitle className="text-2xl font-bold flex items-center justify-center">
+    <Card className="w-full max-w-md shadow-lg rounded-lg">
+      <CardHeader className="text-center pb-4">
+        <CardDescription className="text-muted-foreground mb-4">
+          Присъединете се към Glowy и се насладете на тези предимства:
+          <ul className="list-disc list-inside text-left mt-2 text-sm">
+            <li>Лесно запазване на часове в любимите Ви салони.</li>
+            <li>Достъп до ексклузивни оферти и промоции.</li>
+            <li>Персонализирани препоръки за салони и услуги.</li>
+            <li>Удобно управление на Вашите резервации.</li>
+          </ul>
+        </CardDescription>
+        <CardTitle className="text-3xl font-bold flex items-center justify-center">
           <UserPlus className="mr-3 h-8 w-8 text-primary" />
           Създаване на Акаунт
         </CardTitle>
@@ -183,7 +192,7 @@ export default function RegisterPage() {
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
                         onClick={() => setShowPassword((prev) => !prev)}
                       >
@@ -203,14 +212,13 @@ export default function RegisterPage() {
                   <FormLabel>Потвърдете паролата</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type="password" placeholder="••••••••" {...field} />
+                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
                       <Button 
                         type="button"
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
-                        // Add visibility toggle if needed
-                        onClick={() => alert('Password visibility toggle not implemented yet')} // Placeholder
+                        onClick={() => setShowConfirmPassword((prev) => !prev)}
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />} 
                       </Button>
@@ -227,7 +235,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Тип профил</FormLabel>
                   <FormControl>
-                    <select {...field} className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
+                    <select {...field} className="block w-full px-3 py-2 border border-input bg-background rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm text-foreground">
                       <option value="customer">Клиент</option>
                       <option value="business">Бизнес</option>
                     </select>
@@ -261,3 +269,5 @@ export default function RegisterPage() {
     </Card>
   );
 }
+
+    
