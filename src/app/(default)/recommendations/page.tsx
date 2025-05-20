@@ -20,10 +20,10 @@ export default function RecommendationsPage() {
       const result = await recommendSalons(data);
       setRecommendationOutput(result);
     } catch (error) {
-      console.error('Error getting recommendations:', error);
+      console.error('Грешка при получаване на препоръки:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to get recommendations. Please try again.',
+        title: 'Грешка',
+        description: 'Неуспешно получаване на препоръки. Моля, опитайте отново.',
         variant: 'destructive',
       });
     } finally {
@@ -36,10 +36,10 @@ export default function RecommendationsPage() {
       <header className="mb-12 text-center">
         <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4 flex items-center justify-center">
          <Wand2 className="w-12 h-12 mr-3 text-primary" />
-          AI-Powered Salon Picks
+          AI Препоръки за Салони
         </h1>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-          Let our smart assistant curate salon and service suggestions tailored just for you. Discover hidden gems and trending treatments!
+          Позволете на нашия интелигентен асистент да подбере предложения за салони и услуги, съобразени специално с Вас. Открийте скрити бижута и модерни процедури!
         </p>
       </header>
       

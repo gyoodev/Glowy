@@ -32,16 +32,16 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
   const handleBookSlot = () => {
     if (!selectedDate || !selectedTime) {
       toast({
-        title: "Incomplete Selection",
-        description: "Please select both a date and a time slot.",
+        title: "Непълна селекция",
+        description: "Моля, изберете дата и час.",
         variant: "destructive",
       });
       return;
     }
     
-    const bookingDetails = `Booking confirmed for ${serviceName || 'a service'} at ${salonName} on ${selectedDate.toLocaleDateString()} at ${selectedTime}.`;
+    const bookingDetails = `Резервацията е потвърдена за ${serviceName || 'услуга'} в ${salonName} на ${selectedDate.toLocaleDateString('bg-BG')} в ${selectedTime}.`;
     toast({
-      title: "Booking Successful!",
+      title: "Резервацията е успешна!",
       description: bookingDetails,
     });
     // Here you would typically call an API to finalize the booking
@@ -59,8 +59,8 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
       <CardHeader>
         <CardTitle className="text-xl flex items-center">
           <Clock className="mr-2 h-5 w-5 text-primary" />
-          Book Your Slot
-          {serviceName && <span className="text-sm text-muted-foreground ml-2">for {serviceName}</span>}
+          Резервирайте час
+          {serviceName && <span className="text-sm text-muted-foreground ml-2">за {serviceName}</span>}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col md:flex-row gap-6 items-start">
@@ -77,12 +77,21 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
             modifiersStyles={{
                 available: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}
             }}
+            locale={{
+                localize: {
+                  month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
+                  day: n => ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][n]
+                },
+                formatLong: {
+                  date: () => 'dd/MM/yyyy'
+                }
+            } as any} // Type assertion to bypass strict locale type, assuming basic structure is compatible
           />
         </div>
         {selectedDate && (
           <div className="flex-grow w-full md:w-auto">
             <h4 className="text-md font-semibold mb-3 text-foreground">
-              Available Times for {selectedDate.toLocaleDateString()}
+              Свободни часове за {selectedDate.toLocaleDateString('bg-BG')}
             </h4>
             {availableTimes.length > 0 ? (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -98,11 +107,11 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No available slots for this date.</p>
+              <p className="text-sm text-muted-foreground">Няма свободни часове за тази дата.</p>
             )}
             {selectedTime && (
               <Button onClick={handleBookSlot} className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">
-                Confirm Booking for {selectedTime}
+                Потвърди резервация за {selectedTime}
               </Button>
             )}
           </div>

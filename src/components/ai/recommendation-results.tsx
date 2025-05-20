@@ -18,10 +18,10 @@ export function RecommendationResults({ recommendations }: RecommendationResults
       <CardHeader>
         <CardTitle className="text-2xl flex items-center">
           <Award className="mr-2 h-6 w-6 text-primary" />
-          Your Personalized Recommendations
+          Вашите Персонализирани Препоръки
         </CardTitle>
         <CardDescription>
-          Based on your input, here are some salons and services you might love:
+          Въз основа на Вашата информация, ето някои салони и услуги, които може да Ви харесат:
         </CardDescription>
       </CardHeader>
       <CardContent className="prose prose-sm max-w-none text-foreground">

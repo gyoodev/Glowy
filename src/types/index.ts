@@ -1,8 +1,8 @@
 
 export interface Service {
   id: string;
-  name: string;
-  description: string;
+  name: string; // Ще бъде преведено в mock-data
+  description: string; // Ще бъде преведено в mock-data
   price: number;
   duration: number; // in minutes
   categoryIcon?: React.ElementType; // For Lucide icons
@@ -10,21 +10,21 @@ export interface Service {
 
 export interface Review {
   id: string;
-  userName: string;
+  userName: string; // Ще бъде преведено в mock-data
   userAvatar?: string;
   rating: number; // 1-5
-  comment: string;
+  comment: string; // Ще бъде преведено в mock-data
   date: string; // ISO date string
 }
 
 export interface Salon {
   id: string;
-  name: string;
-  description: string;
-  address: string;
-  city: string;
+  name: string; // Ще бъде преведено в mock-data
+  description: string; // Ще бъде преведено в mock-data
+  address: string; // Ще бъде преведено в mock-data
+  city: string; // Ще бъде преведено в mock-data
   rating: number; // 1-5
-  priceRange: 'cheap' | 'moderate' | 'expensive';
+  priceRange: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
   photos: string[]; // URLs to photos
   services: Service[];
   reviews: Review[];
@@ -34,23 +34,23 @@ export interface Salon {
 
 export interface UserProfile {
   id: string;
-  name: string;
+  name: string; // Ще бъде преведено в mock-data
   email: string;
   profilePhotoUrl?: string;
   preferences?: {
-    favoriteServices?: string[];
-    priceRange?: 'cheap' | 'moderate' | 'expensive';
-    preferredLocations?: string[];
+    favoriteServices?: string[]; // Ще бъде преведено в mock-data
+    priceRange?: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски
+    preferredLocations?: string[]; // Ще бъде преведено в mock-data
   };
 }
 
 export interface Booking {
   id: string;
   salonId: string;
-  salonName: string;
+  salonName: string; // Ще бъде преведено в mock-data
   serviceId: string;
-  serviceName: string;
+  serviceName: string; // Ще бъде преведено в mock-data
   date: string; // ISO date string
   time: string; // "HH:mm"
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
 }

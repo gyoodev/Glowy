@@ -14,9 +14,9 @@ import { useToast } from "@/hooks/use-toast";
 import { UserCircle2 } from 'lucide-react';
 
 const profileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters.'),
-  email: z.string().email('Invalid email address.'),
-  profilePhotoUrl: z.string().url('Invalid URL for profile photo.').optional().or(z.literal('')),
+  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
+  email: z.string().email('Невалиден имейл адрес.'),
+  profilePhotoUrl: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
   favoriteServices: z.string().optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   preferredLocations: z.string().optional(),
@@ -44,10 +44,10 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
 
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
     // Simulate API call
-    console.log('Updated profile data:', data);
+    console.log('Актуализирани данни на профила:', data);
     toast({
-      title: 'Profile Updated',
-      description: 'Your profile information has been successfully updated.',
+      title: 'Профилът е актуализиран',
+      description: 'Информацията за Вашия профил е успешно актуализирана.',
     });
   };
 
@@ -62,8 +62,8 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <CardTitle className="text-2xl">Edit Your Profile</CardTitle>
-            <CardDescription>Keep your personal information and preferences up to date.</CardDescription>
+            <CardTitle className="text-2xl">Редактиране на Вашия Профил</CardTitle>
+            <CardDescription>Поддържайте личната си информация и предпочитания актуални.</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -75,9 +75,9 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Full Name</FormLabel>
+                  <FormLabel>Пълно име</FormLabel>
                   <FormControl>
-                    <Input placeholder="Your full name" {...field} />
+                    <Input placeholder="Вашето пълно име" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -88,9 +88,9 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email Address</FormLabel>
+                  <FormLabel>Имейл адрес</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="your.email@example.com" {...field} />
+                    <Input type="email" placeholder="vashiat.email@example.com" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -101,25 +101,25 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               name="profilePhotoUrl"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Profile Photo URL</FormLabel>
+                  <FormLabel>URL на профилна снимка</FormLabel>
                   <FormControl>
-                    <Input placeholder="https://example.com/your-photo.jpg" {...field} />
+                    <Input placeholder="https://example.com/vashata-snimka.jpg" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <h3 className="text-lg font-semibold pt-4 border-t mt-6">Preferences</h3>
+            <h3 className="text-lg font-semibold pt-4 border-t mt-6">Предпочитания</h3>
             <FormField
               control={form.control}
               name="favoriteServices"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Favorite Services</FormLabel>
+                  <FormLabel>Любими услуги</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Haircut, Manicure, Facial" {...field} />
+                    <Input placeholder="напр. Подстригване, Маникюр, Процедура за лице" {...field} />
                   </FormControl>
-                  <FormDescription>Separate services with a comma.</FormDescription>
+                  <FormDescription>Разделете услугите със запетая.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -129,12 +129,12 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               name="priceRange"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Preferred Price Range</FormLabel>
+                  <FormLabel>Предпочитан ценови диапазон</FormLabel>
                    <select {...field} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                      <option value="">Any</option>
-                      <option value="cheap">Cheap ($)</option>
-                      <option value="moderate">Moderate ($$)</option>
-                      <option value="expensive">Expensive ($$$)</option>
+                      <option value="">Всякакъв</option>
+                      <option value="cheap">Евтино ($)</option>
+                      <option value="moderate">Умерено ($$)</option>
+                      <option value="expensive">Скъпо ($$$)</option>
                     </select>
                   <FormMessage />
                 </FormItem>
@@ -145,18 +145,18 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               name="preferredLocations"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Preferred Locations (Cities/Neighborhoods)</FormLabel>
+                  <FormLabel>Предпочитани местоположения (Градове/Квартали)</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Downtown, North End" {...field} />
+                    <Input placeholder="напр. Център, Северен квартал" {...field} />
                   </FormControl>
-                   <FormDescription>Separate locations with a comma.</FormDescription>
+                   <FormDescription>Разделете местоположенията със запетая.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full sm:w-auto">Save Changes</Button>
+            <Button type="submit" className="w-full sm:w-auto">Запази промените</Button>
           </CardFooter>
         </form>
       </Form>

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Lightbulb } from 'lucide-react';
 
 const recommendationSchema = z.object({
-  userPreferences: z.string().min(10, 'Please describe your preferences in a bit more detail.'),
+  userPreferences: z.string().min(10, 'Моля, опишете предпочитанията си малко по-подробно.'),
   pastBookings: z.string().optional(),
   trendingChoices: z.string().optional(),
 });
@@ -41,10 +41,10 @@ export function RecommendationForm({ onSubmit, isLoading }: RecommendationFormPr
       <CardHeader>
         <CardTitle className="text-2xl flex items-center">
           <Lightbulb className="mr-2 h-6 w-6 text-primary" />
-          AI Salon Recommender
+          AI Препоръки за Салони
         </CardTitle>
         <CardDescription>
-          Tell us what you're looking for, and our AI will suggest the best salons and services for you!
+          Кажете ни какво търсите и нашият AI ще предложи най-добрите салони и услуги за Вас!
         </CardDescription>
       </CardHeader>
       <Form {...form}>
@@ -55,10 +55,10 @@ export function RecommendationForm({ onSubmit, isLoading }: RecommendationFormPr
               name="userPreferences"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Your Preferences</FormLabel>
+                  <FormLabel className="text-base">Вашите предпочитания</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., 'I'm looking for a trendy haircut for long hair, budget-friendly, in downtown. I love vibrant colors and a relaxing atmosphere.'"
+                      placeholder="напр. 'Търся модерна прическа за дълга коса, на достъпна цена, в центъра. Харесвам ярки цветове и релаксираща атмосфера.'"
                       rows={4}
                       {...field}
                     />
@@ -72,10 +72,10 @@ export function RecommendationForm({ onSubmit, isLoading }: RecommendationFormPr
               name="pastBookings"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Past Bookings (Optional)</FormLabel>
+                  <FormLabel className="text-base">Предишни резервации (по избор)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., 'Loved the balayage at Chic Salon last May. Enjoyed a manicure at The Nail Bar.'"
+                      placeholder="напр. 'Хареса ми балеажът в Шик Салон миналия май. Насладих се на маникюр в Нейл Бар.'"
                       rows={3}
                       {...field}
                     />
@@ -89,10 +89,10 @@ export function RecommendationForm({ onSubmit, isLoading }: RecommendationFormPr
               name="trendingChoices"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Known Trending Choices (Optional)</FormLabel>
+                  <FormLabel className="text-base">Известни актуални тенденции (по избор)</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="e.g., 'Heard that curtain bangs are in. Many people are going to GlowUp Studio for facials.'"
+                      placeholder="напр. 'Чух, че бретонът тип завеса е на мода. Много хора ходят в GlowUp Studio за процедури за лице.'"
                       rows={3}
                       {...field}
                     />
@@ -104,7 +104,7 @@ export function RecommendationForm({ onSubmit, isLoading }: RecommendationFormPr
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full text-lg py-6" disabled={isLoading}>
-              {isLoading ? 'Getting Recommendations...' : 'Find My Glow'}
+              {isLoading ? 'Получаване на препоръки...' : 'Намери Моя Блясък'}
             </Button>
           </CardFooter>
         </form>

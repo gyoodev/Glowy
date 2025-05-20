@@ -10,14 +10,20 @@ interface SalonCardProps {
 }
 
 export function SalonCard({ salon }: SalonCardProps) {
+  const priceRangeTranslations = {
+    cheap: 'евтино',
+    moderate: 'умерено',
+    expensive: 'скъпо',
+  };
+
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full">
       <CardHeader className="p-0">
-        <Link href={`/salons/${salon.id}`} aria-label={`View details for ${salon.name}`}>
+        <Link href={`/salons/${salon.id}`} aria-label={`Вижте детайли за ${salon.name}`}>
           <div className="relative h-48 w-full">
             <Image
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
-              alt={`Exterior or interior of ${salon.name}`}
+              alt={`Екстериор или интериор на ${salon.name}`}
               layout="fill"
               objectFit="cover"
               data-ai-hint="salon interior beauty"
@@ -37,12 +43,12 @@ export function SalonCard({ salon }: SalonCardProps) {
         <div className="flex items-center space-x-1 text-sm">
           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
           <span>{salon.rating.toFixed(1)}</span>
-          <span className="text-muted-foreground">({salon.reviews.length} reviews)</span>
+          <span className="text-muted-foreground">({salon.reviews.length} отзива)</span>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize">
-          {salon.priceRange}
+          {priceRangeTranslations[salon.priceRange] || salon.priceRange}
         </Badge>
       </CardFooter>
     </Card>

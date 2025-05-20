@@ -8,6 +8,8 @@ import { mockUserProfile, mockBookings } from '@/lib/mock-data';
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardHeader, CardContent } from '@/components/ui/card';
+
 
 export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -28,20 +30,20 @@ export default function AccountPage() {
       <header className="mb-12">
         <h1 className="text-4xl font-bold tracking-tight text-foreground mb-3 flex items-center">
           <UserCircle className="w-10 h-10 mr-3 text-primary" />
-          My Account
+          Моят Акаунт
         </h1>
         <p className="text-lg text-muted-foreground">
-          Manage your profile, preferences, and view your booking history.
+          Управлявайте своя профил, предпочитания и преглеждайте историята на резервациите си.
         </p>
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:w-1/2 lg:w-1/3 mx-auto mb-8 shadow-sm">
           <TabsTrigger value="profile" className="py-3 text-base">
-            <Edit3 className="mr-2 h-5 w-5" /> Profile
+            <Edit3 className="mr-2 h-5 w-5" /> Профил
           </TabsTrigger>
           <TabsTrigger value="bookings" className="py-3 text-base">
-            <History className="mr-2 h-5 w-5" /> Booking History
+            <History className="mr-2 h-5 w-5" /> История на Резервациите
           </TabsTrigger>
         </TabsList>
 
@@ -67,7 +69,7 @@ export default function AccountPage() {
 
         <TabsContent value="bookings">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">Your Past & Upcoming Bookings</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">Вашите минали и предстоящи резервации</h2>
             {isLoading ? (
                <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -90,7 +92,7 @@ export default function AccountPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-center text-muted-foreground py-8">You have no booking history yet.</p>
+              <p className="text-center text-muted-foreground py-8">Все още нямате история на резервациите.</p>
             )}
           </div>
         </TabsContent>

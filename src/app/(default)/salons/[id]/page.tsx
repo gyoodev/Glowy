@@ -31,7 +31,7 @@ export default function SalonProfilePage() {
           setSalon(fetchedSalon);
         } else {
           // Handle salon not found, e.g. redirect or show error
-          console.error("Salon not found");
+          console.error("Салонът не е намерен");
         }
       }, 500);
     }
@@ -41,10 +41,9 @@ export default function SalonProfilePage() {
     const service = salon?.services.find(s => s.id === serviceId);
     setSelectedService(service);
     toast({
-        title: "Service Selected",
-        description: `${service?.name} added to booking calendar. Please select a date and time.`,
+        title: "Услугата е избрана",
+        description: `${service?.name} е добавена към календара за резервации. Моля, изберете дата и час.`,
     });
-    // Scroll to booking calendar or open modal
     const calendarElement = document.getElementById("booking-calendar-section");
     calendarElement?.scrollIntoView({ behavior: "smooth" });
   };
@@ -69,9 +68,14 @@ export default function SalonProfilePage() {
     );
   }
 
+  const priceRangeTranslations = {
+    cheap: 'евтино',
+    moderate: 'умерено',
+    expensive: 'скъпо',
+  };
+
   return (
     <div className="bg-background">
-      {/* Hero Section */}
       <div className="relative h-64 md:h-96 w-full group">
         <Image
           src={salon.heroImage}
@@ -91,7 +95,6 @@ export default function SalonProfilePage() {
 
       <div className="container mx-auto py-8 px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
           <div className="lg:col-span-2">
             <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -99,14 +102,14 @@ export default function SalonProfilePage() {
                   <div className="flex items-center mb-1">
                     <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
                     <span className="text-2xl font-bold">{salon.rating.toFixed(1)}</span>
-                    <span className="ml-2 text-muted-foreground">({salon.reviews.length} reviews)</span>
+                    <span className="ml-2 text-muted-foreground">({salon.reviews.length} отзива)</span>
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address}
                   </div>
                 </div>
                 <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm mt-2 sm:mt-0 py-1 px-3">
-                  {salon.priceRange}
+                  {priceRangeTranslations[salon.priceRange] || salon.priceRange}
                 </Badge>
               </div>
               <p className="text-foreground leading-relaxed">{salon.description}</p>
@@ -114,14 +117,14 @@ export default function SalonProfilePage() {
 
             <Tabs defaultValue="services" className="mb-8">
               <TabsList className="grid w-full grid-cols-3 mb-4">
-                <TabsTrigger value="services"><Sparkles className="mr-2 h-4 w-4" />Services</TabsTrigger>
-                <TabsTrigger value="reviews"><MessageSquare className="mr-2 h-4 w-4" />Reviews</TabsTrigger>
-                <TabsTrigger value="gallery"><ImageIcon className="mr-2 h-4 w-4" />Gallery</TabsTrigger>
+                <TabsTrigger value="services"><Sparkles className="mr-2 h-4 w-4" />Услуги</TabsTrigger>
+                <TabsTrigger value="reviews"><MessageSquare className="mr-2 h-4 w-4" />Отзиви</TabsTrigger>
+                <TabsTrigger value="gallery"><ImageIcon className="mr-2 h-4 w-4" />Галерия</TabsTrigger>
               </TabsList>
 
               <TabsContent value="services" className="bg-card p-6 rounded-lg shadow-md">
                 <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                  <Sparkles className="mr-2 h-6 w-6 text-primary" /> Our Services
+                  <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
                 </h2>
                 <div className="space-y-1">
                   {salon.services.map(service => (
@@ -132,7 +135,7 @@ export default function SalonProfilePage() {
 
               <TabsContent value="reviews" className="bg-card p-6 rounded-lg shadow-md">
                 <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                  <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Client Testimonials
+                  <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
                 </h2>
                 {salon.reviews.length > 0 ? (
                   <div className="space-y-6">
@@ -141,18 +144,18 @@ export default function SalonProfilePage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground">No reviews yet. Be the first to review!</p>
+                  <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                 )}
               </TabsContent>
               
               <TabsContent value="gallery" className="bg-card p-6 rounded-lg shadow-md">
                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                  <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Photo Gallery
+                  <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {salon.photos.map((photo, index) => (
                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                            <Image src={photo} alt={`${salon.name} gallery image ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
+                            <Image src={photo} alt={`${salon.name} снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
                         </div>
                     ))}
                 </div>
@@ -160,7 +163,6 @@ export default function SalonProfilePage() {
             </Tabs>
           </div>
 
-          {/* Sidebar/Booking */}
           <aside className="lg:col-span-1 space-y-8 sticky top-20">
              <div id="booking-calendar-section">
               <BookingCalendar 
@@ -170,11 +172,11 @@ export default function SalonProfilePage() {
               />
             </div>
             <div className="bg-card p-6 rounded-lg shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Salon Information</h3>
+              <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address}</li>
-                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> (123) 456-7890 (Dummy)</li>
-                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> Mon - Sat: 9 AM - 7 PM</li>
+                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> (123) 456-7890 (Примерен)</li>
+                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> Пон - Съб: 9:00 - 19:00</li>
               </ul>
             </div>
           </aside>

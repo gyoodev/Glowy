@@ -4,9 +4,9 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Search, Sparkles as AppIcon, User } from 'lucide-react'; // Using Sparkles as AppIcon
 
 const navItems = [
-  { href: '/', label: 'Salons' },
-  { href: '/recommendations', label: 'AI Picks' },
-  { href: '/account', label: 'Account' },
+  { href: '/', label: 'Салони' },
+  { href: '/recommendations', label: 'AI Препоръки' },
+  { href: '/account', label: 'Акаунт' },
 ];
 
 export function Header() {
@@ -27,12 +27,12 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
-          <Button variant="ghost" size="icon" aria-label="Search">
+          <Button variant="ghost" size="icon" aria-label="Търсене">
             <Search className="h-5 w-5" />
           </Button>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Отвори менюто">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>

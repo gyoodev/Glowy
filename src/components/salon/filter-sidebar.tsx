@@ -53,21 +53,21 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold flex items-center">
           <ListFilter className="mr-2 h-5 w-5 text-primary" />
-          Filters
+          Филтри
         </CardTitle>
         <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-sm">
-          <X className="mr-1 h-4 w-4" /> Clear
+          <X className="mr-1 h-4 w-4" /> Изчисти
         </Button>
       </CardHeader>
       <CardContent className="space-y-6 p-4">
         <div>
-          <Label htmlFor="location" className="text-sm font-medium">Location (City)</Label>
+          <Label htmlFor="location" className="text-sm font-medium">Местоположение (Град)</Label>
           <Select value={location} onValueChange={setLocation}>
             <SelectTrigger id="location">
-              <SelectValue placeholder="Select city" />
+              <SelectValue placeholder="Изберете град" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_CITIES_VALUE}>All Cities</SelectItem>
+              <SelectItem value={ALL_CITIES_VALUE}>Всички градове</SelectItem>
               {cities.map(city => (
                 <SelectItem key={city} value={city}>{city}</SelectItem>
               ))}
@@ -76,13 +76,13 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="serviceType" className="text-sm font-medium">Service Type</Label>
+          <Label htmlFor="serviceType" className="text-sm font-medium">Тип услуга</Label>
           <Select value={serviceType} onValueChange={setServiceType}>
             <SelectTrigger id="serviceType">
-              <SelectValue placeholder="Select service" />
+              <SelectValue placeholder="Изберете услуга" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_SERVICES_VALUE}>All Services</SelectItem>
+              <SelectItem value={ALL_SERVICES_VALUE}>Всички услуги</SelectItem>
                {serviceTypes.map(type => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
@@ -91,7 +91,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="rating" className="text-sm font-medium">Minimum Rating: {rating[0] === 0 ? 'Any' : `${rating[0]}+ Stars`}</Label>
+          <Label htmlFor="rating" className="text-sm font-medium">Минимален рейтинг: {rating[0] === 0 ? 'Всякакъв' : `${rating[0]}+ Звезди`}</Label>
           <Slider
             id="rating"
             min={0}
@@ -104,22 +104,22 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="priceRange" className="text-sm font-medium">Price Range</Label>
+          <Label htmlFor="priceRange" className="text-sm font-medium">Ценови диапазон</Label>
           <Select value={priceRange} onValueChange={setPriceRange}>
             <SelectTrigger id="priceRange">
-              <SelectValue placeholder="Select price range" />
+              <SelectValue placeholder="Изберете ценови диапазон" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ANY_PRICE_VALUE}>Any Price</SelectItem>
-              <SelectItem value="cheap">Cheap ($)</SelectItem>
-              <SelectItem value="moderate">Moderate ($$)</SelectItem>
-              <SelectItem value="expensive">Expensive ($$$)</SelectItem>
+              <SelectItem value={ANY_PRICE_VALUE}>Всякаква цена</SelectItem>
+              <SelectItem value="cheap">Евтино ($)</SelectItem>
+              <SelectItem value="moderate">Умерено ($$)</SelectItem>
+              <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <Button onClick={handleApplyFilters} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">
-          Apply Filters
+          Приложи филтри
         </Button>
       </CardContent>
     </Card>

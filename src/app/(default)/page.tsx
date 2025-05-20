@@ -31,8 +31,6 @@ export default function SalonDirectoryPage() {
     // Simulate API call
     setTimeout(() => {
       setSalons(mockSalons);
-      // Initial filtering based on default filter values
-      // This will be handled by the main filtering useEffect
       setIsLoading(false);
     }, 1000);
   }, []);
@@ -62,8 +60,9 @@ export default function SalonDirectoryPage() {
         const { location, serviceType, minRating, priceRange } = filters;
         let matches = true;
         if (location && location !== ALL_CITIES_VALUE && salon.city !== location) matches = false;
+        // Ensure service names are compared correctly if mockServices provides Bulgarian names
         if (serviceType && serviceType !== ALL_SERVICES_VALUE && !salon.services.some(s => s.name === serviceType)) matches = false;
-        if (minRating && salon.rating < minRating) matches = false; // minRating 0 means any
+        if (minRating && salon.rating < minRating) matches = false; 
         if (priceRange && priceRange !== ANY_PRICE_VALUE && salon.priceRange !== priceRange) matches = false;
         return matches;
       });
@@ -80,10 +79,10 @@ export default function SalonDirectoryPage() {
       <header className="mb-12 text-center">
         <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4 flex items-center justify-center">
           <VenetianMask className="w-12 h-12 mr-3 text-primary" />
-          Find Your Perfect Salon
+          Намерете Вашия Перфектен Салон
         </h1>
         <p className="text-xl text-muted-foreground">
-          Discover top-rated beauty salons and services near you.
+          Открийте най-добрите салони за красота и услуги близо до Вас.
         </p>
       </header>
 
@@ -92,7 +91,7 @@ export default function SalonDirectoryPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Search by salon name, service, or location..."
+            placeholder="Търсете по име на салон, услуга или местоположение..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-3 text-base rounded-lg shadow-sm"
@@ -132,9 +131,9 @@ export default function SalonDirectoryPage() {
           ) : (
             <div className="text-center py-12">
               <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-2xl font-semibold text-foreground mb-2">No Salons Found</h3>
+              <h3 className="text-2xl font-semibold text-foreground mb-2">Няма намерени салони</h3>
               <p className="text-muted-foreground">
-                Try adjusting your search terms or filters.
+                Опитайте да промените критериите за търсене или филтрите.
               </p>
             </div>
           )}

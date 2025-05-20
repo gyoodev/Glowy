@@ -19,12 +19,12 @@ export function ServiceListItem({ service, onBook }: ServiceListItemProps) {
         </div>
         <p className="text-sm text-muted-foreground mb-1 sm:pl-7">{service.description}</p>
         <div className="flex items-center space-x-4 text-sm text-muted-foreground sm:pl-7">
-          <span>${service.price.toFixed(2)}</span>
-          <span>{service.duration} min</span>
+          <span>{service.price.toFixed(2)} лв.</span>
+          <span>{service.duration} мин.</span>
         </div>
       </div>
       <Button onClick={() => onBook(service.id)} size="sm" className="mt-2 sm:mt-0 self-start sm:self-center">
-        Book Now
+        Резервирай
       </Button>
     </div>
   );

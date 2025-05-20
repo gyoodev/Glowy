@@ -7,11 +7,11 @@ export function Footer() {
         <div className="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
           <Sparkles className="h-6 w-6 text-primary" />
           <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-            Built by Your Friends at Glowy. &copy; {new Date().getFullYear()} All rights reserved.
+            Създадено от Вашите приятели в Glowy. &copy; {new Date().getFullYear()} Всички права запазени.
           </p>
         </div>
         <div className="text-sm text-muted-foreground">
-          Find Your Glow.
+          Открийте Своя Блясък.
         </div>
       </div>
     </footer>
