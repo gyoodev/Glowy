@@ -1,29 +1,104 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { mockUserProfile, mockBookings } from '@/lib/mock-data';
+import { mockBookings } from '@/lib/mock-data'; // mockBookings can still be used for now
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-
+import { auth } from '@/lib/firebase'; // Firebase auth
+import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore'; // Firestore functions
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // To store Firebase user object
+  const router = useRouter();
+  const firestore = getFirestore();
 
   useEffect(() => {
-    // Simulate API calls
-    setTimeout(() => {
-      setUserProfile(mockUserProfile);
-      setBookings(mockBookings);
-      setIsLoading(false);
-    }, 700);
-  }, []);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setCurrentUser(user);
+        setIsLoading(true);
+        try {
+          const userDocRef = doc(firestore, 'users', user.uid);
+          const docSnap = await getDoc(userDocRef);
+
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setUserProfile({
+              id: user.uid,
+              name: data.displayName || user.displayName || '',
+              email: data.email || user.email || '',
+              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
+              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
+            });
+          } else {
+            // User document doesn't exist, create one with defaults from auth and some app defaults
+            console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore.");
+            const defaultProfileData: UserProfile & { createdAt?: Date, profileType?: string, displayName?: string } = {
+              id: user.uid,
+              name: user.displayName || 'Потребител',
+              email: user.email || '',
+              profilePhotoUrl: user.photoURL || '',
+              preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
+              // Fields to save in Firestore, aligning with registration
+              displayName: user.displayName || 'Потребител',
+              createdAt: new Date(),
+              profileType: 'customer', // Default profile type
+            };
+            
+            // Data to actually save, excluding 'id' and 'name' if 'displayName' is preferred for storage
+            const { id: _, name: __, ...dataToSave } = defaultProfileData;
+
+
+            await setDoc(userDocRef, dataToSave);
+            setUserProfile({ // Set state for the UI
+              id: defaultProfileData.id,
+              name: defaultProfileData.name,
+              email: defaultProfileData.email,
+              profilePhotoUrl: defaultProfileData.profilePhotoUrl,
+              preferences: defaultProfileData.preferences,
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching/creating user profile:", error);
+          setUserProfile(null); // Fallback if error
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        // No user is signed in
+        setCurrentUser(null);
+        setUserProfile(null);
+        setIsLoading(false);
+        // Optionally redirect to login
+        router.push('/login');
+      }
+    });
+
+    return () => unsubscribe();
+  }, [firestore, router]);
+
+  useEffect(() => {
+    // Simulate API call for bookings - this can remain for now
+    // This part could also be fetched from Firestore if bookings were stored there
+    if (userProfile) { // Only "load" bookings if a profile is present
+        setTimeout(() => {
+            setBookings(mockBookings);
+        }, 300); // Shorter delay as profile is the main focus
+    } else {
+        setBookings([]); // Clear bookings if no user profile
+    }
+  }, [userProfile]);
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -60,6 +135,8 @@ export default function AccountPage() {
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
                 <Skeleton className="h-12 w-32 mt-4" />
             </div>
           ) : (
@@ -70,7 +147,7 @@ export default function AccountPage() {
         <TabsContent value="bookings">
           <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">Вашите минали и предстоящи резервации</h2>
-            {isLoading ? (
+            {isLoading && bookings.length === 0 ? ( // Show skeletons for bookings only if profile is also loading or bookings not yet fetched
                <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Card key={i} className="shadow-sm">

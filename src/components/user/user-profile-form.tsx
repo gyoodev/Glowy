@@ -16,12 +16,14 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { mockServices, allBulgarianCities } from '@/lib/mock-data'; // Import services and cities
-import { useState } from 'react';
+import { mockServices, allBulgarianCities } from '@/lib/mock-data'; 
+import { useState, useEffect } from 'react';
+import { auth } from '@/lib/firebase'; // Firebase auth
+import { getFirestore, doc, setDoc } from 'firebase/firestore'; // Firestore functions
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
-  email: z.string().email('Невалиден имейл адрес.'),
+  email: z.string().email('Невалиден имейл адрес.'), // Email is typically not changed without re-auth/verification
   profilePhotoUrl: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
   favoriteServices: z.array(z.string()).optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
@@ -31,37 +33,80 @@ const profileSchema = z.object({
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface UserProfileFormProps {
-  userProfile: UserProfile;
+  userProfile: UserProfile; // Expect this to be non-null when rendered
 }
 
 export function UserProfileForm({ userProfile }: UserProfileFormProps) {
   const { toast } = useToast();
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const firestore = getFirestore();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: userProfile.name || '',
-      email: userProfile.email || '',
-      profilePhotoUrl: userProfile.profilePhotoUrl || '',
-      favoriteServices: userProfile.preferences?.favoriteServices || [],
-      priceRange: userProfile.preferences?.priceRange || '',
-      preferredLocations: userProfile.preferences?.preferredLocations || [],
+      name: '', // Initialize with empty and populate via useEffect
+      email: '',
+      profilePhotoUrl: '',
+      favoriteServices: [],
+      priceRange: '',
+      preferredLocations: [],
     },
   });
 
+  // Populate form when userProfile prop changes (e.g., after fetching)
+  useEffect(() => {
+    if (userProfile) {
+      form.reset({
+        name: userProfile.name || '',
+        email: userProfile.email || '',
+        profilePhotoUrl: userProfile.profilePhotoUrl || '',
+        favoriteServices: userProfile.preferences?.favoriteServices || [],
+        priceRange: userProfile.preferences?.priceRange || '',
+        preferredLocations: userProfile.preferences?.preferredLocations || [],
+      });
+    }
+  }, [userProfile, form]);
+
+
   const onSubmit: SubmitHandler<ProfileFormValues> = async (data) => {
-    // Simulate API call
-    console.log('Актуализирани данни на профила:', data);
-    toast({
-      title: 'Профилът е актуализиран',
-      description: 'Информацията за Вашия профил е успешно актуализирана.',
-    });
+    if (!auth.currentUser) {
+      toast({ title: "Грешка", description: "Трябва да сте влезли, за да актуализирате профила.", variant: "destructive" });
+      return;
+    }
+    
+    try {
+      const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+      const profileDataToSave = {
+        displayName: data.name, // Save as displayName in Firestore
+        // email: data.email, // Avoid changing email directly without proper Firebase re-authentication flow
+        profilePhotoUrl: data.profilePhotoUrl || null, // Store null if empty string for easier checks
+        preferences: {
+          favoriteServices: data.favoriteServices || [],
+          priceRange: data.priceRange || null, // Store null if empty string
+          preferredLocations: data.preferredLocations || [],
+        },
+        lastUpdatedAt: new Date(), // Good practice to track updates
+      };
+
+      await setDoc(userDocRef, profileDataToSave, { merge: true });
+      
+      toast({
+        title: 'Профилът е актуализиран',
+        description: 'Информацията за Вашия профил е успешно актуализирана.',
+      });
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Грешка при актуализиране',
+        description: error.message || 'Възникна грешка при запазването на промените.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg max-w-2xl mx-auto">
       <CardHeader>
         <div className="flex items-center space-x-4">
           <Avatar className="h-20 w-20">
@@ -99,8 +144,9 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                 <FormItem>
                   <FormLabel>Имейл адрес</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="vashiat.email@example.com" {...field} />
+                    <Input type="email" placeholder="vashiat.email@example.com" {...field} readOnly disabled />
                   </FormControl>
+                  <FormDescription>Имейлът не може да бъде променян оттук.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -129,7 +175,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                   <Popover open={servicePopoverOpen} onOpenChange={setServicePopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" role="combobox" aria-expanded={servicePopoverOpen} className="w-full justify-between">
-                        {field.value?.length ? `${field.value.length} избран${field.value.length > 1 ? 'и':''} услуги` : "Изберете услуги..."}
+                        {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? 'а': 'и'} услуг${field.value.length === 1 ? 'а': 'и'}` : "Изберете услуги..."}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -147,9 +193,9 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                                   onSelect={() => {
                                     const currentServices = field.value || [];
                                     if (isSelected) {
-                                      form.setValue('favoriteServices', currentServices.filter(s => s !== service.name), { shouldDirty: true });
+                                      form.setValue('favoriteServices', currentServices.filter(s => s !== service.name), { shouldDirty: true, shouldValidate: true });
                                     } else {
-                                      form.setValue('favoriteServices', [...currentServices, service.name], { shouldDirty: true });
+                                      form.setValue('favoriteServices', [...currentServices, service.name], { shouldDirty: true, shouldValidate: true });
                                     }
                                   }}
                                 >
@@ -170,9 +216,10 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                         {serviceName}
                         <button
                           type="button"
+                          aria-label={`Премахни ${serviceName}`}
                           className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onClick={() => {
-                             form.setValue('favoriteServices', (field.value || []).filter(s => s !== serviceName), { shouldDirty: true });
+                             form.setValue('favoriteServices', (field.value || []).filter(s => s !== serviceName), { shouldDirty: true, shouldValidate: true });
                           }}
                         >
                           <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -211,7 +258,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                    <Popover open={locationPopoverOpen} onOpenChange={setLocationPopoverOpen}>
                     <PopoverTrigger asChild>
                       <Button variant="outline" role="combobox" aria-expanded={locationPopoverOpen} className="w-full justify-between">
-                        {field.value?.length ? `${field.value.length} избран${field.value.length > 1 ? 'и':''} град${field.value.length > 1 ? 'а':''}` : "Изберете градове..."}
+                        {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? '' : 'и'} град${field.value.length === 1 ? '' : 'а'}` : "Изберете градове..."}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -229,9 +276,9 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                                   onSelect={() => {
                                     const currentCities = field.value || [];
                                     if (isSelected) {
-                                      form.setValue('preferredLocations', currentCities.filter(c => c !== city), { shouldDirty: true });
+                                      form.setValue('preferredLocations', currentCities.filter(c => c !== city), { shouldDirty: true, shouldValidate: true });
                                     } else {
-                                      form.setValue('preferredLocations', [...currentCities, city], { shouldDirty: true });
+                                      form.setValue('preferredLocations', [...currentCities, city], { shouldDirty: true, shouldValidate: true });
                                     }
                                   }}
                                 >
@@ -252,9 +299,10 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                         {cityName}
                         <button
                           type="button"
+                          aria-label={`Премахни ${cityName}`}
                           className="ml-1.5 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                           onClick={() => {
-                             form.setValue('preferredLocations', (field.value || []).filter(c => c !== cityName), { shouldDirty: true });
+                             form.setValue('preferredLocations', (field.value || []).filter(c => c !== cityName), { shouldDirty: true, shouldValidate: true });
                           }}
                         >
                           <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
@@ -268,10 +316,13 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full sm:w-auto">Запази промените</Button>
+            <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting ? 'Запазване...' : 'Запази промените'}
+            </Button>
           </CardFooter>
         </form>
       </Form>
     </Card>
   );
 }
+
