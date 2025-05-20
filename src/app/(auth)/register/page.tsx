@@ -13,6 +13,7 @@ import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'luci
 import { useState } from 'react';
 import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Added missing import
 import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 
