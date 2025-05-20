@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, LogOut } from 'lucide-react'; 
+import { Menu, Search, Sparkles as AppIcon, LogOut } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -18,33 +18,32 @@ const navItems = [
 export function Header() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Initialize to true
 
   useEffect(() => {
-    setIsLoading(true);
+    // setIsLoading(true); // Not needed here as it's initialized to true
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
-      if (user) {
-        // If user is logged in via Firebase, ensure localStorage is also set for any dependent mock logic.
-        localStorage.setItem('isUserLoggedIn', 'true');
-      } else {
-        // If user is logged out from Firebase, clear localStorage.
-        localStorage.removeItem('isUserLoggedIn');
+      // Ensure localStorage is only accessed on the client
+      if (typeof window !== 'undefined') {
+        if (user) {
+          localStorage.setItem('isUserLoggedIn', 'true');
+        } else {
+          localStorage.removeItem('isUserLoggedIn');
+        }
       }
-      setIsLoading(false);
+      setIsLoading(false); // Set loading to false after auth state is determined
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []);
-  
-  const isLoggedIn = !!currentUser;
+  }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
 
+  const isLoggedIn = !!currentUser;
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      // onAuthStateChanged will handle setCurrentUser(null) and localStorage removal
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -52,7 +51,6 @@ export function Header() {
     }
   };
 
-  // This definition is for when the user IS logged in
   const myAccountLinkDesktop = (
     <Button variant="ghost" asChild>
       <Link href="/account">Моят Акаунт</Link>
@@ -65,7 +63,8 @@ export function Header() {
     </Button>
   );
 
-
+  // Render loading skeleton if isLoading is true
+  // This will be the case on initial server render and initial client render before useEffect runs
   if (isLoading) {
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -80,6 +79,7 @@ export function Header() {
     );
   }
 
+  // Render actual header content once loading is false
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
@@ -87,7 +87,7 @@ export function Header() {
           <AppIcon className="h-6 w-6 text-primary" />
           <span className="font-bold sm:inline-block text-lg">Glowy</span>
         </Link>
-        
+
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
           {navItems.map((item) => (
             <Button key={item.label} variant="ghost" asChild>
