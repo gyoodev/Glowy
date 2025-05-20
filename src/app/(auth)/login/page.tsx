@@ -64,7 +64,7 @@ export default function LoginPage() {
       const user = result.user;
       console.log('Google Sign-In successful:', user);
       localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
-      toast({ // Ensure this is correctly calling toast as a function with an object
+      toast({
         title: 'Влизане с Google успешно',
         description: `Добре дошли, ${user.displayName || user.email}!`,
       });
