@@ -9,9 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, User, Mail, KeyRound, Phone } from 'lucide-react';
+import { UserPlus, User, Mail, KeyRound, Phone, Chrome } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { auth } from '@/lib/firebase';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -42,16 +44,36 @@ export default function RegisterPage() {
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     console.log('Register data:', data);
-    // Simulate successful registration
+    // Here you would typically use Firebase createUserWithEmailAndPassword
+    // For now, we keep the localStorage simulation for email/password
     localStorage.setItem('isUserLoggedIn', 'true');
     toast({
       title: 'Регистрацията е успешна',
       description: 'Вашият акаунт е създаден.',
     });
-    // Redirect to home page or dashboard
     router.push('/');
-     // Optionally, force a reload if header doesn't update automatically
-    // window.location.href = '/';
+  };
+
+  const handleGoogleSignUp = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log('Google Sign-Up successful:', user);
+      localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
+      toast({
+        title: 'Регистрация с Google успешна',
+        description: `Добре дошли, ${user.displayName || user.email}! Вашият акаунт е създаден.`,
+      });
+      router.push('/');
+    } catch (error: any) {
+      console.error('Error during Google Sign-Up:', error);
+      toast({
+        title: 'Грешка при регистрация с Google',
+        description: error.message || 'Възникна неочаквана грешка.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -135,6 +157,14 @@ export default function RegisterPage() {
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full text-lg py-6" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? 'Регистриране...' : 'Регистрация'}
+            </Button>
+            <div className="relative flex py-2 items-center">
+              <div className="flex-grow border-t border-muted-foreground"></div>
+              <span className="flex-shrink mx-4 text-muted-foreground text-xs">ИЛИ</span>
+              <div className="flex-grow border-t border-muted-foreground"></div>
+            </div>
+            <Button variant="outline" className="w-full text-lg py-6" onClick={handleGoogleSignUp} type="button">
+              <Chrome className="mr-2 h-5 w-5" /> Регистрация с Google
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               Вече имате акаунт?{' '}

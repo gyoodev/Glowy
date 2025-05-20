@@ -6,30 +6,50 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, UserCircle, LogOut } from 'lucide-react'; 
+import { Menu, Search, Sparkles as AppIcon, LogOut } from 'lucide-react'; 
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
 const navItems = [
   { href: '/', label: 'Салони' },
   { href: '/recommendations', label: 'AI Препоръки' },
-  // "Моят Акаунт" will be handled conditionally below
 ];
 
 export function Header() {
   const router = useRouter();
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check login status from localStorage on component mount
-    const userLoggedIn = localStorage.getItem('isUserLoggedIn') === 'true';
-    setIsLoggedIn(userLoggedIn);
-    setIsLoading(false);
-  }, []);
+    setIsLoading(true);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      if (user) {
+        // If user is logged in via Firebase, ensure localStorage is also set for any dependent mock logic.
+        localStorage.setItem('isUserLoggedIn', 'true');
+      } else {
+        // If user is logged out from Firebase, clear localStorage.
+        localStorage.removeItem('isUserLoggedIn');
+      }
+      setIsLoading(false);
+    });
 
-  const handleLogout = () => {
-    localStorage.removeItem('isUserLoggedIn');
-    setIsLoggedIn(false);
-    router.push('/login');
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+  
+  const isLoggedIn = !!currentUser;
+
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      // onAuthStateChanged will handle setCurrentUser(null) and localStorage removal
+      router.push('/login');
+    } catch (error) {
+      console.error("Error signing out: ", error);
+      // Optionally, show a toast error
+    }
   };
 
   const accountLinkOrAction = isLoggedIn ? (
@@ -37,6 +57,7 @@ export function Header() {
       <Link href="/account">Моят Акаунт</Link>
     </Button>
   ) : (
+    // If not logged in, "Моят Акаунт" still leads to login
     <Button variant="ghost" onClick={() => router.push('/login')}>
       Моят Акаунт
     </Button>
@@ -54,8 +75,6 @@ export function Header() {
 
 
   if (isLoading) {
-    // You can return a skeleton loader for the header here if desired
-    // For simplicity, just rendering a minimal header or null during loading
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center">
