@@ -87,8 +87,18 @@ export default function AccountPage() {
           // For now, let's use what's fetched or an empty array.
           setBookings(fetchedBookings);
 
-        } catch (error) {
-          console.error("Error fetching/creating user profile or bookings:", error, { user: user?.uid, email: user?.email }); // Log detailed error
+        } catch (error: any) {
+          console.error("Error fetching/creating user profile or bookings:", error);
+           // Enhanced error logging
+          if (error.code) {
+            console.error("Firebase error code:", error.code);
+          }
+          if (error.message) {
+            console.error("Firebase error message:", error.message);
+          }
+          if (error.details) {
+            console.error("Firebase error details:", error.details); // This might be undefined for auth/permission errors
+          }
           setUserProfile(null); // Fallback if error
           setBookings([]); // Clear bookings on error too
         } finally {
@@ -151,7 +161,7 @@ export default function AccountPage() {
             <UserProfileForm userProfile={userProfile} />
           ) : (
              <p className="text-center text-muted-foreground py-8">
-                Неуспешно зареждане на профила. Моля, проверете връзката си или опитайте да влезете отново.
+                Неуспешно зареждане на профила. Моля, проверете връзката си или опитайте да влезете отново. Възможно е да има проблем с правата за достъп до данните.
              </p>
           )}
         </TabsContent>
@@ -189,4 +199,3 @@ export default function AccountPage() {
     </div>
   );
 }
-
