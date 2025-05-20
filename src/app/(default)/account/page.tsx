@@ -5,13 +5,12 @@ import { useState, useEffect } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-// import { mockBookings } from '@/lib/mock-data'; // Bookings will be fetched or mocked later
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { auth } from '@/lib/firebase'; // Firebase auth
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore'; // Firestore functions
+import { auth } from '@/lib/firebase'; 
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'; 
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 
@@ -19,47 +18,54 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // To store Firebase user object
-  const [fetchError, setFetchError] = useState<any | null>(null); // To store any error during data fetching
+  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); 
+  const [fetchError, setFetchError] = useState<any | null>(null); 
   const router = useRouter();
   const firestore = getFirestore();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
-      setFetchError(null); // Reset error on new auth state
-      if (user) {
+      setFetchError(null); 
+      if (user && user.email) { // Ensure user and user.email exist
         setCurrentUser(user);
         try {
-          const userDocRef = doc(firestore, 'users', user.uid);
-          const docSnap = await getDoc(userDocRef);
+          // Query for the user document by email
+          const usersCollectionRef = collection(firestore, 'users');
+          const q = query(usersCollectionRef, where('email', '==', user.email));
+          const querySnapshot = await getDocs(q);
 
-          if (docSnap.exists()) {
-            const data = docSnap.data();
+          let userDocSnap;
+          let userIdForProfile = user.uid; // Default to auth UID for new profiles
+
+          if (!querySnapshot.empty) {
+            // Assuming email is unique, take the first document
+            userDocSnap = querySnapshot.docs[0];
+            userIdForProfile = userDocSnap.id; // Use the ID from the found document (should be user.uid)
+            const data = userDocSnap.data();
             setUserProfile({
-              id: user.uid,
+              id: userIdForProfile,
               name: data.displayName || user.displayName || 'Потребител',
               email: data.email || user.email || '',
               profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
               preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              // userId: data.userId || user.uid, // Ensure userId is populated for the UserProfile type
+              // userId: data.userId || userIdForProfile, // Ensure userId is populated
             });
           } else {
-            console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore.");
-            // Data to be saved in Firestore
+            console.log("User document not found for email:", user.email, ". Creating default profile in Firestore using UID:", user.uid);
+            // Create a new profile document using user.uid as the document ID
+            const newUserDocRef = doc(firestore, 'users', user.uid);
             const dataToSave = {
-              userId: user.uid, // Explicitly add userId
-              email: user.email || '',
+              userId: user.uid,
+              email: user.email,
               displayName: user.displayName || 'Потребител',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              createdAt: new Date(),
-              profileType: 'customer', // Default profile type
+              createdAt: Timestamp.fromDate(new Date()), // Use Firestore Timestamp
+              profileType: 'customer', 
             };
 
-            await setDoc(userDocRef, dataToSave);
-
-            // Data for client-side UserProfile state
+            await setDoc(newUserDocRef, dataToSave);
             setUserProfile({ 
               id: user.uid,
               name: dataToSave.displayName,
@@ -71,6 +77,7 @@ export default function AccountPage() {
           }
 
           // Fetch bookings (mocked for now, but could be real)
+          // If bookings are tied to userId, ensure it's the correct one (user.uid)
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
@@ -85,7 +92,6 @@ export default function AccountPage() {
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error); 
-          // Enhanced error logging
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
@@ -94,6 +100,10 @@ export default function AccountPage() {
           }
           if (error.details) {
             console.error("Firebase error details:", error.details);
+          }
+          if (error.code === 'failed-precondition') {
+            console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it. The query was likely on the 'email' field in the 'users' collection.");
+            setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           }
           setUserProfile(null); 
           setBookings([]); 
@@ -105,7 +115,13 @@ export default function AccountPage() {
         setUserProfile(null);
         setBookings([]);
         setIsLoading(false);
-        router.push('/login');
+        if (!user) { // Only redirect if user is truly null, not if email is missing
+          router.push('/login');
+        } else if (user && !user.email) {
+          console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
+          setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."})
+          setIsLoading(false);
+        }
       }
     });
 
@@ -167,16 +183,9 @@ export default function AccountPage() {
                       Системата засече, че нямате необходимите права за достъп до Вашите данни в Firestore.
                     </p>
                     <p className="mb-3">
-                      Това обикновено се дължи на конфигурацията на **Firestore Security Rules** във Вашия Firebase проект.
+                      Това обикновено се дължи на конфигурацията на **Firestore Security Rules** във Вашия Firebase проект. Моля, уверете се, че правилата Ви позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users' (документ ID трябва да е UID на потребителя).
                     </p>
-                    <p className="font-semibold">Какво да направите:</p>
-                    <ol className="list-decimal list-inside text-left mt-1 mb-3 mx-auto max-w-md bg-background/50 p-3 rounded">
-                        <li>Отворете <strong className="text-foreground">Firebase Console</strong>.</li>
-                        <li>Изберете Вашия проект: <strong className="text-foreground">glowy-gyoodev</strong>.</li>
-                        <li>Навигирайте до <strong className="text-foreground">Firestore Database</strong> &gt; <strong className="text-foreground">Rules</strong> таб.</li>
-                        <li>Уверете се, че правилата позволяват на удостоверени потребители да четат и пишат своите профили в колекцията 'users'.</li>
-                    </ol>
-                     <p className="mb-1">Необходими правила (копирайте и поставете в Firebase Console -> Firestore -> Rules):</p>
+                    <p className="font-semibold">Необходими правила (в Firebase Console &gt; Firestore &gt; Rules):</p>
                     <pre className="text-xs bg-muted text-muted-foreground p-2 rounded-md overflow-x-auto text-left my-2">
                       <code>
                         rules_version = '2';<br/>
@@ -191,6 +200,8 @@ export default function AccountPage() {
                     </pre>
                     <p>След като актуализирате и публикувате тези правила, моля, <strong className="text-foreground">презаредете тази страница</strong>.</p>
                   </div>
+                ) : fetchError && fetchError.customMessage ? (
+                  <p>{fetchError.customMessage}</p>
                 ) : (
                   <p>
                     Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
@@ -234,3 +245,5 @@ export default function AccountPage() {
     </div>
   );
 }
+
+    
