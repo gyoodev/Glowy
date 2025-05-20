@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, User, Mail, KeyRound, Phone } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -27,6 +28,7 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -40,11 +42,16 @@ export default function RegisterPage() {
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     console.log('Register data:', data);
+    // Simulate successful registration
+    localStorage.setItem('isUserLoggedIn', 'true');
     toast({
       title: 'Регистрацията е успешна',
       description: 'Вашият акаунт е създаден.',
     });
-     // Here you would typically redirect or handle auth state
+    // Redirect to home page or dashboard
+    router.push('/');
+     // Optionally, force a reload if header doesn't update automatically
+    // window.location.href = '/';
   };
 
   return (

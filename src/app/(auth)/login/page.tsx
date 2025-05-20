@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, Mail, KeyRound } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
   email: z.string().email('Невалиден имейл адрес.'),
@@ -21,6 +22,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const { toast } = useToast();
+  const router = useRouter();
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
@@ -31,11 +33,16 @@ export default function LoginPage() {
 
   const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
     console.log('Login data:', data);
+    // Simulate successful login
+    localStorage.setItem('isUserLoggedIn', 'true');
     toast({
       title: 'Влизане успешно',
       description: 'Добре дошли отново!',
     });
-    // Here you would typically redirect or handle auth state
+    // Redirect to home page or dashboard
+    router.push('/'); 
+    // Optionally, force a reload if header doesn't update automatically due to SPA behavior
+    // window.location.href = '/'; 
   };
 
   return (
