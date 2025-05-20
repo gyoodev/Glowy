@@ -6,8 +6,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, User, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
@@ -121,22 +121,12 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card className="shadow-xl w-full">
-      <CardHeader className="text-center">
-        <div className="mb-4 text-sm text-muted-foreground">
-            <p className="font-semibold text-base text-foreground">Защо да се регистрирате?</p>
-            <ul className="list-disc list-inside text-left mt-1 space-y-0.5">
-                <li>Запазвайте лесно часове за салони.</li>
-                <li>Получавайте персонализирани AI препоръки.</li>
-                <li>Следете историята на резервациите си.</li>
-                <li>Управлявайте предпочитанията си за бъдещи посещения.</li>
-            </ul>
-        </div>
-        <CardTitle className="text-3xl font-bold flex items-center justify-center">
+ <Card className="w-full max-w-sm shadow-lg rounded-lg">
+      <CardHeader className="space-y-1 text-center">
+        <CardTitle className="text-2xl font-bold flex items-center justify-center">
           <UserPlus className="mr-3 h-8 w-8 text-primary" />
           Създаване на Акаунт
         </CardTitle>
-        <CardDescription>Попълнете формата, за да се регистрирате.</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -146,7 +136,7 @@ export default function RegisterPage() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><User className="mr-2 h-4 w-4 text-muted-foreground" />Пълно име</FormLabel>
+                  <FormLabel>Пълно име</FormLabel>
                   <FormControl>
                     <Input placeholder="Вашето пълно име" {...field} />
                   </FormControl>
@@ -159,7 +149,7 @@ export default function RegisterPage() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
+                  <FormLabel>Имейл</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="vashiat.email@example.com" {...field} />
                   </FormControl>
@@ -172,7 +162,7 @@ export default function RegisterPage() {
               name="phoneNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+                  <FormLabel>Телефонен номер</FormLabel>
                   <FormControl>
                     <Input type="tel" placeholder="0881234567" {...field} />
                   </FormControl>
@@ -185,9 +175,7 @@ export default function RegisterPage() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center">
-                    <KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Парола
-                  </FormLabel>
+                  <FormLabel>Парола</FormLabel>
                   <FormControl>
                     <div className="relative">
                       <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
@@ -211,7 +199,7 @@ export default function RegisterPage() {
               name="confirmPassword" 
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center"><KeyRound className="mr-2 h-4 w-4 text-muted-foreground" />Потвърди парола</FormLabel> 
+                  <FormLabel>Потвърди парола</FormLabel> 
                   <FormControl>
                     <div className="relative">
                       <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
@@ -237,7 +225,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Тип профил</FormLabel>
                   <FormControl>
-                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm dark:bg-input dark:border-border">
+                    <select {...field} className="block w-full px-3 py-2 border border-input rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary sm:text-sm">
                       <option value="customer">Клиент</option>
                       <option value="business">Бизнес</option>
                     </select>
@@ -248,7 +236,7 @@ export default function RegisterPage() {
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full text-lg py-6" disabled={form.formState.isSubmitting}>
+            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? 'Регистриране...' : 'Регистрация'}
             </Button>
             <div className="relative flex py-2 items-center">
@@ -256,7 +244,7 @@ export default function RegisterPage() {
               <span className="flex-shrink mx-4 text-muted-foreground text-xs">ИЛИ</span>
               <div className="flex-grow border-t border-muted-foreground"></div>
             </div>
-            <Button variant="outline" className="w-full text-lg py-6" onClick={handleGoogleSignUp} type="button">
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} type="button">
               <Chrome className="mr-2 h-5 w-5" /> Регистрация с Google
             </Button>
             <div className="text-center text-sm text-muted-foreground">
