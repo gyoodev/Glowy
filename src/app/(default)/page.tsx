@@ -1,0 +1,134 @@
+'use client';
+
+import { useState, useMemo, useEffect } from 'react';
+import { SalonCard } from '@/components/salon/salon-card';
+import { FilterSidebar } from '@/components/salon/filter-sidebar';
+import { mockSalons, mockServices } from '@/lib/mock-data';
+import type { Salon } from '@/types';
+import { Input } from '@/components/ui/input';
+import { Search, MapPin, VenetianMask } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
+export default function SalonDirectoryPage() {
+  const [salons, setSalons] = useState<Salon[]>([]);
+  const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState<Record<string, any>>({});
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Simulate API call
+    setTimeout(() => {
+      setSalons(mockSalons);
+      setFilteredSalons(mockSalons);
+      setIsLoading(false);
+    }, 1000);
+  }, []);
+
+  const uniqueCities = useMemo(() => {
+    const cities = new Set(salons.map(salon => salon.city));
+    return Array.from(cities);
+  }, [salons]);
+
+  const uniqueServiceTypes = useMemo(() => {
+    const serviceNames = new Set(mockServices.map(service => service.name));
+    return Array.from(serviceNames);
+  }, []);
+
+  useEffect(() => {
+    let result = salons;
+
+    if (searchTerm) {
+      result = result.filter(salon =>
+        salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        salon.description.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (Object.keys(filters).length > 0) {
+      result = result.filter(salon => {
+        const { location, serviceType, minRating, priceRange } = filters;
+        let matches = true;
+        if (location && salon.city !== location) matches = false;
+        if (serviceType && !salon.services.some(s => s.name === serviceType)) matches = false;
+        if (minRating && salon.rating < minRating) matches = false;
+        if (priceRange && salon.priceRange !== priceRange) matches = false;
+        return matches;
+      });
+    }
+    setFilteredSalons(result);
+  }, [searchTerm, filters, salons]);
+
+  const handleFilterChange = (newFilters: Record<string, any>) => {
+    setFilters(newFilters);
+  };
+
+  return (
+    <div className="container mx-auto py-8 px-4">
+      <header className="mb-12 text-center">
+        <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4 flex items-center justify-center">
+          <VenetianMask className="w-12 h-12 mr-3 text-primary" />
+          Find Your Perfect Salon
+        </h1>
+        <p className="text-xl text-muted-foreground">
+          Discover top-rated beauty salons and services near you.
+        </p>
+      </header>
+
+      <div className="mb-8 max-w-2xl mx-auto">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Search by salon name, service, or location..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 text-base rounded-lg shadow-sm"
+          />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
+        <aside className="lg:col-span-1">
+          <FilterSidebar 
+            onFilterChange={handleFilterChange} 
+            cities={uniqueCities}
+            serviceTypes={uniqueServiceTypes}
+          />
+        </aside>
+
+        <main className="lg:col-span-3">
+          {isLoading ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="flex flex-col space-y-3">
+                  <Skeleton className="h-[192px] w-full rounded-xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : filteredSalons.length > 0 ? (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredSalons.map(salon => (
+                <SalonCard key={salon.id} salon={salon} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-2xl font-semibold text-foreground mb-2">No Salons Found</h3>
+              <p className="text-muted-foreground">
+                Try adjusting your search terms or filters.
+              </p>
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
