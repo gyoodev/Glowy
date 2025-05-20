@@ -35,11 +35,11 @@ export default function AccountPage() {
           if (docSnap.exists()) {
             const data = docSnap.data();
             setUserProfile({
-              id: user.uid,
-              name: data.displayName || user.displayName || '',
-              email: data.email || user.email || '',
-              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '',
-              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] },
+              id: user.uid, // Ensure id is always included
+              name: data.displayName || user.displayName || '', // Ensure name is always included
+              email: data.email || user.email || '', // Ensure email is always included
+              profilePhotoUrl: data.profilePhotoUrl || user.photoURL || '', // Ensure profilePhotoUrl is always included
+              preferences: data.preferences || { favoriteServices: [], priceRange: '', preferredLocations: [] }, // Ensure preferences are always included
             });
           } else {
             // User document doesn't exist, create one with defaults from auth and some app defaults
@@ -62,11 +62,11 @@ export default function AccountPage() {
 
             await setDoc(userDocRef, dataToSave);
             setUserProfile({ // Set state for the UI
-              id: defaultProfileData.id,
-              name: defaultProfileData.name,
-              email: defaultProfileData.email,
-              profilePhotoUrl: defaultProfileData.profilePhotoUrl,
-              preferences: defaultProfileData.preferences,
+              id: defaultProfileData.id, // Ensure id is always included
+              name: defaultProfileData.name, // Ensure name is always included
+              email: defaultProfileData.email, // Ensure email is always included
+              profilePhotoUrl: defaultProfileData.profilePhotoUrl, // Ensure profilePhotoUrl is always included
+              preferences: defaultProfileData.preferences, // Ensure preferences are always included
             });
           }
 
@@ -127,7 +127,7 @@ export default function AccountPage() {
         </TabsList>
 
         <TabsContent value="profile">
-          {isLoading || !userProfile ? (
+          {isLoading && !userProfile ? (
             <div className="space-y-4 max-w-2xl mx-auto">
                 <div className="flex items-center space-x-4 mb-6">
                     <Skeleton className="h-20 w-20 rounded-full" />
