@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -19,6 +20,10 @@ export default function RecommendationsPage() {
     try {
       const result = await recommendSalons(data);
       setRecommendationOutput(result);
+      toast({
+        title: 'Препоръките са генерирани',
+        description: 'Разгледайте персонализираните си предложения по-долу.',
+      });
     } catch (error) {
       console.error('Грешка при получаване на препоръки:', error);
       toast({
@@ -60,3 +65,4 @@ export default function RecommendationsPage() {
     </div>
   );
 }
+
