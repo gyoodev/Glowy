@@ -9,12 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, User, Mail, KeyRound } from 'lucide-react';
+import { UserPlus, User, Mail, KeyRound, Phone } from 'lucide-react';
 import Link from 'next/link';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
+  phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
   password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
   confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
 }).refine(data => data.password === data.confirmPassword, {
@@ -31,6 +32,7 @@ export default function RegisterPage() {
     defaultValues: {
       name: '',
       email: '',
+      phoneNumber: '',
       password: '',
       confirmPassword: '',
     },
@@ -78,6 +80,19 @@ export default function RegisterPage() {
                   <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл адрес</FormLabel>
                   <FormControl>
                     <Input type="email" placeholder="vashiat.email@example.com" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="0881234567" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
