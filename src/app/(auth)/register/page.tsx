@@ -16,7 +16,7 @@ import Link from 'next/link';
 import { collection, doc, setDoc } from 'firebase/firestore'; // Import firestore functions
 import { useRouter } from 'next/navigation'; 
 import { auth } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 
 const registerSchema = z.object({
  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -49,7 +49,7 @@ export default function RegisterPage() {
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
  try {
-      const userCredential = await auth.createUserWithEmailAndPassword(data.email, data.password);
+      const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
  if (user) {
@@ -70,43 +70,6 @@ export default function RegisterPage() {
  });
  router.push('/');
  }
- } catch (error: any) {
- console.error('Error during registration:', error);
- toast({
- title: 'Грешка при регистрация',
- description: error.message || 'Възникна неочаквана грешка.',
- variant: 'destructive',
- });
- }
-  };
-
-  const handleGoogleSignUp = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log('Google Sign-Up successful:', user);
-
- if (user) {
-        // Check if user already exists in Firestore, add if not
- const userRef = doc(firestore, 'users', user.uid);
- const docSnap = await getDoc(userRef);
-
- if (!docSnap.exists()) {
- await setDoc(userRef, {
- email: user.email,
- displayName: user.displayName,
-          phoneNumber: user.phoneNumber, // Google might not provide phone number directly
- createdAt: new Date(),
- });
- }
-
- localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
- toast({
- title: 'Регистрация с Google успешна',
-      description: 'Вашият акаунт е създаден.',
-    });
-    router.push('/');
   };
 
   const handleGoogleSignUp = async () => {
@@ -129,8 +92,9 @@ export default function RegisterPage() {
             createdAt: new Date(),
           });
         }
-      });
+      }
     }
+
   };
 
   return (
