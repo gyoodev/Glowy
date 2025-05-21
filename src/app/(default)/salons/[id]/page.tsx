@@ -15,8 +15,9 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 // import { Separator } from '@/components/ui/separator'; // Separator is not used
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking } from '@/lib/firebase'; // Import createBooking
-import { Button } from '@/components/ui/button'; // Added Button import
+import { createBooking, auth } from '@/lib/firebase'; // Import createBooking and auth
+import { Button } from '@/components/ui/button';
+import { sendReviewReminderEmail } from '@/app/actions/notificationActions'; // Import the action
 
 export default function SalonProfilePage() {
   const params = useParams();
@@ -59,6 +60,14 @@ export default function SalonProfilePage() {
   };
 
   const handleConfirmBooking = async () => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Не сте влезли",
+        description: "Моля, влезте в профила си, за да направите резервация.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!selectedService || !selectedBookingDate || !selectedBookingTime) {
       toast({
         title: "Непълна информация за резервация",
@@ -69,21 +78,43 @@ export default function SalonProfilePage() {
     }
 
     try {
-      // TODO: Get actual user ID
-      const userId = "placeholder-user-id"; 
+      const userId = auth.currentUser.uid; 
 
       await createBooking({
         salonId: salonId,
         userId: userId,
-        service: selectedService,
-        date: selectedBookingDate.toISOString(), // Store date as ISO string
+        service: selectedService, // Pass the whole service object
+        date: selectedBookingDate.toISOString(), 
         time: selectedBookingTime,
       });
 
       toast({
         title: "Резервацията е потвърдена!",
-        description: `Успешно резервирахте ${selectedService.name} за ${selectedBookingDate.toLocaleDateString()} в ${selectedBookingTime}.`,
+        description: `Успешно резервирахте ${selectedService.name} за ${selectedBookingDate.toLocaleDateString('bg-BG')} в ${selectedBookingTime}.`,
       });
+
+      // Send review reminder email (simulation)
+      try {
+        await sendReviewReminderEmail({
+            salonName: salon.name,
+            serviceName: selectedService.name,
+            bookingDate: selectedBookingDate.toLocaleDateString('bg-BG'),
+            bookingTime: selectedBookingTime,
+        });
+        toast({
+            title: "Покана за отзив (симулация)",
+            description: "След преживяването си, ще получите покана да оставите отзив.",
+            variant: "default", // Or 'success' if you have one
+            duration: 4000,
+        });
+      } catch (emailError) {
+          console.error("Error simulating review reminder email:", emailError);
+          toast({
+              title: "Грешка (симулация на имейл)",
+              description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
+              variant: "destructive",
+          });
+      }
 
       // Reset selections after successful booking
       setSelectedService(undefined);
@@ -120,7 +151,7 @@ export default function SalonProfilePage() {
     );
   }
 
-  const priceRangeTranslations = {
+  const priceRangeTranslations: Record<Salon['priceRange'], string> = {
     cheap: 'евтино',
     moderate: 'умерено',
     expensive: 'скъпо',
@@ -199,7 +230,7 @@ export default function SalonProfilePage() {
                   <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                 )}
                 <div className="mt-6 text-center">
-                  <Button variant="outline" onClick={() => {}} data-ai-hint="Add review button">Добави Отзив</Button>
+                  <Button variant="outline" onClick={() => { /* TODO: Implement add review functionality */ }} data-ai-hint="Add review button">Добави Отзив</Button>
                 </div>
               </TabsContent>
               
@@ -231,8 +262,12 @@ export default function SalonProfilePage() {
               <Button
                 onClick={handleConfirmBooking}
                 className="w-full py-6 text-lg font-semibold"
+                disabled={!auth.currentUser} // Disable if not logged in
               >
-                Потвърди резервация за {selectedService.name} на {selectedBookingDate.toLocaleDateString()} в {selectedBookingTime}
+                {auth.currentUser ? 
+                  `Потвърди: ${selectedService.name} на ${selectedBookingDate.toLocaleDateString('bg-BG')} в ${selectedBookingTime}`
+                  : "Влезте за да резервирате"
+                }
               </Button>
             )}
             <div className="bg-card p-6 rounded-lg shadow-lg">

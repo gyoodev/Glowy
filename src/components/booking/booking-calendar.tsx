@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
-import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
+// sendReviewReminderEmail is not used here anymore
 
 interface BookingCalendarProps {
   salonName: string;
@@ -16,11 +16,11 @@ interface BookingCalendarProps {
   onTimeSelect?: (date: Date | undefined, time: string | undefined) => void;
 }
 
-export function BookingCalendar({ salonName, serviceName, availability = {} }: BookingCalendarProps) {
+export function BookingCalendar({ salonName, serviceName, availability = {}, onTimeSelect }: BookingCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
-  const { toast } = useToast();
+  const { toast } = useToast(); // toast is not used in this component anymore
 
   useEffect(() => {
     if (selectedDate) {
@@ -37,13 +37,9 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
     // Call the parent callback with the selected date and time
     if (onTimeSelect) {
       onTimeSelect(selectedDate, time);
-      toast({
-        title: "Грешка",
-        description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
-        variant: "destructive",
-      });
+      // The problematic toast that was here has been removed.
+      // Email simulation logic is moved to the parent component after actual booking confirmation.
     }
-
   };
   
   const today = new Date();
@@ -106,18 +102,17 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
             ) : (
               <p className="text-sm text-muted-foreground">Няма свободни часове за тази дата.</p>
             )}
-            {selectedTime && (
+            {/* The Book Now button here is redundant if the parent page handles confirmation */}
+            {/* {selectedTime && (
               <div className="mt-4">
                 <Button className="w-full">
                   Book Now
-                  {/* TODO: Implement booking logic here */}
                 </Button>
               </div>
-            )}
+            )} */}
           </div>
         )}
       </CardContent>
     </Card>
   );
 }
-
