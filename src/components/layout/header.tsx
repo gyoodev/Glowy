@@ -69,6 +69,12 @@ export function Header() {
         <Link href="/account">Моят Акаунт</Link>
     </Button>
   );
+ const adminPanelLinkMobile = (
+ <Button variant="ghost" asChild className="justify-start">
+ <Link href="/admin/dashboard">Admin Panel</Link>
+ </Button>
+ );
+
 
   const adminPanelLinkDesktop = (
      <Button variant="ghost" asChild>
@@ -108,6 +114,7 @@ export function Header() {
             </Button>
           ))}
           {isLoggedIn && myAccountLinkDesktop}
+ {userRole === 'admin' && adminPanelLinkDesktop}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
@@ -145,6 +152,7 @@ export function Header() {
                   </Button>
                 ))}
                 {isLoggedIn && myAccountLinkMobile}
+ {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (
                   <Button variant="outline" onClick={handleLogout} className="justify-start text-base py-3">

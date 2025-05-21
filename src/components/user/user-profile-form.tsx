@@ -44,7 +44,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: '', // Initialize with empty and populate via useEffect
+ name: userProfile.displayName || userProfile.name || '', // Initialize with displayName, fallback to name, then empty
       email: '',
       favoriteServices: [],
       priceRange: '',
@@ -56,7 +56,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
   useEffect(() => {
     if (userProfile) {
       form.reset({
-        name: userProfile.name || '',
+ name: userProfile.displayName || userProfile.name || '',
         email: userProfile.email || '',
         favoriteServices: userProfile.preferences?.favoriteServices || [],
         priceRange: userProfile.preferences?.priceRange || '',
