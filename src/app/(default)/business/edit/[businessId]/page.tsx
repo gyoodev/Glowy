@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -14,18 +14,24 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { format, parse } from 'date-fns';
+import { bg } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 export default function EditBusinessPage() {
   const router = useRouter();
   const params = useParams();
   const businessId = params.businessId as string;
+  const authInstance = getAuth();
+  const firestore = getFirestore();
+  const { toast } = useToast();
 
   const [business, setBusiness] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  // formData will now store URLs directly
   const [formData, setFormData] = useState<Partial<Salon> & { newHeroImageUrl?: string, newGalleryPhotoUrl?: string }>({
     name: '',
     description: '',
@@ -38,13 +44,14 @@ export default function EditBusinessPage() {
     workingHours: '',
     heroImage: '',
     photos: [],
-    newHeroImageUrl: '', // Temporary field for new hero image URL input
-    newGalleryPhotoUrl: '' // Temporary field for new gallery photo URL input
+    newHeroImageUrl: '',
+    newGalleryPhotoUrl: '',
+    availability: {}, // Added for availability
   });
 
-  const firestore = getFirestore();
-  const { toast } = useToast();
-  const authInstance = getAuth();
+  // State for availability management UI
+  const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
+  const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(authInstance, (user) => {
@@ -63,6 +70,7 @@ export default function EditBusinessPage() {
       toast({ title: 'Грешка', description: 'Липсва ID на бизнеса.', variant: 'destructive' });
       return;
     }
+    setLoading(true);
     try {
       const businessRef = doc(firestore, 'salons', businessId);
       const docSnap = await getDoc(businessRef);
@@ -77,8 +85,8 @@ export default function EditBusinessPage() {
         setFormData({
             name: businessData.name,
             description: businessData.description,
-            address: businessData.address,
-            city: businessData.city,
+            address: businessData.address || '',
+            city: businessData.city || '',
             priceRange: businessData.priceRange,
             phone: businessData.phone || '',
             email: businessData.email || '',
@@ -86,8 +94,9 @@ export default function EditBusinessPage() {
             workingHours: businessData.workingHours || '',
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
-            newHeroImageUrl: businessData.heroImage || '', // Initialize with current hero image for editing
-            newGalleryPhotoUrl: ''
+            newHeroImageUrl: businessData.heroImage || '', 
+            newGalleryPhotoUrl: '',
+            availability: businessData.availability || {}, // Initialize availability
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
@@ -112,11 +121,17 @@ export default function EditBusinessPage() {
 
   const handleAddGalleryPhotoUrl = () => {
     if (formData.newGalleryPhotoUrl && formData.newGalleryPhotoUrl.trim() !== '') {
-      setFormData(prev => ({
-        ...prev,
-        photos: [...(prev.photos || []), prev.newGalleryPhotoUrl!.trim()],
-        newGalleryPhotoUrl: '' // Clear input after adding
-      }));
+      const newUrl = formData.newGalleryPhotoUrl.trim();
+      if (!(formData.photos || []).includes(newUrl)) {
+        setFormData(prev => ({
+          ...prev,
+          photos: [...(prev.photos || []), newUrl],
+          newGalleryPhotoUrl: '' 
+        }));
+      } else {
+        toast({ title: 'Дублиран URL', description: 'Този URL вече е добавен в галерията.', variant: 'default' });
+        setFormData(prev => ({...prev, newGalleryPhotoUrl: ''}));
+      }
     } else {
       toast({ title: 'Грешка', description: 'Моля, въведете валиден URL на снимка.', variant: 'destructive' });
     }
@@ -128,6 +143,75 @@ export default function EditBusinessPage() {
       photos: (prev.photos || []).filter(url => url !== photoUrlToRemove)
     }));
   };
+
+  // --- Availability Management Handlers ---
+  const handleAvailabilityDateSelect = (date: Date | undefined) => {
+    setSelectedAvailabilityDate(date);
+    setNewTimeForSelectedDate(''); // Reset time input when date changes
+  };
+
+  const handleAddTimeSlot = () => {
+    if (!selectedAvailabilityDate) {
+      toast({ title: 'Грешка', description: 'Моля, първо изберете дата.', variant: 'destructive'});
+      return;
+    }
+    if (!newTimeForSelectedDate.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) {
+      toast({ title: 'Невалиден формат', description: 'Моля, въведете час във формат HH:MM (напр. 09:30).', variant: 'destructive'});
+      return;
+    }
+
+    const dateKey = format(selectedAvailabilityDate, 'yyyy-MM-dd');
+    setFormData(prev => {
+      const currentTimes = prev.availability?.[dateKey] || [];
+      if (currentTimes.includes(newTimeForSelectedDate)) {
+        toast({ title: 'Дублиран час', description: 'Този час вече е добавен за избраната дата.', variant: 'default'});
+        return prev;
+      }
+      const updatedTimes = [...currentTimes, newTimeForSelectedDate].sort();
+      return {
+        ...prev,
+        availability: {
+          ...prev.availability,
+          [dateKey]: updatedTimes,
+        }
+      };
+    });
+    setNewTimeForSelectedDate('');
+  };
+
+  const handleRemoveTimeSlot = (dateKey: string, timeToRemove: string) => {
+    setFormData(prev => {
+      const currentTimes = prev.availability?.[dateKey] || [];
+      const updatedTimes = currentTimes.filter(time => time !== timeToRemove);
+      const newAvailability = { ...prev.availability };
+      if (updatedTimes.length === 0) {
+        delete newAvailability[dateKey]; // Remove date key if no times left
+      } else {
+        newAvailability[dateKey] = updatedTimes;
+      }
+      return {
+        ...prev,
+        availability: newAvailability,
+      };
+    });
+  };
+  
+  const handleRemoveAllTimesForDate = (dateKey: string) => {
+    setFormData(prev => {
+        const newAvailability = { ...prev.availability };
+        delete newAvailability[dateKey];
+        return {
+            ...prev,
+            availability: newAvailability,
+        };
+    });
+    if (selectedAvailabilityDate && format(selectedAvailabilityDate, 'yyyy-MM-dd') === dateKey) {
+        // If the currently selected date's availability was cleared, reflect this in UI potentially
+    }
+    toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
+  };
+  // --- End Availability Management Handlers ---
+
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -144,8 +228,9 @@ export default function EditBusinessPage() {
         email: formData.email,
         website: formData.website,
         workingHours: formData.workingHours,
-        heroImage: formData.newHeroImageUrl?.trim() || '', // Use the newHeroImageUrl from formData
-        photos: formData.photos || []
+        heroImage: formData.newHeroImageUrl?.trim() || '',
+        photos: formData.photos || [],
+        availability: formData.availability || {}, // Save availability
     };
 
     try {
@@ -175,12 +260,21 @@ export default function EditBusinessPage() {
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-40 w-full mt-4" />
             <Skeleton className="h-40 w-full mt-4" />
+            <Skeleton className="h-64 w-full mt-4" /> {/* Skeleton for availability */}
           </CardContent>
         </Card>
       </div>
     );
   }
   if (!business) return null;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const availableDaysModifier = {
+    available: Object.keys(formData.availability || {}).filter(dateKey => (formData.availability?.[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
+  };
+
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -190,7 +284,7 @@ export default function EditBusinessPage() {
             <Edit className="mr-3 h-8 w-8 text-primary" />
             Редактирай Салон: {business.name}
           </CardTitle>
-          <CardDescription>Актуализирайте информацията, снимките и услугите за Вашия салон.</CardDescription>
+          <CardDescription>Актуализирайте информацията, снимките, услугите и наличността за Вашия салон.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
@@ -300,6 +394,99 @@ export default function EditBusinessPage() {
                 )}
               </div>
             </section>
+            
+            {/* Availability Management Section */}
+            <section>
+              <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
+                <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+                Управление на наличността
+              </h3>
+              <div className="grid md:grid-cols-2 gap-6 items-start">
+                <div>
+                  <Label className="block mb-2 font-medium">Изберете дата от календара:</Label>
+                  <Calendar
+                    mode="single"
+                    selected={selectedAvailabilityDate}
+                    onSelect={handleAvailabilityDateSelect}
+                    disabled={(date) => date < today}
+                    className="rounded-md border shadow-sm p-0"
+                    modifiers={availableDaysModifier}
+                    modifiersStyles={{
+                        available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
+                    }}
+                    locale={{
+                      localize: {
+                        month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
+                        day: n => ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][n]
+                      },
+                      formatLong: { date: () => 'dd/MM/yyyy' }
+                    } as any}
+                  />
+                </div>
+
+                {selectedAvailabilityDate && (
+                  <div className="space-y-4">
+                    <div>
+                      <Label htmlFor="newTimeSlot" className="font-medium">
+                        Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
+                      </Label>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Input
+                          id="newTimeSlot"
+                          type="text"
+                          placeholder="HH:MM (напр. 09:30)"
+                          value={newTimeForSelectedDate}
+                          onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
+                          className="flex-grow"
+                        />
+                        <Button type="button" onClick={handleAddTimeSlot} size="sm">
+                          <PlusCircle size={16} className="mr-1" /> Добави
+                        </Button>
+                      </div>
+                    </div>
+
+                    {(formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.length || 0) > 0 ? (
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
+                            <Badge key={time} variant="secondary" className="text-base py-1 px-2">
+                              {time}
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="icon" 
+                                className="ml-1.5 h-4 w-4 p-0 hover:bg-destructive/20"
+                                onClick={() => handleRemoveTimeSlot(format(selectedAvailabilityDate, 'yyyy-MM-dd'), time)}
+                              >
+                                <Trash2 size={12} className="text-destructive" />
+                              </Button>
+                            </Badge>
+                          ))}
+                        </div>
+                         <Button 
+                            type="button" 
+                            variant="destructive" 
+                            size="sm" 
+                            className="mt-2 w-full"
+                            onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
+                          >
+                            <Trash2 size={16} className="mr-1" /> Премахни всички часове за тази дата
+                          </Button>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">Няма добавени часове за тази дата.</p>
+                    )}
+                  </div>
+                )}
+                {!selectedAvailabilityDate && (
+                    <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full">
+                        <p>Изберете дата от календара, за да управлявате свободните часове.</p>
+                    </div>
+                )}
+              </div>
+            </section>
+
           </CardContent>
           <CardFooter className="border-t pt-6">
             <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading}>
@@ -311,3 +498,4 @@ export default function EditBusinessPage() {
     </div>
   );
 }
+
