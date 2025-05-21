@@ -41,27 +41,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }, [router]);
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-screen">Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Зареждане...</div>;
   }
 
   if (!isAdmin) {
     // This case should ideally be handled by the redirect in useEffect,
     // but keeping a fallback message or component here is good practice.
-    return <div className="flex justify-center items-center h-screen text-red-500">Access Denied</div>;
+    return <div className="flex justify-center items-center h-screen text-red-500">Достъп отказан</div>;
   }
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Basic Admin Sidebar Placeholder */}
       <aside className="w-64 bg-gray-800 text-white p-4">
-        <h2 className="text-2xl font-bold mb-6">Admin Panel</h2>
+        <h2 className="text-2xl font-bold mb-6">Админ панел</h2>
         <nav>
           <ul>
-            <li className="mb-2"><Link href="/admin/dashboard" className="hover:text-gray-300">Dashboard</Link></li>
-            <li className="mb-2"><Link href="/admin/users" className="hover:text-gray-300">Users</Link></li>
-            <li className="mb-2"><Link href="/admin/salons" className="hover:text-gray-300">Salons</Link></li>
-            <li className="mb-2"><Link href="/admin/bookings" className="hover:text-gray-300">Bookings</Link></li>
-            <li className="mb-2"><Link href="/admin/contacts" className="hover:text-gray-300">Contact Entries</Link></li>
+            <li className="mb-2"><Link href="/admin/dashboard" className="hover:text-gray-300">Табло</Link></li>
+            <li className="mb-2"><Link href="/admin/users" className="hover:text-gray-300">Потребители</Link></li>
+            <li className="mb-2"><Link href="/admin/salons" className="hover:text-gray-300">Салони</Link></li>
+            <li className="mb-2"><Link href="/admin/bookings" className="hover:text-gray-300">Резервации</Link></li>
+            <li className="mb-2"><Link href="/admin/contacts" className="hover:text-gray-300">Запитвания</Link></li>
             {/* Add more admin navigation links here */}
           </ul>
         </nav>
@@ -71,7 +71,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <main className="flex-1 overflow-y-auto p-6">
         {/* Basic Admin Header Placeholder */}
         <header className="flex justify-between items-center pb-4 border-b border-gray-300 mb-6">
-          <h1 className="text-3xl font-semibold">Admin Content</h1>
+          <h1 className="text-3xl font-semibold">Админ съдържание</h1>
           {/* Add admin header elements here */}
         </header>
         {children}

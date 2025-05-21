@@ -51,6 +51,9 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('isUserLoggedIn');
+      }
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -77,14 +80,14 @@ export function Header() {
 
  const adminPanelLinkMobile = (
  <Button variant="ghost" asChild className="justify-start">
- <Link href="/admin/dashboard">Admin Panel</Link>
+ <Link href="/admin/dashboard">Админ панел</Link>
  </Button>
  );
 
 
   const adminPanelLinkDesktop = (
      <Button variant="ghost" asChild>
-      <Link href="/admin/dashboard">Admin Panel</Link>
+      <Link href="/admin/dashboard">Админ панел</Link>
     </Button>
   )
  const businessManageLinkDesktop = (
@@ -126,8 +129,8 @@ export function Header() {
             </Button>
           ))}
           {isLoggedIn && myAccountLinkDesktop}
- {userRole === 'admin' && adminPanelLinkDesktop}
- {userRole === 'business' && businessManageLinkDesktop}
+          {userRole === 'admin' && adminPanelLinkDesktop}
+          {userRole === 'business' && businessManageLinkDesktop}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
@@ -165,8 +168,8 @@ export function Header() {
                   </Button>
                 ))}
                 {isLoggedIn && myAccountLinkMobile}
- {userRole === 'business' && businessManageLinkMobile}
- {userRole === 'admin' && adminPanelLinkMobile}
+                {userRole === 'business' && businessManageLinkMobile}
+                {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (
                   <Button variant="outline" onClick={handleLogout} className="justify-start text-base py-3">
