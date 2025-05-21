@@ -17,7 +17,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from '
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { allBulgarianCities } from '@/lib/mock-data';
+import { allBulgarianCities, mockServices } from '@/lib/mock-data'; // Import mockServices
 import { useToast } from '@/hooks/use-toast';
 
 // Define the schema for the form
@@ -36,14 +36,12 @@ const createBusinessSchema = z.object({
       duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
     })
   ).min(1, "Моля, добавете поне една услуга."),
-  // Fields for AI generation (atmosphere, target customer, unique selling points)
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
 type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
 
-// Define options for select components (for AI part)
 const targetCustomerOptions = [
   { value: 'жени', label: 'Жени' },
   { value: 'мъже', label: 'Мъже' },
@@ -68,7 +66,7 @@ export default function CreateBusinessPage() {
       address: '',
       city: '',
       priceRange: 'moderate',
-      services: [{ name: '', price: 0, duration: 30 }], // Start with one empty service
+      services: [{ name: '', price: 0, duration: 30 }],
       atmosphereForAi: '',
       targetCustomerForAi: '',
       uniqueSellingPointsForAi: '',
@@ -106,10 +104,10 @@ export default function CreateBusinessPage() {
       .map(s => `${s.name} (Цена: ${s.price} лв., Продължителност: ${s.duration} мин.)`)
       .join(', ');
 
-    if (formValues.services.length === 0) {
+    if (formValues.services.length === 0 || formValues.services.some(s => !s.name)) {
         toast({
             title: 'Липсват услуги',
-            description: 'Моля, добавете поне една услуга, преди да генерирате описание.',
+            description: 'Моля, добавете и изберете име за поне една услуга, преди да генерирате описание.',
             variant: 'destructive'
         });
         return;
@@ -126,7 +124,7 @@ export default function CreateBusinessPage() {
     if (!aiInputData.salonName || !aiInputData.serviceDescription || !aiInputData.atmosphereDescription || !aiInputData.targetCustomerDescription || !aiInputData.uniqueSellingPoints) {
       toast({
         title: 'Непълна информация за AI',
-        description: 'Моля, попълнете името на салона, поне една услуга, и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
+        description: 'Моля, попълнете името на салона, поне една услуга с име, и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
         variant: 'destructive',
       });
       form.trigger(['name', 'services', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
@@ -162,23 +160,22 @@ export default function CreateBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        services: data.services.map(s => ({ // Ensure services are correctly mapped
+        services: data.services.map(s => ({ 
             name: s.name,
-            price: Number(s.price), // Ensure price is a number
-            duration: Number(s.duration), // Ensure duration is a number
-            description: '', // Add default description if needed
-            id: Math.random().toString(36).substr(2, 9) // Temporary ID for embedded services
+            price: Number(s.price), 
+            duration: Number(s.duration), 
+            description: mockServices.find(ms => ms.name === s.name)?.description || '', // Add description from mockServices
+            id: mockServices.find(ms => ms.name === s.name)?.id || Math.random().toString(36).substr(2, 9) // Use ID from mockServices or generate
         })),
-        // Save AI specific fields if needed for other purposes or if description isn't always AI generated
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
         uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
         ownerId: auth.currentUser.uid,
-        rating: 0, // Initial rating
-        reviews: [], // Initial reviews
-        photos: ['https://placehold.co/600x400.png'], // Default photo
-        heroImage: 'https://placehold.co/1200x400.png', // Default hero image
-        availability: {}, // Initial availability
+        rating: 0, 
+        reviews: [], 
+        photos: ['https://placehold.co/600x400.png'], 
+        heroImage: 'https://placehold.co/1200x400.png', 
+        availability: {}, 
         createdAt: serverTimestamp(),
     };
 
@@ -233,7 +230,6 @@ export default function CreateBusinessPage() {
                 )}
               />
 
-              {/* Services Section */}
               <div className="space-y-4 border p-4 rounded-md">
                 <FormLabel className="text-lg font-medium">Услуги</FormLabel>
                 {serviceFields.map((item, index) => (
@@ -244,9 +240,20 @@ export default function CreateBusinessPage() {
                       render={({ field }) => (
                         <FormItem className="md:col-span-3">
                           <FormLabel className="text-xs">Име на услугата</FormLabel>
-                          <FormControl>
-                            <Input placeholder="напр. Дамско подстригване" {...field} />
-                          </FormControl>
+                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Изберете услуга" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {mockServices.map(service => (
+                                <SelectItem key={service.id} value={service.name}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
