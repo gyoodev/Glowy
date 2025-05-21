@@ -50,12 +50,11 @@ export default function SalonProfilePage() {
     const fetchSalonBySlug = async (slugToFetch: string) => {
       setIsLoading(true);
       setSalon(null); 
-      const salonNameFromSlug = slugToFetch.replace(/[_-]/g, ' ');
-      console.log("[SalonProfilePage] Fetching salon for slug:", slugToFetch, "Derived name:", salonNameFromSlug);
+      console.log("[SalonProfilePage] Fetching salon for slug (name):", slugToFetch);
 
       try {
-        const salonsCollectionRef = collection(firestore, 'salons');
-        const q = query(salonsCollectionRef, where('name', '==', salonNameFromSlug), limit(1));
+        const salonsCollectionRef = collection(firestore, 'salons'); // Assuming 'salons' is your collection name
+        const q = query(salonsCollectionRef, where('name', '==', slugToFetch), limit(1));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
@@ -68,7 +67,7 @@ export default function SalonProfilePage() {
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found:", salonData);
         } else {
-          console.error("[SalonProfilePage] Salon not found in Firestore for derived name:", salonNameFromSlug);
+          console.error("[SalonProfilePage] Salon not found in Firestore for name:", slugToFetch);
           setSalon(null);
         }
       } catch (error) {

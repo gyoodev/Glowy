@@ -11,12 +11,10 @@ interface SalonCardProps {
 }
 
 export function SalonCard({ salon }: SalonCardProps) {
-  const salonSlug = salon.name.toLowerCase().replace(/\s+/g, '-');
-
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full">
       <CardHeader className="p-0">
-        <Link href={`/salons/${salonSlug}`} aria-label={`Вижте детайли за ${salon.name}`}>
+        <Link href={`/salons/${salon.name}`} aria-label={`Вижте детайли за ${salon.name}`}>
           <div className="relative h-48 w-full">
             <Image
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
@@ -29,7 +27,7 @@ export function SalonCard({ salon }: SalonCardProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Link href={`/salons/${salonSlug}`} className="hover:underline">
+        <Link href={`/salons/${salon.name}`} className="hover:underline">
           <CardTitle className="mb-2 text-xl font-semibold">{salon.name}</CardTitle>
         </Link>
         <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{salon.description}</p>
@@ -45,7 +43,7 @@ export function SalonCard({ salon }: SalonCardProps) {
       </CardContent>
       <CardFooter className="p-4 pt-0">
         <Button asChild className="w-full">
-          <Link href={`/salons/${salonSlug}`}>Виж Повече</Link>
+          <Link href={`/salons/${salon.name}`}>Виж Повече</Link>
         </Button>
       </CardFooter>
     </Card>
