@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { auth } from '@/lib/firebase';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
-import { Building, Sparkles, Loader2 } from 'lucide-react';
+import { Building, Sparkles, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { allBulgarianCities } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
@@ -29,28 +29,21 @@ const createBusinessSchema = z.object({
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], {
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
-  // Fields for AI generation
-  serviceDetailsForAi: z.string().min(1, 'Моля, изберете услуги.'),
+  services: z.array(
+    z.object({
+      name: z.string().min(1, "Името на услугата е задължително."),
+      price: z.coerce.number({ invalid_type_error: "Цената трябва да е число."}).min(0, "Цената трябва да е положително число."),
+      duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
+    })
+  ).min(1, "Моля, добавете поне една услуга."),
+  // Fields for AI generation (atmosphere, target customer, unique selling points)
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
 type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
 
-// Define options for select components
-const serviceOptions = [
-  { value: 'фризьорство', label: 'Фризьорство' },
-  { value: 'козметика', label: 'Козметика' },
-  { value: 'маникюр', label: 'Маникюр' },
-  { value: 'педикюр', label: 'Педикюр' },
-  { value: 'масажи', label: 'Масажи' },
-  { value: 'спа процедури', label: 'Спа Процедури' },
-  { value: 'грижа за кожата', label: 'Грижа за Кожата' },
-  { value: 'грижа за лицето', label: 'Грижа за Лицето' },
-  { value: 'епилация', label: 'Епилация' },
-  { value: 'обезкосмяване', label: 'Обезкосмяване' },
-];
-
+// Define options for select components (for AI part)
 const targetCustomerOptions = [
   { value: 'жени', label: 'Жени' },
   { value: 'мъже', label: 'Мъже' },
@@ -75,11 +68,16 @@ export default function CreateBusinessPage() {
       address: '',
       city: '',
       priceRange: 'moderate',
-      serviceDetailsForAi: '',
+      services: [{ name: '', price: 0, duration: 30 }], // Start with one empty service
       atmosphereForAi: '',
       targetCustomerForAi: '',
       uniqueSellingPointsForAi: '',
     },
+  });
+
+  const { fields: serviceFields, append: appendService, remove: removeService } = useFieldArray({
+    control: form.control,
+    name: "services"
   });
 
   useEffect(() => {
@@ -103,21 +101,35 @@ export default function CreateBusinessPage() {
   }, [router, toast, firestore]);
 
   const handleGenerateDescription = async () => {
+    const formValues = form.getValues();
+    const serviceDescriptionString = formValues.services
+      .map(s => `${s.name} (Цена: ${s.price} лв., Продължителност: ${s.duration} мин.)`)
+      .join(', ');
+
+    if (formValues.services.length === 0) {
+        toast({
+            title: 'Липсват услуги',
+            description: 'Моля, добавете поне една услуга, преди да генерирате описание.',
+            variant: 'destructive'
+        });
+        return;
+    }
+
     const aiInputData = {
-      salonName: form.getValues('name') || 'Моят Салон',
-      serviceDescription: serviceOptions.find(opt => opt.value === form.getValues('serviceDetailsForAi'))?.label || '',
-      atmosphereDescription: form.getValues('atmosphereForAi'),
-      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === form.getValues('targetCustomerForAi'))?.label || '',
-      uniqueSellingPoints: form.getValues('uniqueSellingPointsForAi'),
+      salonName: formValues.name || 'Моят Салон',
+      serviceDescription: serviceDescriptionString,
+      atmosphereDescription: formValues.atmosphereForAi,
+      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === formValues.targetCustomerForAi)?.label || formValues.targetCustomerForAi,
+      uniqueSellingPoints: formValues.uniqueSellingPointsForAi,
     };
 
     if (!aiInputData.salonName || !aiInputData.serviceDescription || !aiInputData.atmosphereDescription || !aiInputData.targetCustomerDescription || !aiInputData.uniqueSellingPoints) {
       toast({
         title: 'Непълна информация за AI',
-        description: 'Моля, попълнете всички полета, маркирани за AI генериране на описание.',
+        description: 'Моля, попълнете името на салона, поне една услуга, и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
         variant: 'destructive',
       });
-      form.trigger(['name', 'serviceDetailsForAi', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
+      form.trigger(['name', 'services', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
       return;
     }
     
@@ -150,17 +162,23 @@ export default function CreateBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        serviceDetailsForAi: data.serviceDetailsForAi,
+        services: data.services.map(s => ({ // Ensure services are correctly mapped
+            name: s.name,
+            price: Number(s.price), // Ensure price is a number
+            duration: Number(s.duration), // Ensure duration is a number
+            description: '', // Add default description if needed
+            id: Math.random().toString(36).substr(2, 9) // Temporary ID for embedded services
+        })),
+        // Save AI specific fields if needed for other purposes or if description isn't always AI generated
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
         uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
         ownerId: auth.currentUser.uid,
-        rating: 0,
-        reviews: [],
-        photos: ['https://placehold.co/600x400.png'],
-        heroImage: 'https://placehold.co/1200x400.png',
-        services: [],
-        availability: {},
+        rating: 0, // Initial rating
+        reviews: [], // Initial reviews
+        photos: ['https://placehold.co/600x400.png'], // Default photo
+        heroImage: 'https://placehold.co/1200x400.png', // Default hero image
+        availability: {}, // Initial availability
         createdAt: serverTimestamp(),
     };
 
@@ -215,36 +233,82 @@ export default function CreateBusinessPage() {
                 )}
               />
 
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium text-primary">AI Генериране на Описание</h3>
-                <p className="text-sm text-muted-foreground">
-                  Попълнете следните полета, за да може нашият AI да генерира привлекателно описание за Вашия салон.
-                </p>
+              {/* Services Section */}
+              <div className="space-y-4 border p-4 rounded-md">
+                <FormLabel className="text-lg font-medium">Услуги</FormLabel>
+                {serviceFields.map((item, index) => (
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-8 gap-2 items-end border-b pb-3 last:border-b-0">
+                    <FormField
+                      control={form.control}
+                      name={`services.${index}.name`}
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                          <FormLabel className="text-xs">Име на услугата</FormLabel>
+                          <FormControl>
+                            <Input placeholder="напр. Дамско подстригване" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`services.${index}.price`}
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel className="text-xs">Цена (лв.)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="50" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`services.${index}.duration`}
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-2">
+                          <FormLabel className="text-xs">Продълж. (мин.)</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="60" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => removeService(index)}
+                      className="md:col-span-1 h-9"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => appendService({ name: "", price: 0, duration: 30 })}
+                  className="mt-2"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Добави Услуга
+                </Button>
+                <FormMessage>{form.formState.errors.services?.message || form.formState.errors.services?.root?.message}</FormMessage>
               </div>
 
-              <FormField
-                control={form.control}
-                name="serviceDetailsForAi"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Вид услуги (за AI)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Изберете основни услуги" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {serviceOptions.map(option => (
-                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>Изберете основните категории услуги, които предлагате.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
+              <div className="space-y-2 pt-4">
+                <h3 className="text-lg font-medium text-primary">AI Генериране на Основно Описание</h3>
+                <p className="text-sm text-muted-foreground">
+                  Попълнете следните полета (и поне една услуга по-горе), за да може нашият AI да генерира привлекателно описание за Вашия салон.
+                </p>
+              </div>
+              
               <FormField
                 control={form.control}
                 name="atmosphereForAi"
@@ -287,7 +351,7 @@ export default function CreateBusinessPage() {
                 name="uniqueSellingPointsForAi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Уникални предимства/акценти</FormLabel>
+                    <FormLabel>Уникални предимства/акценти (за AI)</FormLabel>
                     <FormControl>
                       <Textarea placeholder="напр. Използваме само висококачествени професионални продукти, предлагаме безплатна консултация, имаме програми за лоялни клиенти." {...field} rows={3} />
                     </FormControl>
@@ -303,7 +367,7 @@ export default function CreateBusinessPage() {
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                Генерирай Описание с AI
+                Генерирай Основно Описание с AI
               </Button>
 
               <FormField
@@ -390,4 +454,6 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
+    
+
     
