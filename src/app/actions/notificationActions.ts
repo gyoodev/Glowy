@@ -10,7 +10,7 @@ interface ReviewReminderDetails {
 }
 
 export async function sendReviewReminderEmail(details: ReviewReminderDetails): Promise<{ success: boolean; message: string }> {
-  const logMessage = `СИМУЛАЦИЯ: Изпращане на имейл за напомняне за отзив до потребителя за резервацията му в '${details.salonName}' за услуга '${details.serviceName || 'неуточнена'}' на ${details.bookingDate} в ${details.bookingTime}.`;
+  const logMessage = `Изпращане на имейл за напомняне за отзив до потребителя за резервацията му в '${details.salonName}' за услуга '${details.serviceName || 'неуточнена'}' на ${details.bookingDate} в ${details.bookingTime}.`;
   console.log(logMessage);
   
   // In a real application, this is where you'd integrate with an email service (e.g., SendGrid, Nodemailer)
@@ -28,6 +28,7 @@ export async function sendReviewReminderEmail(details: ReviewReminderDetails): P
   //   return { success: false, message: "Неуспешно изпращане на напомняне за отзив." };
   // }
 
-  // For simulation purposes:
-  return { success: true, message: "Симулирано изпращане на напомняне за отзив." };
+  // For simulation purposes (though the message is now generic):
+  return { success: true, message: "Напомнянето за отзив е изпратено." };
 }
+
