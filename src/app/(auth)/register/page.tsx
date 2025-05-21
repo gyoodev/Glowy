@@ -6,10 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
+import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
 import { useState } from 'react';
 import { collection, doc, setDoc, getDoc, getFirestore, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -35,7 +35,8 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export default function RegisterPage() {
   const { toast } = useToast();
-  const router = useRouter(); // Use useRouter from next/navigation
+  const router = useRouter();
+  const firestore = getFirestore();
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -44,43 +45,38 @@ export default function RegisterPage() {
       phoneNumber: '',
       password: '',
       confirmPassword: '',
-      profileType: 'customer', // Default to customer
+      profileType: 'customer',
     },
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const firestore = getFirestore();
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // Fetch and increment user count
       const counterDocRef = doc(firestore, 'counters', 'users');
       const counterDocSnap = await getDoc(counterDocRef);
       let newUserCount = 1;
       if (counterDocSnap.exists()) {
         newUserCount = counterDocSnap.data().count + 1;
       }
-
-      // Update the counter document
       await setDoc(counterDocRef, { count: newUserCount });
 
 
       if (user) {
-        // Add user details to Firestore
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
           email: user.email,
           displayName: data.name,
-          userId: user.uid, 
+          userId: user.uid,
           phoneNumber: data.phoneNumber,
           createdAt: Timestamp.fromDate(new Date()),
           role: data.profileType,
         });
-        
-        localStorage.setItem('isUserLoggedIn', 'true'); 
+
+        localStorage.setItem('isUserLoggedIn', 'true');
         toast({
           title: 'Регистрацията е успешна',
           description: 'Вашият акаунт е създаден.',
@@ -113,12 +109,10 @@ export default function RegisterPage() {
       console.log('Google Sign-Up successful:', user);
 
       if (user) {
-        // Check if user already exists in Firestore, add if not
         const userRef = doc(collection(firestore, 'users'), user.uid);
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
-          // Fetch and increment user count for Google sign-ups as well if they are new
           const counterDocRef = doc(firestore, 'counters', 'users');
           const counterDocSnap = await getDoc(counterDocRef);
           let newUserCount = 1;
@@ -130,11 +124,11 @@ export default function RegisterPage() {
 
           await setDoc(userRef, {
             email: user.email,
-            userId: user.uid, 
+            userId: user.uid,
             displayName: user.displayName,
-            phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
+            phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
-            role: 'customer', // Default to customer for Google sign-ups for now
+            role: 'customer',
           });
         }
         localStorage.setItem('isUserLoggedIn', 'true');
@@ -146,8 +140,6 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       console.error('Error during Google Sign-Up:', error);
-      // Firebase often handles "email already in use" gracefully with Google Sign-In by signing the user in.
-      // However, if a different error occurs, we should show it.
       toast({
         title: 'Грешка при регистрация с Google',
         description: error.message || 'Възникна неочаквана грешка.',
@@ -158,14 +150,16 @@ export default function RegisterPage() {
 
   return (
     <Card className="w-full max-w-md shadow-xl rounded-lg p-6 md:p-8">
- <CardHeader className="text-center space-y-2">
- <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3">
- <UserPlus className="h-8 w-8 text-primary" />
+      <CardHeader className="text-center space-y-2">
+        <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3">
+          <UserPlus className="h-8 w-8 text-primary" />
           Създаване на Акаунт
- </CardTitle>
- <p className="text-muted-foreground text-sm md:text-base">
-          Присъединете се към Glowy и се насладете на предимствата:
-          <ul className="list-disc list-inside text-left mt-2 text-sm">
+        </CardTitle>
+        <CardDescription className="text-muted-foreground text-sm md:text-base">
+          <span className="text-muted-foreground text-sm md:text-base block mb-2">
+            Присъединете се към Glowy и се насладете на предимствата:
+          </span>
+          <ul className="list-disc list-inside text-left text-sm">
             <li>Лесно запазване на часове в любимите Ви салони.</li>
             <li>Достъп до ексклузивни оферти и промоции.</li>
             <li>Персонализирани препоръки за салони и услуги.</li>
@@ -248,14 +242,14 @@ export default function RegisterPage() {
                   <FormControl>
                     <div className="relative">
                       <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
-                      <Button 
+                      <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />} 
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
                     </div>
                   </FormControl>
@@ -267,20 +261,32 @@ export default function RegisterPage() {
               control={form.control}
               name="profileType"
               render={({ field }) => (
-                <FormItem>
+                <FormItem className="space-y-3">
                   <FormLabel>Тип профил</FormLabel>
- <FormControl asChild>
- <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex flex-col space-y-2">
- <FormItem className="flex items-center space-x-2">
- <FormControl>
- <RadioGroupItem value="customer" id="profileTypeCustomer" />
- </FormControl>
- <FormLabel htmlFor="profileTypeCustomer" className="font-normal">Клиент</FormLabel>
- </FormItem>
- <FormItem className="flex items-center space-x-2">
- <FormControl><RadioGroupItem value="business" id="profileTypeBusiness" /></FormControl>
- <FormLabel htmlFor="profileTypeBusiness" className="font-normal">Бизнес</FormLabel>
- </FormItem></RadioGroup></FormControl>
+                  <FormControl>
+                    <RadioGroup
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      className="flex flex-col space-y-1"
+                    >
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="customer" id="profileTypeCustomer" />
+                        </FormControl>
+                        <FormLabel htmlFor="profileTypeCustomer" className="font-normal">
+                          Клиент
+                        </FormLabel>
+                      </FormItem>
+                      <FormItem className="flex items-center space-x-3 space-y-0">
+                        <FormControl>
+                          <RadioGroupItem value="business" id="profileTypeBusiness" />
+                        </FormControl>
+                        <FormLabel htmlFor="profileTypeBusiness" className="font-normal">
+                          Бизнес
+                        </FormLabel>
+                      </FormItem>
+                    </RadioGroup>
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
@@ -294,7 +300,7 @@ export default function RegisterPage() {
               <div className="flex-grow border-t border-muted-foreground"></div>
               <span className="flex-shrink mx-4 text-muted-foreground text-xs">ИЛИ</span>
               <div className="flex-grow border-t border-muted-foreground"></div>
- </div>\n
+            </div>
             <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} type="button">
               <Chrome className="mr-2 h-5 w-5" /> Регистрация с Google
             </Button>
@@ -310,6 +316,3 @@ export default function RegisterPage() {
     </Card>
   );
 }
-    
-
-    
