@@ -92,8 +92,8 @@ export default function SalonProfilePage() {
         salonId: salonId,
         salonName: bookingSalonName,
         userId: userId,
-        serviceId: localSelectedService.id,
-        serviceName: bookingServiceName,
+        serviceName: bookingServiceName, // Pass serviceName directly
+        serviceId: localSelectedService.id, // Pass serviceId directly
         date: bookingDate.toISOString(),
         time: bookingTime,
       });
@@ -122,17 +122,16 @@ export default function SalonProfilePage() {
               bookingTime: bookingTime,
             });
             toast({
-              title: "Покана за отзив (симулация)",
-              description: `Напомняне: Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName} приключи, Ви изпратихме покана да оставите отзив.`,
+              title: "Покана за отзив изпратена",
+              description: `Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName} приключи, Ви изпратихме покана по имейл да оставите отзив.`,
               variant: "default",
               duration: 7000,
             });
           } catch (emailError) {
-            console.error("Error simulating delayed review reminder email:", emailError);
-            // Optionally, show an error toast for the delayed email simulation itself
+            console.error("Error sending review reminder email:", emailError);
             toast({
-                title: "Грешка (симулация на имейл)",
-                description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
+                title: "Грешка при изпращане на покана за отзив",
+                description: "Възникна грешка при опита за изпращане на покана за отзив по имейл.",
                 variant: "destructive",
             });
           }
@@ -146,8 +145,6 @@ export default function SalonProfilePage() {
         });
       } else {
         console.log("Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
-        // Optionally, you could call sendReviewReminderEmail immediately if the appointment was very recent and an hour has passed.
-        // For now, we are just logging.
       }
 
       setSelectedService(undefined);
