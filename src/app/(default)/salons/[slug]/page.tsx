@@ -48,7 +48,7 @@ export default function SalonProfilePage() {
     const fetchSalonBySlug = async (slugToFetch: string) => {
       setIsLoading(true);
       setSalon(null); 
-      const salonNameFromSlug = slugToFetch.replace(/_/g, ' ');
+      const salonNameFromSlug = slugToFetch.replace(/[_-]/g, ' ');
       console.log("[SalonProfilePage] Fetching salon for slug:", slugToFetch, "Derived name:", salonNameFromSlug);
 
       try {
