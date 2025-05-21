@@ -6,10 +6,11 @@ import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking } from '@/types';
-import { UserCircle, History, Edit3, AlertTriangle } from 'lucide-react';
+import type { UserProfile, Booking, Review, Salon } from '@/types';
+import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { ReviewCard } from '@/components/salon/review-card'; // Import ReviewCard
 import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
@@ -26,6 +27,8 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [reviews, setReviews] = useState<Review[]>([]); // New state for reviews
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false); // New loading state for reviews
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const router = useRouter();
@@ -77,6 +80,7 @@ export default function AccountPage() {
           });
           setBookings(fetchedBookings);
 
+          // Reviews will be fetched when the "Отзиви" tab is selected
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error as FirebaseError);
@@ -117,6 +121,55 @@ export default function AccountPage() {
     return () => unsubscribe();
   }, [firestore, router]);
 
+  // Effect to fetch reviews when the userProfile and its role are available
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!userProfile || !userProfile.id) return;
+
+      setIsLoadingReviews(true);
+      setReviews([]); // Clear previous reviews
+      const reviewsCollectionRef = collection(firestore, 'reviews');
+
+      try {
+        let reviewsQuery;
+        if (userProfile.role === 'customer') {
+          // Fetch reviews written by the user
+          reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id));
+        } else if (userProfile.role === 'business') {
+          // Fetch salons owned by the business user
+          const salonsQuery = query(collection(firestore, 'salons'), where('ownerId', '==', userProfile.id));
+          const salonSnapshot = await getDocs(salonsQuery);
+          const salonIds = salonSnapshot.docs.map(doc => doc.id);
+
+          if (salonIds.length === 0) {
+            setReviews([]); // No salons, no reviews
+            setIsLoadingReviews(false);
+            return;
+          }
+
+          // Fetch reviews for these salons
+          reviewsQuery = query(reviewsCollectionRef, where('salonId', 'in', salonIds));
+        } else {
+          // No reviews for other roles (e.g., admin) on this page
+          setIsLoadingReviews(false);
+          return;
+        }
+
+        const reviewSnapshot = await getDocs(reviewsQuery);
+        const fetchedReviews: Review[] = [];
+        reviewSnapshot.forEach(doc => {
+          fetchedReviews.push({ id: doc.id, ...doc.data() } as Review);
+        });
+        setReviews(fetchedReviews);
+      } catch (error) {
+        console.error("Error fetching reviews:", error);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+    fetchReviews();
+  }, [userProfile, firestore]); // Depend on userProfile and firestore
+
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -136,9 +189,12 @@ export default function AccountPage() {
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-1/2 lg:w-1/3 mx-auto mb-8 shadow-sm">
+        <TabsList className="grid w-full grid-cols-3 md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm"> {/* Adjusted grid-cols to 3 */}
           <TabsTrigger value="profile" className="py-3 text-base">
             <Edit3 className="mr-2 h-5 w-5" /> Профил
+          </TabsTrigger>
+          <TabsTrigger value="reviews" className="py-3 text-base"> {/* New Reviews tab */}
+            <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
           </TabsTrigger>
           <TabsTrigger value="bookings" className="py-3 text-base">
             <History className="mr-2 h-5 w-5" /> Резервации
@@ -246,6 +302,39 @@ export default function AccountPage() {
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">Все още нямате история на резервациите.</p>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* New Reviews Tab Content */}
+        <TabsContent value="reviews">
+           <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
+              {userProfile?.role === 'customer' ? 'Вашите Отзиви' : 'Отзиви за Вашите Салони'}
+            </h2>
+            {isLoadingReviews ? (
+               <div className="space-y-4">
+                {[...Array(3)].map((_, i) => (
+                  <Card key={i} className="shadow-sm">
+                     <CardHeader>
+                      <Skeleton className="h-5 w-1/3 mb-1" />
+                      <Skeleton className="h-4 w-1/4" />
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                       <Skeleton className="h-4 w-2/3" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : reviews.length > 0 ? (
+              <div className="space-y-6">
+                {reviews.map(review => (
+                  <ReviewCard key={review.id} review={review} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-center text-muted-foreground py-8">Няма намерени отзиви.</p>
             )}
           </div>
         </TabsContent>
