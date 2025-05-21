@@ -10,7 +10,7 @@ import { getFirestore, collection, query, where, getDocs, orderBy } from 'fireba
 import type { UserProfile, Salon } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Eye, List } from 'lucide-react'; // Re-added List icon
+import { PlusCircle, Edit3, Eye, List } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
@@ -45,6 +45,7 @@ export default function BusinessManagePage() {
             setUserBusinesses(businesses);
           } catch (error) {
             console.error("Error fetching businesses:", error);
+            // You might want to show a toast or error message here
           } finally {
              setIsFetchingBusinesses(false);
           }
@@ -67,6 +68,7 @@ export default function BusinessManagePage() {
   }
 
   if (!userProfile) {
+    // This case should ideally be handled by the redirects in useEffect
     return (
       <div className="container mx-auto py-10 px-6 text-center">
         <p>Грешка: Неуспешно зареждане на потребителски профил. Моля, опитайте да влезете отново.</p>
@@ -157,8 +159,7 @@ export default function BusinessManagePage() {
                   </Link>
                 </Button>
                 <Button variant="default" size="sm" asChild>
-                  {/* TODO: Implement edit page for businesses /business/edit/[businessId] */}
-                  <Link href={`#`}> {/* Replace # with actual edit link */}
+                  <Link href={`/business/edit/${business.id}`}>
                     <Edit3 className="mr-2 h-4 w-4" />
                     Редактирай
                   </Link>
