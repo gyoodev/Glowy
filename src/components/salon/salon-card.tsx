@@ -3,7 +3,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Salon } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button'; // Added Button import
+import { Button } from '@/components/ui/button';
 import { Star, MapPin } from 'lucide-react';
 
 interface SalonCardProps {
@@ -11,17 +11,12 @@ interface SalonCardProps {
 }
 
 export function SalonCard({ salon }: SalonCardProps) {
-  // Price range translations are no longer needed here
-  // const priceRangeTranslations = {
-  //   cheap: 'евтино',
-  //   moderate: 'умерено',
-  //   expensive: 'скъпо',
-  // };
+  const salonSlug = salon.name.replace(/\s+/g, '_');
 
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full">
       <CardHeader className="p-0">
-        <Link href={`/salons/${salon.id}`} aria-label={`Вижте детайли за ${salon.name}`}>
+        <Link href={`/salons/${salonSlug}`} aria-label={`Вижте детайли за ${salon.name}`}>
           <div className="relative h-48 w-full">
             <Image
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
@@ -34,7 +29,7 @@ export function SalonCard({ salon }: SalonCardProps) {
         </Link>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Link href={`/salons/${salon.id}`} className="hover:underline">
+        <Link href={`/salons/${salonSlug}`} className="hover:underline">
           <CardTitle className="mb-2 text-xl font-semibold">{salon.name}</CardTitle>
         </Link>
         <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{salon.description}</p>
@@ -49,12 +44,8 @@ export function SalonCard({ salon }: SalonCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        {/* Removed Badge component */}
-        {/* <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize">
-          {priceRangeTranslations[salon.priceRange] || salon.priceRange}
-        </Badge> */}
         <Button asChild className="w-full">
-          <Link href={`/salons/${salon.id}`}>Виж Повече</Link>
+          <Link href={`/salons/${salonSlug}`}>Виж Повече</Link>
         </Button>
       </CardFooter>
     </Card>

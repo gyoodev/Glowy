@@ -26,10 +26,12 @@ export default function BusinessManagePage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.push('/login');
+        setIsLoading(false); // Ensure loading stops if no user
       } else {
         const profile = await getUserProfile(user.uid);
         if (!profile || profile.role !== 'business') {
           router.push('/');
+          setIsLoading(false); // Ensure loading stops if not business user
         } else {
           setUserProfile(profile);
           // Fetch businesses only after confirming user is a business user
@@ -49,9 +51,9 @@ export default function BusinessManagePage() {
           } finally {
              setIsFetchingBusinesses(false);
           }
+          setIsLoading(false); // Overall auth loading, set here after profile check and business fetch attempt
         }
       }
-      setIsLoading(false); // Overall auth loading
     });
 
     return () => unsubscribe();
@@ -69,12 +71,15 @@ export default function BusinessManagePage() {
 
   if (!userProfile) {
     // This case should ideally be handled by the redirects in useEffect
+    // Or if loading is done and still no profile (e.g. error fetching profile)
     return (
       <div className="container mx-auto py-10 px-6 text-center">
         <p>Грешка: Неуспешно зареждане на потребителски профил. Моля, опитайте да влезете отново.</p>
       </div>
     );
   }
+  
+  const salonNameToSlug = (name: string) => name.replace(/\s+/g, '_');
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -130,7 +135,7 @@ export default function BusinessManagePage() {
           {userBusinesses.map((business) => (
             <Card key={business.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="p-0">
-                <Link href={`/salons/${business.id}`} aria-label={`Преглед на ${business.name}`}>
+                <Link href={`/salons/${salonNameToSlug(business.name)}`} aria-label={`Преглед на ${business.name}`}>
                   <div className="relative h-48 w-full">
                     <Image
                       src={business.heroImage || 'https://placehold.co/400x200.png'}
@@ -144,7 +149,7 @@ export default function BusinessManagePage() {
                 </Link>
               </CardHeader>
               <CardContent className="p-4 flex-grow">
-                <Link href={`/salons/${business.id}`} className="hover:underline">
+                <Link href={`/salons/${salonNameToSlug(business.name)}`} className="hover:underline">
                   <CardTitle className="mb-2 text-xl font-semibold">{business.name}</CardTitle>
                 </Link>
                 <CardDescription className="text-sm text-muted-foreground line-clamp-3">
@@ -153,7 +158,7 @@ export default function BusinessManagePage() {
               </CardContent>
               <CardFooter className="p-4 border-t flex justify-between items-center">
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/salons/${business.id}`}>
+                  <Link href={`/salons/${salonNameToSlug(business.name)}`}>
                     <Eye className="mr-2 h-4 w-4" />
                     Преглед
                   </Link>
