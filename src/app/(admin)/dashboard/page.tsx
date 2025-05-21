@@ -4,11 +4,13 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { toast } = useToast(); // Initialize toast
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -18,35 +20,53 @@ export default function AdminDashboardPage() {
           if (userProfile?.role === 'admin') {
             setIsAdmin(true);
           } else {
-            router.push('/'); // Redirect non-admins
+            // This is a secondary check; AdminLayout should primarily handle this.
+            // toast({ // Toasting here might be redundant if AdminLayout already does it.
+            //   title: 'Достъп отказан',
+            //   description: 'Нямате права за достъп до таблото.',
+            //   variant: 'destructive',
+            // });
+            router.push('/'); 
           }
         } catch (error) {
-          console.error('Error checking admin role:', error);
-          router.push('/'); // Redirect on error
+          console.error('Грешка при проверка на админ роля в таблото:', error);
+          // toast({ // Toasting here might be redundant.
+          //   title: 'Грешка',
+          //   description: 'Възникна грешка при проверка на вашите права.',
+          //   variant: 'destructive',
+          // });
+          router.push('/'); 
         } finally {
           setLoading(false);
         }
       } else {
-        router.push('/login'); // Redirect if not logged in
+        // This is a secondary check.
+        // toast({
+        //   title: 'Необходимо е удостоверяване',
+        //   description: 'Моля, влезте.',
+        //   variant: 'default',
+        // });
+        router.push('/login'); 
       }
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, toast]); // Added toast to dependency array, though not directly used for new toasts here
 
   if (loading) {
-    return <div>Loading admin panel...</div>; // Basic loading state
+    return <div className="container mx-auto py-10 text-center">Зареждане на административното табло...</div>;
   }
 
   if (!isAdmin) {
-    return null; // Or a specific "Access Denied" component if you prefer
+    // This should ideally not be reached if AdminLayout is working correctly.
+    // It serves as a fallback.
+    return <div className="container mx-auto py-10 text-center text-red-500">Достъп отказан. Пренасочване...</div>;
   }
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
-      {/* Admin dashboard content goes here */}
-      <p>Welcome to the admin dashboard. More features will be added here.</p>
+      <h1 className="text-3xl font-bold mb-6">Административно табло</h1>
+      <p>Добре дошли в административното табло. Тук ще бъдат добавени още функции.</p>
     </div>
   );
 }
