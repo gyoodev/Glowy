@@ -6,10 +6,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile } from '@/types';
-import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card';
-import AddReviewForm from '@/components/salon/AddReviewForm'; // Corrected import
+import AddReviewForm from '@/components/salon/AddReviewForm';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -63,12 +63,6 @@ export default function SalonProfilePage() {
     } catch (error) {
         console.error("[SalonProfilePage] Error fetching user reviews:", error);
         setUserReviews([]);
-        // Optionally, show a toast for the error
-        // toast({
-        //   title: "Грешка при зареждане на вашите отзиви",
-        //   description: "Опитайте отново по-късно.",
-        //   variant: "destructive",
-        // });
     }
   };
 
@@ -176,7 +170,7 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
-  }, [salon?.id, firestore]); // auth.currentUser change is handled by onAuthStateChanged re-renders
+  }, [salon?.id, firestore]);
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -343,8 +337,6 @@ export default function SalonProfilePage() {
       const docRef = await addDoc(reviewsCollectionRef, newReview);
       console.log("[SalonProfilePage] Review added with ID:", docRef.id);
 
-      // Re-fetch salon to update reviews and rating
-      // This could be optimized by updating local state directly or fetching only reviews
       const salonsCollectionRef = collection(firestore, 'salons');
       const q = query(salonsCollectionRef, where('name', '==', salon.name), limit(1));
       const querySnapshot = await getDocs(q);
@@ -353,30 +345,25 @@ export default function SalonProfilePage() {
         const salonDoc = querySnapshot.docs[0];
         const updatedSalonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
         updatedSalonData.services = updatedSalonData.services || [];
-        updatedSalonData.reviews = updatedSalonData.reviews || []; // Keep this, as Firestore doesn't auto-create from type
+        updatedSalonData.reviews = updatedSalonData.reviews || [];
         updatedSalonData.photos = updatedSalonData.photos || [];
         
-        // Update salon.reviews by fetching all reviews for this salon
         const allReviewsQuery = query(collection(firestore, 'reviews'), where('salonId', '==', salon.id));
         const allReviewsSnapshot = await getDocs(allReviewsQuery);
         const allSalonReviews = allReviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Review[];
         updatedSalonData.reviews = allSalonReviews;
 
-        // Recalculate rating
         if (allSalonReviews.length > 0) {
             const totalRating = allSalonReviews.reduce((acc, rev) => acc + rev.rating, 0);
             updatedSalonData.rating = totalRating / allSalonReviews.length;
-            // Update the rating in Firestore as well
             const salonDocRef = doc(firestore, 'salons', salon.id);
             await updateDoc(salonDocRef, {
                 rating: updatedSalonData.rating,
-                reviews: updatedSalonData.reviews.map(r => ({ ...r })) // Store a plain array of review objects
+                reviews: updatedSalonData.reviews.map(r => ({ ...r })) 
             });
         } else {
              updatedSalonData.rating = 0;
         }
-
-
         setSalon(updatedSalonData);
       }
 
