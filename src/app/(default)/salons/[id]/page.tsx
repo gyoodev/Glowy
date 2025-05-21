@@ -11,13 +11,15 @@ import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info } from 'lucide-react';
-// import { Separator } from '@/components/ui/separator'; // Separator is not used
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Cut } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking, auth } from '@/lib/firebase'; // Import createBooking and auth
+import { createBooking, auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
-import { sendReviewReminderEmail } from '@/app/actions/notificationActions'; // Import the action
+import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'; // Added Card imports
+import { format } from 'date-fns';
+import { bg } from 'date-fns/locale';
 
 export default function SalonProfilePage() {
   const params = useParams();
@@ -30,13 +32,11 @@ export default function SalonProfilePage() {
 
   useEffect(() => {
     if (salonId) {
-      // Simulate API call
       const fetchedSalon = getSalonById(salonId);
-      setTimeout(() => { // Simulate loading
+      setTimeout(() => {
         if (fetchedSalon) {
           setSalon(fetchedSalon);
         } else {
-          // Handle salon not found, e.g. redirect or show error
           console.error("Салонът не е намерен");
         }
       }, 500);
@@ -78,14 +78,14 @@ export default function SalonProfilePage() {
     }
 
     try {
-      const userId = auth.currentUser.uid; 
+      const userId = auth.currentUser.uid;
 
       await createBooking({
         salonId: salonId,
         salonName: salon.name,
         userId: userId,
         service: selectedService,
-        date: selectedBookingDate.toISOString(), 
+        date: selectedBookingDate.toISOString(),
         time: selectedBookingTime,
       });
 
@@ -94,7 +94,6 @@ export default function SalonProfilePage() {
         description: `Успешно резервирахте ${selectedService.name} за ${selectedBookingDate.toLocaleDateString('bg-BG')} в ${selectedBookingTime}.`,
       });
 
-      // Send review reminder email (simulation)
       try {
         await sendReviewReminderEmail({
             salonName: salon.name,
@@ -105,7 +104,7 @@ export default function SalonProfilePage() {
         toast({
             title: "Покана за отзив (симулация)",
             description: "След преживяването си, ще получите покана да оставите отзив.",
-            variant: "default", 
+            variant: "default",
             duration: 4000,
         });
       } catch (emailError) {
@@ -117,7 +116,6 @@ export default function SalonProfilePage() {
           });
       }
 
-      // Reset selections after successful booking
       setSelectedService(undefined);
       setSelectedBookingDate(undefined);
       setSelectedBookingTime(undefined);
@@ -234,7 +232,7 @@ export default function SalonProfilePage() {
                   <Button variant="outline" onClick={() => { /* TODO: Implement add review functionality */ }} data-ai-hint="Add review button">Добави Отзив</Button>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="gallery" className="bg-card p-6 rounded-lg shadow-md">
                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                   <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
@@ -252,21 +250,47 @@ export default function SalonProfilePage() {
 
           <aside className="lg:col-span-1 space-y-8 sticky top-20">
              <div id="booking-calendar-section">
-              <BookingCalendar 
-                salonName={salon.name} 
+              <BookingCalendar
+                salonName={salon.name}
                 serviceName={selectedService?.name}
                 availability={salon.availability}
                 onTimeSelect={handleTimeSelected}
               />
             </div>
+
+            {selectedService && selectedBookingDate && selectedBookingTime && (
+              <Card className="shadow-md mb-4 border-primary bg-secondary/30">
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="text-lg text-primary-foreground flex items-center">
+                    <Info className="mr-2 h-5 w-5" />
+                    Вашата Резервация
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm space-y-2 text-secondary-foreground">
+                  <div className="flex items-center">
+                    <Cut className="mr-2 h-4 w-4 text-primary" />
+                    <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
+                  </div>
+                  <div className="flex items-center">
+                    <CalendarDays className="mr-2 h-4 w-4 text-primary" />
+                    <span className="font-medium">Дата:</span>&nbsp;{format(selectedBookingDate, "PPP", { locale: bg })}
+                  </div>
+                  <div className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4 text-primary" />
+                    <span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {selectedService && selectedBookingDate && selectedBookingTime && (
               <Button
                 onClick={handleConfirmBooking}
                 className="w-full py-6 text-lg font-semibold"
-                disabled={!auth.currentUser} // Disable if not logged in
+                disabled={!auth.currentUser}
               >
-                {auth.currentUser ? 
-                  "Запази час" 
+                {auth.currentUser ?
+                  "Запази час"
                   : "Влезте за да резервирате"
                 }
               </Button>
