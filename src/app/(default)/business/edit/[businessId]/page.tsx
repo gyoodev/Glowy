@@ -1,12 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect, ChangeEvent } from 'react';
+import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-// TODO: Implement Firebase Storage for actual file uploads
-// import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import type { Salon } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { UploadCloud, XCircle, ImagePlus, Trash2 } from 'lucide-react'; // Added Trash2 for remove icon
+import { ImagePlus, Trash2, Edit } from 'lucide-react';
 
 export default function EditBusinessPage() {
   const router = useRouter();
@@ -26,17 +24,25 @@ export default function EditBusinessPage() {
   const [business, setBusiness] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [formData, setFormData] = useState<Partial<Salon>>({});
-
-  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
-  const [heroImagePreview, setHeroImagePreview] = useState<string | null>(null);
   
-  const [galleryFiles, setGalleryFiles] = useState<File[]>([]); // Files to be uploaded
-  const [galleryImagePreviews, setGalleryImagePreviews] = useState<string[]>([]); // Client-side previews for new files
-  const [existingGalleryPhotos, setExistingGalleryPhotos] = useState<string[]>([]); // URLs from Firestore
+  // formData will now store URLs directly
+  const [formData, setFormData] = useState<Partial<Salon> & { newHeroImageUrl?: string, newGalleryPhotoUrl?: string }>({
+    name: '',
+    description: '',
+    address: '',
+    city: '',
+    priceRange: 'moderate',
+    phone: '',
+    email: '',
+    website: '',
+    workingHours: '',
+    heroImage: '',
+    photos: [],
+    newHeroImageUrl: '', // Temporary field for new hero image URL input
+    newGalleryPhotoUrl: '' // Temporary field for new gallery photo URL input
+  });
 
   const firestore = getFirestore();
-  // const storage = getStorage(); // Initialize Firebase Storage for actual uploads
   const { toast } = useToast();
   const authInstance = getAuth();
 
@@ -50,7 +56,6 @@ export default function EditBusinessPage() {
     });
     return () => unsubscribe();
   }, [businessId, router, authInstance]); // eslint-disable-line react-hooks/exhaustive-deps
-  // Added eslint-disable for fetchBusiness dependency, as it's stable.
 
   const fetchBusiness = async (userId: string) => {
     if (!businessId) {
@@ -73,18 +78,17 @@ export default function EditBusinessPage() {
             name: businessData.name,
             description: businessData.description,
             address: businessData.address,
-            city: businessData.city, // Assuming city is part of Salon type and data
-            priceRange: businessData.priceRange, // Assuming priceRange is part of Salon type and data
-            phone: businessData.phone,
-            email: businessData.email,
-            website: businessData.website,
-            workingHours: businessData.workingHours,
-            // Do not set heroImage/photos in formData directly, use dedicated state
+            city: businessData.city,
+            priceRange: businessData.priceRange,
+            phone: businessData.phone || '',
+            email: businessData.email || '',
+            website: businessData.website || '',
+            workingHours: businessData.workingHours || '',
+            heroImage: businessData.heroImage || '',
+            photos: businessData.photos || [],
+            newHeroImageUrl: businessData.heroImage || '', // Initialize with current hero image for editing
+            newGalleryPhotoUrl: ''
         });
-        setExistingGalleryPhotos(businessData.photos || []);
-        if (businessData.heroImage) {
-          setHeroImagePreview(businessData.heroImage);
-        }
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
         router.push('/business/manage');
@@ -101,46 +105,28 @@ export default function EditBusinessPage() {
     const { id, value } = e.target;
     setFormData((prevData) => ({ ...prevData, [id]: value }));
   };
+  
+  const handleHeroImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData(prev => ({...prev, newHeroImageUrl: e.target.value }));
+  };
 
-  const handleHeroImageChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setHeroImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setHeroImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+  const handleAddGalleryPhotoUrl = () => {
+    if (formData.newGalleryPhotoUrl && formData.newGalleryPhotoUrl.trim() !== '') {
+      setFormData(prev => ({
+        ...prev,
+        photos: [...(prev.photos || []), prev.newGalleryPhotoUrl!.trim()],
+        newGalleryPhotoUrl: '' // Clear input after adding
+      }));
+    } else {
+      toast({ title: 'Грешка', description: 'Моля, въведете валиден URL на снимка.', variant: 'destructive' });
     }
   };
 
-  const handleGalleryFilesChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const filesArray = Array.from(e.target.files);
-      setGalleryFiles(prev => [...prev, ...filesArray]); // Add new files to the list for upload
-      
-      const newPreviewsArray: string[] = [];
-      filesArray.forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          newPreviewsArray.push(reader.result as string);
-          // Check if all new files are processed
-          if (newPreviewsArray.length === filesArray.length) {
-            setGalleryImagePreviews(prev => [...prev, ...newPreviewsArray]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  };
-
-  const removeExistingGalleryPhoto = (photoUrlToRemove: string) => {
-    setExistingGalleryPhotos(prev => prev.filter(url => url !== photoUrlToRemove));
-  };
-
-  const removeNewGalleryPhotoPreview = (indexToRemove: number) => {
-    setGalleryImagePreviews(prev => prev.filter((_, index) => index !== indexToRemove));
-    setGalleryFiles(prev => prev.filter((_, index) => index !== indexToRemove));
+  const removeGalleryPhoto = (photoUrlToRemove: string) => {
+    setFormData(prev => ({
+      ...prev,
+      photos: (prev.photos || []).filter(url => url !== photoUrlToRemove)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -148,46 +134,23 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
 
-    const dataToUpdate: Partial<Salon> = { ...formData };
-     // Remove id, ownerId, createdAt if they exist in formData to avoid updating them
-    delete (dataToUpdate as any).id;
-    delete (dataToUpdate as any).ownerId;
-    delete (dataToUpdate as any).createdAt;
-
-
-    // Simulate Hero Image Upload & Get URL
-    if (heroImageFile) {
-      // In a real app:
-      // const heroImageStorageRef = ref(storage, `salons/${businessId}/heroImage/${heroImageFile.name}`);
-      // await uploadBytes(heroImageStorageRef, heroImageFile);
-      // dataToUpdate.heroImage = await getDownloadURL(heroImageStorageRef);
-      dataToUpdate.heroImage = `https://placehold.co/1200x400.png?text=Hero+${Date.now()}`; // Placeholder for simulation
-      toast({ title: 'Инфо', description: `Симулирано качване на главна снимка: ${heroImageFile.name}`});
-    } else if (heroImagePreview === null) { // If preview is null, it means user wants to remove it
-        dataToUpdate.heroImage = ''; // Or delete the field: delete dataToUpdate.heroImage;
-    } else {
-        dataToUpdate.heroImage = business.heroImage; // Keep existing if no new file and not removed
-    }
-
-
-    // Simulate Gallery Images Upload & Get URLs
-    const uploadedGalleryUrls: string[] = [];
-    if (galleryFiles.length > 0) {
-      for (const file of galleryFiles) {
-        // In a real app:
-        // const galleryImageStorageRef = ref(storage, `salons/${businessId}/gallery/${Date.now()}_${file.name}`);
-        // await uploadBytes(galleryImageStorageRef, file);
-        // uploadedGalleryUrls.push(await getDownloadURL(galleryImageStorageRef));
-        uploadedGalleryUrls.push(`https://placehold.co/600x400.png?text=NewGallery+${Date.now()}`); // Placeholder
-      }
-      toast({ title: 'Инфо', description: `Симулирано качване на ${galleryFiles.length} нови снимки в галерията.`});
-    }
-    
-    dataToUpdate.photos = [...existingGalleryPhotos, ...uploadedGalleryUrls];
+    const dataToUpdate: Partial<Salon> = {
+        name: formData.name,
+        description: formData.description,
+        address: formData.address,
+        city: formData.city,
+        priceRange: formData.priceRange,
+        phone: formData.phone,
+        email: formData.email,
+        website: formData.website,
+        workingHours: formData.workingHours,
+        heroImage: formData.newHeroImageUrl?.trim() || '', // Use the newHeroImageUrl from formData
+        photos: formData.photos || []
+    };
 
     try {
       const businessRef = doc(firestore, 'salons', businessId);
-      await updateDoc(businessRef, dataToUpdate as any); // Use 'as any' if types don't perfectly align due to Partial
+      await updateDoc(businessRef, dataToUpdate as any); 
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
       router.push('/business/manage');
     } catch (error: any) {
@@ -223,7 +186,10 @@ export default function EditBusinessPage() {
     <div className="container mx-auto py-10 px-6">
       <Card className="max-w-3xl mx-auto shadow-xl">
         <CardHeader>
-          <CardTitle className="text-3xl font-bold">Редактирай Салон: {business.name}</CardTitle>
+          <CardTitle className="text-3xl font-bold flex items-center">
+            <Edit className="mr-3 h-8 w-8 text-primary" />
+            Редактирай Салон: {business.name}
+          </CardTitle>
           <CardDescription>Актуализирайте информацията, снимките и услугите за Вашия салон.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -269,22 +235,20 @@ export default function EditBusinessPage() {
 
             {/* Hero Image Section */}
             <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка</h3>
+              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
               <div className="space-y-2">
-                <Label htmlFor="heroImageFile" className="flex items-center gap-2 cursor-pointer text-primary hover:underline p-2 border border-dashed rounded-md justify-center hover:bg-secondary">
-                    <UploadCloud size={24} /> {heroImageFile ? `Избрана: ${heroImageFile.name}` : heroImagePreview ? "Промени главната снимка" : "Качи главна снимка"}
-                </Label>
-                <Input id="heroImageFile" type="file" accept="image/*" onChange={handleHeroImageChange} className="sr-only" />
-                {heroImagePreview && (
+                <Label htmlFor="newHeroImageUrl">URL на главна снимка</Label>
+                <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" value={formData.newHeroImageUrl || ''} onChange={handleHeroImageChange} />
+                {formData.newHeroImageUrl && formData.newHeroImageUrl.trim() !== '' && (
                   <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
-                    <Image src={heroImagePreview} alt="Преглед на главна снимка" layout="fill" objectFit="cover" />
+                    <Image src={formData.newHeroImageUrl} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
                      <Button
                         type="button"
                         variant="destructive"
                         size="icon"
                         className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        onClick={() => { setHeroImageFile(null); setHeroImagePreview(null); }}
-                        title="Премахни главната снимка"
+                        onClick={() => setFormData(prev => ({...prev, newHeroImageUrl: ''}))}
+                        title="Изчисти URL на главната снимка"
                       >
                         <Trash2 size={16} />
                       </Button>
@@ -295,42 +259,36 @@ export default function EditBusinessPage() {
 
             {/* Gallery Section */}
             <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия</h3>
+              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия (URL адреси)</h3>
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="galleryFilesInput" className="flex items-center gap-2 cursor-pointer text-primary hover:underline p-2 border border-dashed rounded-md justify-center hover:bg-secondary">
-                    <ImagePlus size={24} /> Добави снимки към галерията
-                  </Label>
-                  <Input id="galleryFilesInput" type="file" accept="image/*" multiple onChange={handleGalleryFilesChange} className="sr-only" />
+                <div className="flex items-end gap-2">
+                    <div className="flex-grow space-y-1">
+                        <Label htmlFor="newGalleryPhotoUrl">URL на нова снимка за галерията</Label>
+                        <Input 
+                            id="newGalleryPhotoUrl" 
+                            type="text" 
+                            placeholder="https://example.com/gallery-image.jpg" 
+                            value={formData.newGalleryPhotoUrl || ''} 
+                            onChange={(e) => setFormData(prev => ({...prev, newGalleryPhotoUrl: e.target.value}))} 
+                        />
+                    </div>
+                    <Button type="button" variant="outline" onClick={handleAddGalleryPhotoUrl} className="whitespace-nowrap">
+                        <ImagePlus size={18} className="mr-2"/> Добави URL
+                    </Button>
                 </div>
 
-                {(existingGalleryPhotos.length > 0 || galleryImagePreviews.length > 0) ? (
+                {(formData.photos && formData.photos.length > 0) ? (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {existingGalleryPhotos.map((photoUrl, index) => (
-                      <div key={`existing-${index}`} className="relative group aspect-square">
-                        <Image src={photoUrl} alt={`Съществуваща снимка ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior details" />
+                    {formData.photos.map((photoUrl, index) => (
+                      <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
+                        <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail" />
                         <Button
                           type="button"
                           variant="destructive"
                           size="icon"
                           className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => removeExistingGalleryPhoto(photoUrl)}
+                          onClick={() => removeGalleryPhoto(photoUrl)}
                           title="Премахни тази снимка"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    ))}
-                    {galleryImagePreviews.map((previewUrl, index) => (
-                      <div key={`new-${index}`} className="relative group aspect-square">
-                        <Image src={previewUrl} alt={`Нова снимка ${index + 1} преглед`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon style example" />
-                         <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => removeNewGalleryPhotoPreview(index)}
-                          title="Премахни тази нова снимка"
                         >
                           <Trash2 size={14} />
                         </Button>
@@ -338,11 +296,8 @@ export default function EditBusinessPage() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-muted-foreground text-center py-4">Галерията е празна. Добавете снимки.</p>
+                  <p className="text-muted-foreground text-center py-4">Галерията е празна. Добавете URL адреси на снимки.</p>
                 )}
-                 <p className="text-xs text-muted-foreground mt-2">
-                    Забележка: Качването на файлове е симулирано. В реално приложение тук ще има интеграция с Firebase Storage.
-                 </p>
               </div>
             </section>
           </CardContent>
