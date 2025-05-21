@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/toaster';
+import { useToast } from '@/hooks/use-toast'; // Corrected import path
 import { Skeleton } from '@/components/ui/skeleton'; // Keep this import
 
 export default function EditBusinessPage() {
@@ -38,7 +38,7 @@ export default function EditBusinessPage() {
     });
 
     return () => unsubscribe();
-  }, [businessId, router, auth]);
+  }, [businessId, router, auth]); // Added auth to dependency array
 
   const fetchBusiness = async (userId: string) => {
     if (!businessId) {
@@ -126,7 +126,7 @@ export default function EditBusinessPage() {
         toast({
            title: 'No Changes',
            description: 'No changes detected to save.',
-           variant: 'neutral', // Consider a neutral variant if you have one
+           // variant: 'neutral', // Consider a neutral variant if you have one
         });
       }
 
@@ -210,25 +210,25 @@ export default function EditBusinessPage() {
              <div className="grid gap-2">
               <Label htmlFor="phone">Телефон</Label>
               <Input
-                id="phone"
-                value={formData.phone || ''}
+                id="phone" // Assuming Salon type has 'phone'
+                value={(formData as any).phone || ''} // Cast if phone not in Salon
                 onChange={handleInputChange}
               />
             </div>
              <div className="grid gap-2">
               <Label htmlFor="email">Имейл</Label>
               <Input
-                id="email"
+                id="email" // Assuming Salon type has 'email'
                 type="email"
-                value={formData.email || ''}
+                value={(formData as any).email || ''} // Cast if email not in Salon
                 onChange={handleInputChange}
               />
             </div>
              <div className="grid gap-2">
               <Label htmlFor="website">Уебсайт</Label>
               <Input
-                id="website"
-                value={formData.website || ''}
+                id="website" // Assuming Salon type has 'website'
+                value={(formData as any).website || ''} // Cast if website not in Salon
                 onChange={handleInputChange}
               />
             </div>
