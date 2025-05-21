@@ -4,17 +4,21 @@
 import { useState, useMemo, useEffect } from 'react';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
-import { mockServices, allBulgarianCities } from '@/lib/mock-data'; // Import allBulgarianCities
+import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, VenetianMask } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const ALL_CITIES_VALUE = "--all-cities--";
-const ALL_SERVICES_VALUE = "--all-services--";
-const ANY_PRICE_VALUE = "--any-price--"; // This constant is used for actual filtering.
 import type { Salon } from '@/types';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
+
+const ALL_CITIES_VALUE = "--all-cities--";
+const ALL_SERVICES_VALUE = "--all-services--";
+// For the new price range filter
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500; // Must match FilterSidebar
+const DEFAULT_PRICE_RANGE_FILTER: [number, number] = [DEFAULT_MIN_PRICE, DEFAULT_MAX_PRICE];
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -24,7 +28,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    priceRange: ANY_PRICE_VALUE, // This remains the same string for filtering.
+    priceRange: DEFAULT_PRICE_RANGE_FILTER, // Initialize with the array [min, max]
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -50,6 +54,7 @@ export default function SalonDirectoryPage() {
 
 
   const uniqueServiceTypes = useMemo(() => {
+    // Consider deriving this from actual salon.services data if it becomes dynamic
     const serviceNames = new Set(mockServices.map(service => service.name));
     return Array.from(serviceNames);
   }, []);
@@ -60,20 +65,40 @@ export default function SalonDirectoryPage() {
     if (searchTerm) {
       result = result.filter(salon =>
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        salon.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (salon.description && salon.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
     if (Object.keys(filters).length > 0) {
       result = result.filter(salon => {
         const { location, serviceType, minRating, priceRange } = filters;
-        let matches = true;
-        if (location && location !== ALL_CITIES_VALUE && salon.city !== location) matches = false;
-        if (serviceType && serviceType !== ALL_SERVICES_VALUE && !salon.services.some(s => s.name === serviceType)) matches = false;
-        if (minRating && salon.rating < minRating) matches = false; 
-        // The priceRange filter here still expects 'cheap', 'moderate', 'expensive', or ANY_PRICE_VALUE ('--any-price--')
-        if (priceRange && priceRange !== ANY_PRICE_VALUE && salon.priceRange !== priceRange) matches = false;
-        return matches;
+        let matchesAll = true; // Start with true and set to false if any filter doesn't match
+
+        if (location && location !== ALL_CITIES_VALUE && salon.city !== location) {
+          matchesAll = false;
+        }
+        if (matchesAll && serviceType && serviceType !== ALL_SERVICES_VALUE && !(salon.services || []).some(s => s.name === serviceType)) {
+          matchesAll = false;
+        }
+        if (matchesAll && minRating && salon.rating < minRating) {
+          matchesAll = false;
+        }
+        
+        if (matchesAll && priceRange && Array.isArray(priceRange) && priceRange.length === 2) {
+          const [minPriceSelected, maxPriceSelected] = priceRange;
+          // Only apply price filter if the selected range is different from the default "any" range
+          const isDefaultSelectedRange = minPriceSelected === DEFAULT_MIN_PRICE && maxPriceSelected === DEFAULT_MAX_PRICE;
+          
+          if (!isDefaultSelectedRange) {
+            const salonHasMatchingService = (salon.services || []).some(service => 
+              service.price >= minPriceSelected && service.price <= maxPriceSelected
+            );
+            if (!salonHasMatchingService) {
+              matchesAll = false;
+            }
+          }
+        }
+        return matchesAll;
       });
     }
     setFilteredSalons(result);

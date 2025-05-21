@@ -20,32 +20,15 @@ interface FilterSidebarProps {
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const ANY_PRICE_VALUE_SLIDER = 0; // For slider
-const PRICE_CHEAP_SLIDER = 1;
-const PRICE_MODERATE_SLIDER = 2;
-const PRICE_EXPENSIVE_SLIDER = 3;
-
-const priceRangeLabels: Record<number, string> = {
-  [ANY_PRICE_VALUE_SLIDER]: "Всякаква цена",
-  [PRICE_CHEAP_SLIDER]: "Евтино ($)",
-  [PRICE_MODERATE_SLIDER]: "Умерено ($$)",
-  [PRICE_EXPENSIVE_SLIDER]: "Скъпо ($$$)",
-};
-
-// Helper to convert slider value back to string for filtering logic
-const getPriceRangeStringFromSliderValue = (sliderValue: number): string => {
-  if (sliderValue === PRICE_CHEAP_SLIDER) return 'cheap';
-  if (sliderValue === PRICE_MODERATE_SLIDER) return 'moderate';
-  if (sliderValue === PRICE_EXPENSIVE_SLIDER) return 'expensive';
-  return "--any-price--"; // Corresponds to ANY_PRICE_VALUE_SLIDER or unexpected values
-};
-
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500; // Adjust as needed for a sensible max
+const DEFAULT_PRICE_RANGE: [number, number] = [DEFAULT_MIN_PRICE, DEFAULT_MAX_PRICE];
 
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
   const [rating, setRating] = useState([0]);
-  const [priceRangeSlider, setPriceRangeSlider] = useState([ANY_PRICE_VALUE_SLIDER]);
+  const [priceRangeValue, setPriceRangeValue] = useState<[number, number]>(DEFAULT_PRICE_RANGE);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const handleApplyFilters = () => {
@@ -53,7 +36,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       location,
       serviceType,
       minRating: rating[0],
-      priceRange: getPriceRangeStringFromSliderValue(priceRangeSlider[0]),
+      priceRange: priceRangeValue, // Pass the array [minPrice, maxPrice]
     });
   };
 
@@ -61,12 +44,12 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setLocation(ALL_CITIES_VALUE);
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
-    setPriceRangeSlider([ANY_PRICE_VALUE_SLIDER]);
+    setPriceRangeValue(DEFAULT_PRICE_RANGE);
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
       minRating: 0,
-      priceRange: getPriceRangeStringFromSliderValue(ANY_PRICE_VALUE_SLIDER),
+      priceRange: DEFAULT_PRICE_RANGE,
     });
   };
   
@@ -177,14 +160,16 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="priceRangeSlider" className="text-sm font-medium">Ценови диапазон: {priceRangeLabels[priceRangeSlider[0]]}</Label>
+          <Label htmlFor="priceRangeSlider" className="text-sm font-medium">
+            Цена: {priceRangeValue[0]} лв. - {priceRangeValue[1]}{priceRangeValue[1] === DEFAULT_MAX_PRICE ? '+' : ''} лв.
+          </Label>
           <Slider
             id="priceRangeSlider"
-            min={ANY_PRICE_VALUE_SLIDER}
-            max={PRICE_EXPENSIVE_SLIDER}
-            step={1}
-            value={priceRangeSlider}
-            onValueChange={setPriceRangeSlider}
+            min={DEFAULT_MIN_PRICE}
+            max={DEFAULT_MAX_PRICE}
+            step={10} // Adjust step as needed
+            value={priceRangeValue}
+            onValueChange={(value) => setPriceRangeValue(value as [number, number])}
             className="mt-2"
           />
         </div>
