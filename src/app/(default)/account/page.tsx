@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,12 +10,12 @@ import type { UserProfile, Booking, Review, Salon } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { ReviewCard } from '@/components/salon/review-card'; // Import ReviewCard
+import { ReviewCard } from '@/components/salon/review-card';
 import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getUserProfile } from '@/lib/firebase'; // Import getUserProfile
+import { getUserProfile } from '@/lib/firebase';
 
 interface FirebaseError extends Error {
   code?: string;
@@ -27,8 +27,8 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]); // New state for reviews
-  const [isLoadingReviews, setIsLoadingReviews] = useState(false); // New loading state for reviews
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const router = useRouter();
@@ -38,37 +38,50 @@ export default function AccountPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null);
-      if (user && user.uid) { // Check for user.uid as well
+      if (user && user.uid) {
         setCurrentUser(user);
         try {
-          const profileData = await getUserProfile(user.uid);
+          // Try to fetch profile by UID first (standard way)
+          let profileData = await getUserProfile(user.uid);
+
+          if (!profileData && user.email) {
+            // If not found by UID (e.g., legacy data or specific setup), try by email
+            console.log(`Profile not found by UID ${user.uid}, trying by email ${user.email}`);
+            const usersQuery = query(collection(firestore, 'users'), where('email', '==', user.email));
+            const querySnapshot = await getDocs(usersQuery);
+            if (!querySnapshot.empty) {
+              const userDoc = querySnapshot.docs[0];
+              profileData = { id: userDoc.id, ...userDoc.data() } as UserProfile;
+              console.log("Profile found by email:", profileData);
+            }
+          }
+
 
           if (profileData) {
             setUserProfile(profileData as UserProfile);
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email?: string | null } = {
+            const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email?: string | null, userId: string } = {
               name: user.displayName || 'Потребител',
-              email: user.email, // Include email from auth user
+              email: user.email,
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
               createdAt: Timestamp.fromDate(new Date()),
-              // profileType: 'customer', // This field seems to be from an older schema, ensure UserProfile type is up-to-date
+              userId: user.uid, // Ensure userId is saved
             };
-            await setDoc(newUserDocRef, { ...dataToSave, role: 'customer', userId: user.uid }); // Add default role and userId
+            await setDoc(newUserDocRef, { ...dataToSave, role: 'customer' });
             setUserProfile({
               id: user.uid,
               name: dataToSave.name,
               email: dataToSave.email || '',
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
-              role: 'customer', // Assign a default role
+              role: 'customer',
               userId: user.uid,
             });
           }
 
-          // Fetch bookings using UID
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
@@ -80,7 +93,6 @@ export default function AccountPage() {
           });
           setBookings(fetchedBookings);
 
-          // Reviews will be fetched when the "Отзиви" tab is selected
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error as FirebaseError);
@@ -121,36 +133,30 @@ export default function AccountPage() {
     return () => unsubscribe();
   }, [firestore, router]);
 
-  // Effect to fetch reviews when the userProfile and its role are available
   useEffect(() => {
     const fetchReviews = async () => {
       if (!userProfile || !userProfile.id) return;
 
       setIsLoadingReviews(true);
-      setReviews([]); // Clear previous reviews
+      setReviews([]);
       const reviewsCollectionRef = collection(firestore, 'reviews');
 
       try {
         let reviewsQuery;
         if (userProfile.role === 'customer') {
-          // Fetch reviews written by the user
           reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id));
         } else if (userProfile.role === 'business') {
-          // Fetch salons owned by the business user
           const salonsQuery = query(collection(firestore, 'salons'), where('ownerId', '==', userProfile.id));
           const salonSnapshot = await getDocs(salonsQuery);
           const salonIds = salonSnapshot.docs.map(doc => doc.id);
 
           if (salonIds.length === 0) {
-            setReviews([]); // No salons, no reviews
+            setReviews([]);
             setIsLoadingReviews(false);
             return;
           }
-
-          // Fetch reviews for these salons
           reviewsQuery = query(reviewsCollectionRef, where('salonId', 'in', salonIds));
         } else {
-          // No reviews for other roles (e.g., admin) on this page
           setIsLoadingReviews(false);
           return;
         }
@@ -167,9 +173,23 @@ export default function AccountPage() {
         setIsLoadingReviews(false);
       }
     };
-    fetchReviews();
-  }, [userProfile, firestore]); // Depend on userProfile and firestore
+    if (userProfile) {
+      fetchReviews();
+    }
+  }, [userProfile, firestore]);
 
+  const getRoleDisplayName = (role?: string) => {
+    switch (role) {
+      case 'admin':
+        return 'Администратор';
+      case 'business':
+        return 'Бизнес';
+      case 'customer':
+        return 'Потребител';
+      default:
+        return 'Потребител';
+    }
+  };
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -180,7 +200,7 @@ export default function AccountPage() {
         </h1>
         {userProfile?.role && (
           <Badge variant="secondary" className="text-lg">
-            {userProfile.role === 'admin' ? 'Роля: Администратор' : 'Роля: Потребител'}
+            Роля: {getRoleDisplayName(userProfile.role)}
           </Badge>
         )}
         <p className="text-lg text-muted-foreground">
@@ -189,11 +209,11 @@ export default function AccountPage() {
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm"> {/* Adjusted grid-cols to 3 */}
+        <TabsList className="grid w-full grid-cols-3 md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm">
           <TabsTrigger value="profile" className="py-3 text-base">
             <Edit3 className="mr-2 h-5 w-5" /> Профил
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="py-3 text-base"> {/* New Reviews tab */}
+          <TabsTrigger value="reviews" className="py-3 text-base">
             <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
           </TabsTrigger>
           <TabsTrigger value="bookings" className="py-3 text-base">
@@ -228,37 +248,27 @@ export default function AccountPage() {
                 <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
               </div>
               {fetchError?.code === 'permission-denied' || (fetchError?.customMessage && fetchError.customMessage.includes("Липсват права")) ? (
-                  <div className="text-sm text-left space-y-3 p-4 bg-destructive/5 border border-destructive/30 rounded-md">
+                  <div className="text-sm text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md">
                     <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore (permission-denied)!</p>
                     <p className="text-destructive-foreground/90">
                       Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
-                      Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект.
+                      Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект (<code>glowy-gyoodev</code>).
                     </p>
                     <p className="text-destructive-foreground/90">
-                      <strong>За да разрешите това, МОЛЯ, направете следното във Вашата Firebase конзола:</strong>
+                      <strong>За да разрешите това, МОЛЯ, направете следното във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>:</strong>
                     </p>
                     <ol className="list-decimal list-inside space-y-1 text-destructive-foreground/90 pl-4">
-                      <li>Отворете <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground">Firebase Console</a> и изберете Вашия проект (<code>glowy-gyoodev</code>).</li>
-                      <li>В лявото меню отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
+                      <li>Отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
                       <li>Изберете таба <strong>Rules</strong>.</li>
                       <li>Заменете съществуващите правила със следните:</li>
                     </ol>
-                    <pre className="text-xs bg-card text-card-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
+                    <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
                       <code>
-                        rules_version = '2';{'\n'}
-                        service cloud.firestore {'{\n'}
-                        {'  '}match /databases/{'{database}'}/documents {'{\n'}
-                        {'    '}// Позволява на удостоверен потребител да чете и пише своя собствен документ{'\n'}
-                        {'    '}// в колекцията 'users', където ID на документа е UID на потребителя.{'\n'}
-                        {'    '}match /users/{'{userId}'} {'{\n'}
-                        {'      '}allow read, write: if request.auth != null && request.auth.uid == userId;{'\n'}
-                        {'    '}{'}\n'}
-                        {'  '}{'}\n'}
-                        {'}'}
+                        {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // Allow an authenticated user to read and write their own document\n    // in the 'users' collection, where the document ID is their UID.\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n  }\n}`}
                       </code>
                     </pre>
                     <p className="text-destructive-foreground/90">
-                      5. Натиснете бутона <strong>Publish</strong>.
+                      4. Натиснете бутона <strong>Publish</strong>.
                     </p>
                     <p className="font-semibold text-destructive-foreground">
                       След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
@@ -306,11 +316,10 @@ export default function AccountPage() {
           </div>
         </TabsContent>
 
-        {/* New Reviews Tab Content */}
         <TabsContent value="reviews">
            <div className="max-w-3xl mx-auto">
             <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
-              {userProfile?.role === 'customer' ? 'Вашите Отзиви' : 'Отзиви за Вашите Салони'}
+              {userProfile?.role === 'customer' ? 'Вашите Отзиви' : userProfile?.role === 'business' ? 'Отзиви за Вашите Салони' : 'Отзиви'}
             </h2>
             {isLoadingReviews ? (
                <div className="space-y-4">
