@@ -68,10 +68,10 @@ export default function SalonProfilePage() {
       });
       return;
     }
-    if (!selectedService || !selectedBookingDate || !selectedBookingTime) {
+    if (!selectedService || !selectedBookingDate || !selectedBookingTime || !salon) {
       toast({
         title: "Непълна информация за резервация",
-        description: "Моля, изберете услуга, дата и час.",
+        description: "Моля, изберете салон, услуга, дата и час.",
         variant: "destructive",
       });
       return;
@@ -82,8 +82,9 @@ export default function SalonProfilePage() {
 
       await createBooking({
         salonId: salonId,
+        salonName: salon.name, // Pass salonName
         userId: userId,
-        service: selectedService, // Pass the whole service object
+        service: selectedService, // Pass the whole service object (createBooking will pick fields)
         date: selectedBookingDate.toISOString(), 
         time: selectedBookingTime,
       });
@@ -104,7 +105,7 @@ export default function SalonProfilePage() {
         toast({
             title: "Покана за отзив (симулация)",
             description: "След преживяването си, ще получите покана да оставите отзив.",
-            variant: "default", // Or 'success' if you have one
+            variant: "default", 
             duration: 4000,
         });
       } catch (emailError) {
