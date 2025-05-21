@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { useToast } from '@/components/ui/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function EditBusinessPage() {
@@ -23,6 +23,7 @@ export default function EditBusinessPage() {
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState<Partial<Salon>>({});
   const firestore = getFirestore();
+  const { toast } = useToast();
   const auth = getAuth();
 
   useEffect(() => {
