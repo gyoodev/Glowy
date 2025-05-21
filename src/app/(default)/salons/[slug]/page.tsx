@@ -3,10 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import Link from 'next/link'; // Import Link
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { Salon, Service } from '@/types';
-import { mockSalons } from '@/lib/mock-data';
+import { getFirestore, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
@@ -24,7 +24,7 @@ import { bg } from 'date-fns/locale';
 
 export default function SalonProfilePage() {
   const params = useParams();
-  const slugParam = params.slug; // slug can be string or string[]
+  const slugParam = params.slug;
 
   const [salon, setSalon] = useState<Salon | null>(null);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
@@ -32,47 +32,76 @@ export default function SalonProfilePage() {
   const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>(undefined);
   const [selectedBookingTime, setSelectedBookingTime] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
-
+  const firestore = getFirestore();
 
   useEffect(() => {
     let currentSlug: string | undefined;
     if (typeof slugParam === 'string') {
       currentSlug = slugParam;
     } else if (Array.isArray(slugParam) && slugParam.length > 0) {
-      currentSlug = slugParam[0]; // Use the first part if it's an array (for catch-all segments)
+      currentSlug = slugParam[0];
     }
 
-    if (currentSlug) {
+    const fetchSalonBySlug = async (slug: string) => {
       setIsLoading(true);
-      const salonNameFromSlug = currentSlug.replace(/_/g, ' ');
-      const fetchedSalon = Array.isArray(mockSalons) ? mockSalons.find(s => s.salonName === salonNameFromSlug) : undefined;
+      setSalon(null); 
+      const salonNameFromSlug = slug.replace(/_/g, ' ');
 
-      // Simulate API delay
-      const timer = setTimeout(() => {
-        if (fetchedSalon) {
-          setSalon(fetchedSalon);
+      try {
+        const salonsCollectionRef = collection(firestore, 'salons');
+        const q = query(salonsCollectionRef, where('name', '==', salonNameFromSlug), limit(1));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          const salonDoc = querySnapshot.docs[0];
+          let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
+          // Ensure arrays exist
+          salonData.services = salonData.services || [];
+          salonData.reviews = salonData.reviews || [];
+          salonData.photos = salonData.photos || [];
+          setSalon(salonData);
         } else {
-          console.error("Салонът не е намерен по slug:", currentSlug);
+          console.error("Салонът не е намерен по slug (Firestore):", slug);
           setSalon(null);
         }
+      } catch (error) {
+        console.error("Грешка при извличане на салон от Firestore:", error);
+        setSalon(null);
+        toast({
+          title: "Грешка при зареждане",
+          description: "Неуспешно зареждане на информацията за салона.",
+          variant: "destructive",
+        });
+      } finally {
         setIsLoading(false);
-      }, 500);
-      return () => clearTimeout(timer); // Cleanup timeout
+      }
+    };
+
+    if (currentSlug) {
+      fetchSalonBySlug(currentSlug);
     } else {
-      setSalon(null); // No slug, so no salon
+      setSalon(null);
       setIsLoading(false);
     }
-  }, [slugParam]);
+  }, [slugParam, firestore, toast]);
 
   const handleBookService = (serviceId: string) => {
-    const service = salon?.services.find(s => s.id === serviceId);
-    setSelectedService(service);
-    toast({
-        title: "Услугата е избрана",
-        description: `${service?.name} е добавена към календара за резервации. Моля, изберете дата и час.`,
-    });
-    const calendarElement = document.getElementById("booking-calendar-section");
-    calendarElement?.scrollIntoView({ behavior: "smooth" });
+    const service = salon?.services?.find(s => s.id === serviceId);
+    if (service) {
+        setSelectedService(service);
+        toast({
+            title: "Услугата е избрана",
+            description: `${service.name} е добавена към календара за резервации. Моля, изберете дата и час.`,
+        });
+        const calendarElement = document.getElementById("booking-calendar-section");
+        calendarElement?.scrollIntoView({ behavior: "smooth" });
+    } else {
+        toast({
+            title: "Грешка",
+            description: "Избраната услуга не е намерена.",
+            variant: "destructive",
+        });
+    }
   };
 
   const handleTimeSelected = (date: Date | undefined, time: string | undefined) => {
@@ -104,10 +133,8 @@ export default function SalonProfilePage() {
     const bookingTime = selectedBookingTime;
     const localSelectedService = selectedService;
 
-
     try {
       const userId = auth.currentUser.uid;
-
       await createBooking({
         salonId: salon.id,
         salonName: bookingSalonName,
@@ -126,7 +153,6 @@ export default function SalonProfilePage() {
       const [hours, minutes] = bookingTime.split(':').map(Number);
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
-
       const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
@@ -155,21 +181,18 @@ export default function SalonProfilePage() {
             });
           }
         }, delay);
-
         toast({
           title: "Напомняне за отзив е насрочено",
-          description: `Ще получите покана да оставите отзив 1 час след Вашата резервация в ${bookingSalonName} (ако останете на тази страница).`,
+          description: `Ще получите покана да оставите отзив 1 час след Вашата резервация в ${bookingSalonName}.`,
           variant: "default",
           duration: 6000,
         });
       } else {
         console.log("Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
       }
-
       setSelectedService(undefined);
       setSelectedBookingDate(undefined);
       setSelectedBookingTime(undefined);
-
     } catch (error) {
       console.error("Error creating booking:", error);
       toast({
@@ -218,12 +241,12 @@ export default function SalonProfilePage() {
     moderate: 'умерено',
     expensive: 'скъпо',
   };
-
+  
   return (
     <div className="bg-background">
       <div className="relative h-64 md:h-96 w-full group">
         <Image
-          src={salon.heroImage}
+          src={salon.heroImage || 'https://placehold.co/1200x400.png'}
           alt={`Hero image for ${salon.name}`}
           layout="fill"
           objectFit="cover"
@@ -233,7 +256,7 @@ export default function SalonProfilePage() {
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
           <div className="text-center text-white p-4">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">{salon.name}</h1>
-            <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto">{salon.description.substring(0,100)}...</p>
+            <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto">{salon.description?.substring(0,100)}...</p>
           </div>
         </div>
       </div>
@@ -246,16 +269,18 @@ export default function SalonProfilePage() {
                 <div>
                   <div className="flex items-center mb-1">
                     <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
-                    <span className="text-2xl font-bold">{salon.rating.toFixed(1)}</span>
-                    <span className="ml-2 text-muted-foreground">({salon.reviews.length} отзива)</span>
+                    <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? 'N/A'}</span>
+                    <span className="ml-2 text-muted-foreground">({salon.reviews?.length ?? 0} отзива)</span>
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address}
                   </div>
                 </div>
-                <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm mt-2 sm:mt-0 py-1 px-3">
-                  {priceRangeTranslations[salon.priceRange] || salon.priceRange}
-                </Badge>
+                {salon.priceRange && (
+                    <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm mt-2 sm:mt-0 py-1 px-3">
+                    {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+                    </Badge>
+                )}
               </div>
               <p className="text-foreground leading-relaxed">{salon.description}</p>
             </div>
@@ -272,9 +297,9 @@ export default function SalonProfilePage() {
                   <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
                 </h2>
                 <div className="space-y-1">
-                  {salon.services.map(service => (
+                  {salon.services && salon.services.length > 0 ? salon.services.map(service => (
                     <ServiceListItem key={service.id} service={service} onBook={handleBookService} />
-                  ))}
+                  )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                 </div>
               </TabsContent>
 
@@ -282,7 +307,7 @@ export default function SalonProfilePage() {
                 <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                   <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
                 </h2>
-                {salon.reviews.length > 0 ? (
+                {salon.reviews && salon.reviews.length > 0 ? (
                   <div className="space-y-6">
                     {salon.reviews.map(review => (
                       <ReviewCard key={review.id} review={review} />
@@ -301,11 +326,11 @@ export default function SalonProfilePage() {
                   <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {salon.photos.map((photo, index) => (
+                    {salon.photos && salon.photos.length > 0 ? salon.photos.map((photo, index) => (
                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
                             <Image src={photo} alt={`${salon.name} снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
                         </div>
-                    ))}
+                    )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
                 </div>
               </TabsContent>
             </Tabs>
@@ -316,7 +341,7 @@ export default function SalonProfilePage() {
               <BookingCalendar
                 salonName={salon.name}
                 serviceName={selectedService?.name}
-                availability={salon.availability}
+                availability={salon.availability || {}}
                 onTimeSelect={handleTimeSelected}
               />
             </div>
@@ -359,12 +384,11 @@ export default function SalonProfilePage() {
               </Button>
             )}
             <div className="bg-card p-6 rounded-lg shadow-lg">
-
               <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address}</li>
-                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> (123) 456-7890 (Примерен)</li>
-                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> Пон - Съб: 9:00 - 19:00</li>
+                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || '(няма предоставен)'}</li>
+                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> { salon.workingHours || 'Пон - Съб: 9:00 - 19:00 (примерно)'}</li>
               </ul>
             </div>
           </aside>
@@ -373,4 +397,3 @@ export default function SalonProfilePage() {
     </div>
   );
 }
-

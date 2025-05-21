@@ -25,10 +25,10 @@ export interface Salon {
   city: string; // Ще бъде преведено в mock-data
   rating: number; // 1-5
   priceRange: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
-  photos: string[]; // URLs to photos
+  photos: string[]; // URLs to photos - Should always be an array, even if empty
   services: Service[]; // In a real app, these might be IDs referencing a separate services collection
   reviews: Review[]; // In a real app, these might be IDs referencing a separate reviews collection
-  heroImage: string; // URL to a hero image
+  heroImage?: string; // URL to a hero image - Made optional
   availability?: Record<string, string[]>; // Date string -> array of time slots e.g., "HH:mm"
   ownerId?: string; // UID of the business owner
   // Fields for AI generation, might not be stored directly if only used for generating the main description
@@ -37,6 +37,10 @@ export interface Salon {
   targetCustomerForAi?: string;
   uniqueSellingPointsForAi?: string;
   createdAt?: any; // For Firestore Timestamp
+  phone?: string; // Optional phone number
+  email?: string; // Optional email
+  website?: string; // Optional website
+  workingHours?: string; // Optional working hours
 }
 
 export interface UserProfile {
