@@ -11,7 +11,7 @@ interface SalonCardProps {
 }
 
 export function SalonCard({ salon }: SalonCardProps) {
-  const salonSlug = salon.name.replace(/\s+/g, '_');
+  const salonSlug = salon.name.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full">

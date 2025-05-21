@@ -9,8 +9,9 @@ import type { Salon, Service } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card';
+import { AddReviewForm } from '@/components/salon/AddReviewForm';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -27,6 +28,7 @@ export default function SalonProfilePage() {
   const slugParam = params.slug;
 
   const [salon, setSalon] = useState<Salon | null>(null);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
   const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>(undefined);
@@ -204,6 +206,57 @@ export default function SalonProfilePage() {
       console.error("[SalonProfilePage] Error creating booking:", error);
       toast({
         title: "Възникна грешка при резервацията",
+        description: "Моля, опитайте отново по-късно.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAddReview = async (rating: number, comment: string) => {
+    if (!auth.currentUser) {
+      toast({
+        title: "Не сте влезли",
+        description: "Моля, влезте в профила си, за да оставите отзив.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!salon) {
+      toast({
+        title: "Грешка",
+        description: "Няма информация за салона.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const userId = auth.currentUser.uid;
+      const newReview = {
+        id: Date.now().toString(), // Simple unique ID for mock data
+        userName: auth.currentUser.displayName || 'Анонимен потребител', // Use display name or a default
+        rating: rating,
+        comment: comment,
+        date: new Date().toISOString(),
+        userAvatar: auth.currentUser.photoURL || 'https://placehold.co/40x40.png', // Use photoURL or a default
+        userId: userId,
+      };
+
+      // In a real application, you would add this to a 'reviews' collection
+      // and update the salon's average rating and review count separately
+      // For this example, we'll just update the local state as if it were added.
+      const updatedSalon = { ...salon, reviews: [...(salon.reviews || []), newReview] };
+      setSalon(updatedSalon);
+
+      setShowReviewForm(false);
+      toast({
+        title: "Отзивът е добавен!",
+        description: "Благодарим за Вашия отзив.",
+      });
+    } catch (error) {
+      console.error("Error adding review:", error);
+      toast({
+        title: "Възникна грешка при добавяне на отзив",
         description: "Моля, опитайте отново по-късно.",
         variant: "destructive",
       });
