@@ -1,16 +1,17 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+// import { useToast } from '@/hooks/use-toast'; // toast is not used here
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { toast } = useToast(); // Initialize toast
+  // const { toast } = useToast(); // toast is not used here
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -21,21 +22,21 @@ export default function AdminDashboardPage() {
             setIsAdmin(true);
           } else {
             // This is a secondary check; AdminLayout should primarily handle this.
-            // toast({ // Toasting here might be redundant if AdminLayout already does it.
+            // toast({
             //   title: 'Достъп отказан',
             //   description: 'Нямате права за достъп до таблото.',
             //   variant: 'destructive',
             // });
-            router.push('/'); 
+            router.push('/');
           }
         } catch (error) {
           console.error('Грешка при проверка на админ роля в таблото:', error);
-          // toast({ // Toasting here might be redundant.
+          // toast({
           //   title: 'Грешка',
           //   description: 'Възникна грешка при проверка на вашите права.',
           //   variant: 'destructive',
           // });
-          router.push('/'); 
+          router.push('/');
         } finally {
           setLoading(false);
         }
@@ -46,12 +47,13 @@ export default function AdminDashboardPage() {
         //   description: 'Моля, влезте.',
         //   variant: 'default',
         // });
-        router.push('/login'); 
+        router.push('/login');
+        setLoading(false); // Ensure loading is set to false if user is null
       }
     });
 
     return () => unsubscribe();
-  }, [router, toast]); // Added toast to dependency array, though not directly used for new toasts here
+  }, [router]); // Removed toast from dependency array
 
   if (loading) {
     return <div className="container mx-auto py-10 text-center">Зареждане на административното табло...</div>;

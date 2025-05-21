@@ -5,11 +5,11 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import type { UserProfile, Service } from '@/types'; // Ensure Service type is imported
+import type { UserProfile, Service, Booking } from '@/types'; // Ensure Service type is imported
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M", 
+  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
   authDomain: "glowy-gyoodev.firebaseapp.com",
   projectId: "glowy-gyoodev",
   storageBucket: "glowy-gyoodev.firebasestorage.app",
@@ -27,6 +27,7 @@ if (!getApps().length) {
 }
 
 const auth = getAuth(app);
+const firestore = getFirestore(app); // Initialize firestore once
 
 let analytics;
 if (typeof window !== 'undefined') {
@@ -37,32 +38,27 @@ if (typeof window !== 'undefined') {
   });
 }
 
-const firestore = getFirestore(app);
 
 // Function to create a new booking
 export const createBooking = async (bookingDetails: {
   salonId: string;
-  salonName: string; // Added salonName
+  salonName: string;
   userId: string;
-  service: Service; // Use the specific Service type
+  service: Service;
   date: string;
   time: string;
 }) => {
   try {
     const bookingDataForFirestore = {
       salonId: bookingDetails.salonId,
-      salonName: bookingDetails.salonName,
+      salonName: bookingDetails.salonName, // Storing salonName
       userId: bookingDetails.userId,
       serviceId: bookingDetails.service.id,
       serviceName: bookingDetails.service.name,
-      // Optionally add other serializable service details if needed for history
-      // e.g., serviceDescription: bookingDetails.service.description,
-      // e.g., servicePrice: bookingDetails.service.price,
       date: bookingDetails.date,
       time: bookingDetails.time,
       status: 'confirmed', // Default status
       createdAt: Timestamp.fromDate(new Date()),
-      // DO NOT include the full service object or its categoryIcon here
     };
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
@@ -74,35 +70,72 @@ export const createBooking = async (bookingDetails: {
 };
 
 // Function to get bookings for a specific user
-export const getUserBookings = async (userId: string) => {
-  const bookings: any[] = [];
-  const q = query(collection(firestore, 'bookings'), where('userId', '==', userId), where('status', '!=', 'cancelled')); // Example: exclude cancelled
+export const getUserBookings = async (userId: string): Promise<Booking[]> => {
+  const bookings: Booking[] = [];
+  // Example: exclude cancelled, order by creation date descending
+  const q = query(
+    collection(firestore, 'bookings'),
+    where('userId', '==', userId)
+    // orderBy('createdAt', 'desc') // This would require a composite index if 'status' is also filtered with inequality
+  );
   const querySnapshot = await getDocs(q);
   querySnapshot.forEach((doc) => {
-    bookings.push({ id: doc.id, ...doc.data() });
+    // Ensure the fetched data conforms to the Booking type
+    const data = doc.data();
+    const booking: Booking = {
+      id: doc.id,
+      salonId: data.salonId,
+      salonName: data.salonName,
+      serviceId: data.serviceId,
+      serviceName: data.serviceName,
+      date: data.date,
+      time: data.time,
+      status: data.status as Booking['status'], // Type assertion for status
+      // Optionally map other fields if they exist and are part of Booking type
+    };
+    bookings.push(booking);
   });
   return bookings;
 };
 
 // Function to get user profile data by UID
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
+  if (!userId) {
+    console.warn("getUserProfile called with null or undefined userId.");
+    return null;
+  }
   try {
     const userDocRef = doc(firestore, 'users', userId);
     const userDocSnap = await getDoc(userDocRef);
     if (userDocSnap.exists()) {
-      return { id: userDocSnap.id, ...userDocSnap.data() } as UserProfile;
+      const data = userDocSnap.data();
+      // Ensure the data conforms to UserProfile, especially nested objects
+      return {
+        id: userDocSnap.id,
+        name: data.name || data.displayName || '', // Handle potential variations
+        email: data.email || '',
+        role: data.role,
+        userId: data.userId || userId, // Ensure userId field exists
+        profilePhotoUrl: data.profilePhotoUrl,
+        preferences: {
+          favoriteServices: data.preferences?.favoriteServices || [],
+          priceRange: data.preferences?.priceRange || '',
+          preferredLocations: data.preferences?.preferredLocations || [],
+        },
+        // Add any other fields from UserProfile type with defaults if necessary
+      } as UserProfile;
     } else {
-      console.log(`No profile found for UID: ${userId}`);
+      console.log(`No profile found for UID: ${userId} in getUserProfile.`);
       return null;
     }
   } catch (error) {
-    console.error('Error fetching user profile by UID:', error);
-    throw error;
+    console.error('Error fetching user profile by UID (getUserProfile):', error);
+    return null; // Return null on error instead of throwing
   }
 };
 
 
-// Function to get user profile data by email (still uses UID as doc ID eventually)
+// Function to get user profile data by email
 export const getUserProfileByEmail = async (email: string): Promise<UserProfile | null> => {
   if (!email) {
     console.warn("Attempted to fetch profile with null or undefined email.");
@@ -112,15 +145,27 @@ export const getUserProfileByEmail = async (email: string): Promise<UserProfile 
     const usersQuery = query(collection(firestore, 'users'), where('email', '==', email));
     const querySnapshot = await getDocs(usersQuery);
     if (!querySnapshot.empty) {
-      // Assuming email is unique, so take the first one.
       const userDoc = querySnapshot.docs[0];
-      return { id: userDoc.id, ...userDoc.data() } as UserProfile;
+      const data = userDoc.data();
+      return {
+        id: userDoc.id,
+        name: data.name || data.displayName || '',
+        email: data.email || '',
+        role: data.role,
+        userId: data.userId || userDoc.id,
+        profilePhotoUrl: data.profilePhotoUrl,
+        preferences: {
+          favoriteServices: data.preferences?.favoriteServices || [],
+          priceRange: data.preferences?.priceRange || '',
+          preferredLocations: data.preferences?.preferredLocations || [],
+        },
+      } as UserProfile;
     } else {
-      console.log(`No profile found for email: ${email}`);
-      return null; // User document not found for this email
+      console.log(`No profile found for email: ${email} in getUserProfileByEmail.`);
+      return null;
     }
   } catch (error: any) {
-    console.error('Error fetching user profile by email:', error);
+    console.error('Error fetching user profile by email (getUserProfileByEmail):', error);
     if (error.code === 'failed-precondition') {
         console.error(
         "Firestore query failed: This usually means you're missing a composite index " +
@@ -128,7 +173,8 @@ export const getUserProfileByEmail = async (email: string): Promise<UserProfile 
         "Check the Firebase console for a link to create it."
         );
     }
-    throw error; 
+    // throw error; // Consider returning null instead of throwing for robustness in calling components
+    return null;
   }
 };
 
@@ -161,4 +207,4 @@ export const getBookingStatus = async (bookingId: string) => {
     throw error;
   }
 };
-export { app, auth, analytics, firestore };
+export { app, auth, analytics }; // firestore is already initialized and exported by getFirestore(app)
