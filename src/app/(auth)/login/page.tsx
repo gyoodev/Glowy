@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LogIn, Mail, KeyRound, Chrome, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
+import { auth} from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
@@ -35,11 +35,21 @@ export default function LoginPage() {
     },
   });
 
+  const [rememberMe, setRememberMe] = React.useState(false);
+
+  React.useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      form.setValue('email', savedEmail);
+      setRememberMe(true);
+    }
+  }, [form]);
+
   const onSubmit: SubmitHandler<LoginFormValues> = async (data) => {
     console.log('Login data:', data);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user;
+      const user = userCredential.user; // This line seems redundant as 'user' is not used later in this block
       console.log('Email/Password Sign-In successful:', user);
       localStorage.setItem('isUserLoggedIn', 'true');
       toast({
@@ -47,6 +57,12 @@ export default function LoginPage() {
         description: 'Добре дошли отново!',
       });
       router.push('/');
+
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', data.email);
+      } else {
+        localStorage.removeItem('rememberedEmail');
+      }
     } catch (error: any) {
       console.error('Error during Email/Password Sign-In:', error);
       toast({
@@ -62,7 +78,7 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log('Google Sign-In successful:', user);
+      console.log('Google Sign-In successful:', user); // This line seems redundant as 'user' is not used later in this block
       localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
       toast({
         title: 'Влизане с Google успешно',
@@ -129,6 +145,14 @@ export default function LoginPage() {
               )}
             />
           </CardContent>
+          <div className="flex items-center justify-between px-6 pb-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
+              <label htmlFor="remember-me" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                Remember me
+              </label>
+            </div>
+          </div>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full text-lg py-6" disabled={form.formState.isSubmitting}>
               {form.formState.isSubmitting ? 'Влизане...' : 'Вход'}
