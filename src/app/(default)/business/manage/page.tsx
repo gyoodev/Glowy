@@ -136,7 +136,7 @@ export default function BusinessManagePage() {
             <Card key={business.id} className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="p-0">
                 <Link href={`/salons/${salonNameToSlug(business.name)}`} aria-label={`Преглед на ${business.name}`}>
-                  <div className="relative h-48 w-full">
+                  <div className="relative h-48 w-full overflow-hidden">
                     <Image
                       src={business.heroImage || 'https://placehold.co/400x200.png'}
                       alt={`Изображение на ${business.name}`}
@@ -165,7 +165,7 @@ export default function BusinessManagePage() {
                 </Button>
                 <Button variant="default" size="sm" asChild>
                   <Link href={`/business/edit/${business.id}`}>
-                    <Edit3 className="mr-2 h-4 w-4" />
+ <Edit3 className="mr-2 h-4 w-4" />
                     Редактирай
                   </Link>
                 </Button>
