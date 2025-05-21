@@ -69,6 +69,12 @@ export function Header() {
         <Link href="/account">Моят Акаунт</Link>
     </Button>
   );
+ const businessManageLinkMobile = (
+    <Button variant="ghost" asChild className="justify-start">
+      <Link href="/business/manage">Управление на Бизнеса</Link>
+    </Button>
+  );
+
  const adminPanelLinkMobile = (
  <Button variant="ghost" asChild className="justify-start">
  <Link href="/admin/dashboard">Admin Panel</Link>
@@ -81,6 +87,12 @@ export function Header() {
       <Link href="/admin/dashboard">Admin Panel</Link>
     </Button>
   )
+ const businessManageLinkDesktop = (
+    <Button variant="ghost" asChild>
+      <Link href="/business/manage">Управление на Бизнеса</Link>
+    </Button>
+  );
+
 
   // Render loading skeleton if isLoading is true
   // This will be the case on initial server render and initial client render before useEffect runs
@@ -115,6 +127,7 @@ export function Header() {
           ))}
           {isLoggedIn && myAccountLinkDesktop}
  {userRole === 'admin' && adminPanelLinkDesktop}
+ {userRole === 'business' && businessManageLinkDesktop}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
@@ -152,6 +165,7 @@ export function Header() {
                   </Button>
                 ))}
                 {isLoggedIn && myAccountLinkMobile}
+ {userRole === 'business' && businessManageLinkMobile}
  {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (

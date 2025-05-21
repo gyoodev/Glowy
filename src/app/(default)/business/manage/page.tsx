@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
+import Link from 'next/link';
 import type { UserProfile } from '@/types'; // Assuming UserProfile type is in types/index.ts
 
 export default function BusinessManagePage() {
@@ -49,6 +50,11 @@ export default function BusinessManagePage() {
       <h1 className="text-3xl font-bold mb-6">Business Management Page</h1>
       {/* Placeholder content for business management form */}
       <p>Welcome, {userProfile?.name}! You can manage your business here.</p>
+      {/* TODO: Replace 'your-business-id' with the actual business ID */}
+      <Link href="/business/your-business-id" className="text-blue-600 hover:underline">
+        View Your Business Profile
+      </Link>
+
       {/* Add your business management form and content here */}
     </div>
   );

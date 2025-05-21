@@ -14,6 +14,7 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 import { Separator } from '@/components/ui/separator';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
+import { createBooking } from '@/lib/firebase'; // Import createBooking
 
 export default function SalonProfilePage() {
   const params = useParams();
@@ -21,6 +22,8 @@ export default function SalonProfilePage() {
   const [salon, setSalon] = useState<Salon | null>(null);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
+  const [selectedBookingDate, setSelectedBookingDate] = useState<Date | undefined>(undefined);
+  const [selectedBookingTime, setSelectedBookingTime] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (salonId) {
@@ -46,6 +49,53 @@ export default function SalonProfilePage() {
     });
     const calendarElement = document.getElementById("booking-calendar-section");
     calendarElement?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const handleTimeSelected = (date: Date | undefined, time: string | undefined) => {
+    setSelectedBookingDate(date);
+    setSelectedBookingTime(time);
+  };
+
+  const handleConfirmBooking = async () => {
+    if (!selectedService || !selectedBookingDate || !selectedBookingTime) {
+      toast({
+        title: "Непълна информация за резервация",
+        description: "Моля, изберете услуга, дата и час.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // TODO: Get actual user ID
+      const userId = "placeholder-user-id"; 
+
+      await createBooking({
+        salonId: salonId,
+        userId: userId,
+        service: selectedService,
+        date: selectedBookingDate.toISOString(), // Store date as ISO string
+        time: selectedBookingTime,
+      });
+
+      toast({
+        title: "Резервацията е потвърдена!",
+        description: `Успешно резервирахте ${selectedService.name} за ${selectedBookingDate.toLocaleDateString()} в ${selectedBookingTime}.`,
+      });
+
+      // Reset selections after successful booking
+      setSelectedService(undefined);
+      setSelectedBookingDate(undefined);
+      setSelectedBookingTime(undefined);
+
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      toast({
+        title: "Възникна грешка при резервацията",
+        description: "Моля, опитайте отново по-късно.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (!salon) {
@@ -169,9 +219,19 @@ export default function SalonProfilePage() {
                 salonName={salon.name} 
                 serviceName={selectedService?.name}
                 availability={salon.availability}
+                onTimeSelect={handleTimeSelected}
               />
             </div>
+            {selectedService && selectedBookingDate && selectedBookingTime && (
+              <Button
+                onClick={handleConfirmBooking}
+                className="w-full py-6 text-lg font-semibold"
+              >
+                Потвърди резервация за {selectedService.name} на {selectedBookingDate.toLocaleDateString()} в {selectedBookingTime}
+              </Button>
+            )}
             <div className="bg-card p-6 rounded-lg shadow-lg">
+
               <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address}</li>

@@ -13,6 +13,7 @@ interface BookingCalendarProps {
   salonName: string;
   serviceName?: string;
   availability?: Record<string, string[]>; // Date string -> array of time slots "HH:mm"
+  onTimeSelect?: (date: Date | undefined, time: string | undefined) => void;
 }
 
 export function BookingCalendar({ salonName, serviceName, availability = {} }: BookingCalendarProps) {
@@ -31,46 +32,11 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
     }
   }, [selectedDate, availability]);
 
-  const handleBookSlot = async () => {
-    if (!selectedDate || !selectedTime) {
-      toast({
-        title: "Непълна селекция",
-        description: "Моля, изберете дата и час.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const bookingDetailsMessage = `Резервацията е потвърдена за ${serviceName || 'услуга'} в ${salonName} на ${selectedDate.toLocaleDateString('bg-BG')} в ${selectedTime}.`;
-    toast({
-      title: "Резервацията е успешна!",
-      description: bookingDetailsMessage,
-    });
-    console.log(bookingDetailsMessage);
-
-    // Simulate sending review reminder email
-    try {
-      const reminderResult = await sendReviewReminderEmail({
-        salonName: salonName,
-        serviceName: serviceName,
-        bookingDate: selectedDate.toLocaleDateString('bg-BG'),
-        bookingTime: selectedTime,
-      });
-
-      if (reminderResult.success) {
-        toast({
-          title: "Покана за Отзив (Симулация)",
-          description: "Симулирано е изпращане на имейл с покана да оставите отзив за Вашето преживяване.",
-        });
-      } else {
-        toast({
-          title: "Грешка при Симулация на Отзив",
-          description: reminderResult.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Грешка при симулация на изпращане на напомняне за отзив:", error);
+  const handleTimeSlotClick = (time: string) => {
+    setSelectedTime(time);
+    // Call the parent callback with the selected date and time
+    if (onTimeSelect) {
+      onTimeSelect(selectedDate, time);
       toast({
         title: "Грешка",
         description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
@@ -78,9 +44,6 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
       });
     }
 
-    // Here you would typically call an API to finalize the booking
-    setSelectedDate(undefined);
-    setSelectedTime(undefined);
   };
   
   const today = new Date();
@@ -132,7 +95,7 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
                   <Button
                     key={time}
                     variant={selectedTime === time ? 'default' : 'outline'}
-                    onClick={() => setSelectedTime(time)}
+                    onClick={() => handleTimeSlotClick(time)}
                     className="w-full"
                   >
                     {time}
@@ -143,12 +106,6 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
               <p className="text-sm text-muted-foreground">Няма свободни часове за тази дата.</p>
             )}
             {selectedTime && (
-              <Button onClick={handleBookSlot} className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">
-                Потвърди резервация за {selectedTime}
-              </Button>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

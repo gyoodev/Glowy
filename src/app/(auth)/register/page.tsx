@@ -76,7 +76,7 @@ export default function RegisterPage() {
           userId: newUserCount, // Use the incremented count as userId
           phoneNumber: data.phoneNumber,
           createdAt: new Date(),
-          profileType: data.profileType,
+          role: data.profileType,
         });
         
         localStorage.setItem('isUserLoggedIn', 'true'); 
@@ -115,7 +115,7 @@ export default function RegisterPage() {
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
             createdAt: new Date(),
-            profileType: 'customer', // Default to customer for Google sign-ups for now
+            role: 'customer', // Default to customer for Google sign-ups for now
           });
         }
         localStorage.setItem('isUserLoggedIn', 'true');
