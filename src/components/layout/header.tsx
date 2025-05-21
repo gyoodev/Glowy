@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, User } from 'lucide-react'; // Removed LogOut, Added User
+import { Menu, Search, Sparkles as AppIcon, User } from 'lucide-react';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -58,13 +58,13 @@ export function Header() {
 
   const myAccountLinkDesktop = (
     <Button variant="ghost" asChild>
-      <Link href="/account">Моят Акаунт</Link>
+      <Link href="/account">Профил</Link>
     </Button>
   );
 
   const myAccountLinkMobile = (
      <Button variant="ghost" asChild className="justify-start">
-        <Link href="/account">Моят Акаунт</Link>
+        <Link href="/account">Профил</Link>
     </Button>
   );
  const businessManageLinkMobile = (
@@ -180,9 +180,8 @@ export function Header() {
                     </Button>
                   </>
                 )}
-                 {isLoggedIn && ( // Add a separate logout button for mobile if desired, or place it in account page
+                 {isLoggedIn && ( 
                     <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-red-500 hover:text-red-600">
-                        {/* Optionally add LogOut icon back here if this button is dedicated to logout */}
                         Изход
                     </Button>
                 )}
