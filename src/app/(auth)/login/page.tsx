@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
 import { useToast } from '@/hooks/use-toast';
 import { LogIn, Mail, KeyRound, Chrome, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
@@ -49,7 +50,7 @@ export default function LoginPage() {
     console.log('Login data:', data);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const user = userCredential.user; // This line seems redundant as 'user' is not used later in this block
+      const user = userCredential.user; 
       console.log('Email/Password Sign-In successful:', user);
       localStorage.setItem('isUserLoggedIn', 'true');
       toast({
@@ -78,7 +79,7 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log('Google Sign-In successful:', user); // This line seems redundant as 'user' is not used later in this block
+      console.log('Google Sign-In successful:', user); 
       localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
       toast({
         title: 'Влизане с Google успешно',
