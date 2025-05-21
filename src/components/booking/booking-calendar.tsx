@@ -106,7 +106,6 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
               <p className="text-sm text-muted-foreground">Няма свободни часове за тази дата.</p>
             )}
           </div>
-            {selectedTime && (
       </CardContent>
     </Card>
   );
