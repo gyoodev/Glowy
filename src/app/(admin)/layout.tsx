@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link'; // Import Link
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
 
@@ -56,9 +57,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         <h2 className="text-2xl font-bold mb-6">Admin Panel</h2>
         <nav>
           <ul>
-            <li className="mb-2"><a href="/admin/dashboard" className="hover:text-gray-300">Dashboard</a></li>
-            <li className="mb-2"><a href="/admin/users" className="hover:text-gray-300">Users</a></li>
-            <li className="mb-2"><a href="/admin/salons" className="hover:text-gray-300">Salons</a></li>
+            <li className="mb-2"><Link href="/admin/dashboard" className="hover:text-gray-300">Dashboard</Link></li>
+            <li className="mb-2"><Link href="/admin/users" className="hover:text-gray-300">Users</Link></li>
+            <li className="mb-2"><Link href="/admin/salons" className="hover:text-gray-300">Salons</Link></li>
+            <li className="mb-2"><Link href="/admin/bookings" className="hover:text-gray-300">Bookings</Link></li>
+            <li className="mb-2"><Link href="/admin/contacts" className="hover:text-gray-300">Contact Entries</Link></li>
             {/* Add more admin navigation links here */}
           </ul>
         </nav>

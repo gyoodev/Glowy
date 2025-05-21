@@ -11,7 +11,7 @@ import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Cut } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth } from '@/lib/firebase';
@@ -268,7 +268,7 @@ export default function SalonProfilePage() {
                 </CardHeader>
                 <CardContent className="text-sm space-y-2 text-secondary-foreground">
                   <div className="flex items-center">
-                    <Cut className="mr-2 h-4 w-4 text-primary" />
+                    <Scissors className="mr-2 h-4 w-4 text-primary" />
                     <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
                   </div>
                   <div className="flex items-center">

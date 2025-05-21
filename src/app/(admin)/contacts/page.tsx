@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { getFirestore, collection, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, orderBy, getDocs, Timestamp, doc, updateDoc } from 'firebase/firestore'; // Added doc and updateDoc
 
 interface ContactEntry {
   id: string;
@@ -49,9 +49,6 @@ export default function AdminContactEntriesPage() {
   const markAsAnswered = useCallback(async (contactId: string) => {
     setUpdatingId(contactId);
     try {
-      // Assuming you have imported `doc` and `updateDoc` from 'firebase/firestore'
-      // Add these imports at the top:
-      // import { doc, updateDoc } from 'firebase/firestore';
       const contactDocRef = doc(firestore, 'contacts', contactId);
       await updateDoc(contactDocRef, {
         isAnswered: true,
@@ -80,14 +77,13 @@ export default function AdminContactEntriesPage() {
       {!isLoading && !error && contacts.length === 0 && <p>No contact entries found.</p>}
       {!isLoading && !error && contacts.length > 0 && (
         <div className="space-y-6">
-          {contacts.map(contact => {
-            <div key={contact.id} className={`p-4 border rounded-md ${contact.isAnswered ? 'bg-gray-100' : 'bg-white'}`}>
+          {contacts.map(contact => ( // Corrected map to return JSX
+            <div key={contact.id} className={`p-4 border rounded-md shadow-sm ${contact.isAnswered ? 'bg-gray-50' : 'bg-white'}`}>
               <h3 className="text-xl font-semibold">{contact.subject || 'No Subject'}</h3>
               <p className="text-sm text-gray-600">From: {contact.name} ({contact.email})</p>
               <p className="mt-2 text-gray-800">{contact.message}</p>
               <p className="mt-2 text-xs text-gray-500">Received: {contact.createdAt.toDate().toLocaleString()}</p>
               <p className="mt-1 text-sm font-medium">{contact.isAnswered ? 'Status: Answered' : 'Status: Pending'}</p>
-              {/* Add button to mark as answered here later */}
               {!contact.isAnswered && (
                 <button
                   onClick={() => markAsAnswered(contact.id)}
@@ -98,7 +94,7 @@ export default function AdminContactEntriesPage() {
                 </button>
               )}
             </div>
-          })}
+          ))}
         </div>
       )}
     </div>
