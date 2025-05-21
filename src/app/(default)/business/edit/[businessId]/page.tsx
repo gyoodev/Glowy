@@ -19,6 +19,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+
 
 export default function EditBusinessPage() {
   const router = useRouter();
@@ -46,10 +49,9 @@ export default function EditBusinessPage() {
     photos: [],
     newHeroImageUrl: '',
     newGalleryPhotoUrl: '',
-    availability: {}, // Added for availability
+    availability: {},
   });
 
-  // State for availability management UI
   const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
 
@@ -96,7 +98,7 @@ export default function EditBusinessPage() {
             photos: businessData.photos || [],
             newHeroImageUrl: businessData.heroImage || '', 
             newGalleryPhotoUrl: '',
-            availability: businessData.availability || {}, // Initialize availability
+            availability: businessData.availability || {},
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
@@ -144,10 +146,9 @@ export default function EditBusinessPage() {
     }));
   };
 
-  // --- Availability Management Handlers ---
   const handleAvailabilityDateSelect = (date: Date | undefined) => {
     setSelectedAvailabilityDate(date);
-    setNewTimeForSelectedDate(''); // Reset time input when date changes
+    setNewTimeForSelectedDate('');
   };
 
   const handleAddTimeSlot = () => {
@@ -185,7 +186,7 @@ export default function EditBusinessPage() {
       const updatedTimes = currentTimes.filter(time => time !== timeToRemove);
       const newAvailability = { ...prev.availability };
       if (updatedTimes.length === 0) {
-        delete newAvailability[dateKey]; // Remove date key if no times left
+        delete newAvailability[dateKey];
       } else {
         newAvailability[dateKey] = updatedTimes;
       }
@@ -210,8 +211,6 @@ export default function EditBusinessPage() {
     }
     toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
   };
-  // --- End Availability Management Handlers ---
-
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -228,9 +227,9 @@ export default function EditBusinessPage() {
         email: formData.email,
         website: formData.website,
         workingHours: formData.workingHours,
-        heroImage: formData.newHeroImageUrl?.trim() || '',
+        heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '', // Prioritize new URL, then existing, then empty
         photos: formData.photos || [],
-        availability: formData.availability || {}, // Save availability
+        availability: formData.availability || {},
     };
 
     try {
@@ -260,7 +259,7 @@ export default function EditBusinessPage() {
             <Skeleton className="h-32 w-full" />
             <Skeleton className="h-40 w-full mt-4" />
             <Skeleton className="h-40 w-full mt-4" />
-            <Skeleton className="h-64 w-full mt-4" /> {/* Skeleton for availability */}
+            <Skeleton className="h-64 w-full mt-4" />
           </CardContent>
         </Card>
       </div>
@@ -275,7 +274,6 @@ export default function EditBusinessPage() {
     available: Object.keys(formData.availability || {}).filter(dateKey => (formData.availability?.[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
   };
 
-
   return (
     <div className="container mx-auto py-10 px-6">
       <Card className="max-w-3xl mx-auto shadow-xl">
@@ -288,205 +286,211 @@ export default function EditBusinessPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
-            {/* General Info Section */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Основна Информация</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Име на Салона</Label>
-                  <Input id="name" value={formData.name || ''} onChange={handleInputChange} required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="address">Адрес</Label>
-                  <Input id="address" value={formData.address || ''} onChange={handleInputChange} />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="city">Град</Label>
-                  <Input id="city" value={formData.city || ''} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Телефон</Label>
-                  <Input id="phone" value={formData.phone || ''} onChange={handleInputChange} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Имейл</Label>
-                  <Input id="email" type="email" value={formData.email || ''} onChange={handleInputChange} />
-                </div>
-                 <div className="space-y-2">
-                  <Label htmlFor="website">Уебсайт</Label>
-                  <Input id="website" value={formData.website || ''} onChange={handleInputChange} />
-                </div>
-                 <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="workingHours">Работно време</Label>
-                  <Input id="workingHours" value={formData.workingHours || ''} onChange={handleInputChange} placeholder="напр. Пон - Пет: 09:00 - 18:00"/>
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="description">Описание</Label>
-                  <Textarea id="description" value={formData.description || ''} onChange={handleInputChange} required rows={5} />
-                </div>
-              </div>
-            </section>
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="details">Детайли на Салона</TabsTrigger>
+                <TabsTrigger value="availability">Управление на Наличността</TabsTrigger>
+              </TabsList>
 
-            {/* Hero Image Section */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
-              <div className="space-y-2">
-                <Label htmlFor="newHeroImageUrl">URL на главна снимка</Label>
-                <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" value={formData.newHeroImageUrl || ''} onChange={handleHeroImageChange} />
-                {formData.newHeroImageUrl && formData.newHeroImageUrl.trim() !== '' && (
-                  <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
-                    <Image src={formData.newHeroImageUrl} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
-                     <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                        onClick={() => setFormData(prev => ({...prev, newHeroImageUrl: ''}))}
-                        title="Изчисти URL на главната снимка"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                  </div>
-                )}
-              </div>
-            </section>
-
-            {/* Gallery Section */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия (URL адреси)</h3>
-              <div className="space-y-4">
-                <div className="flex items-end gap-2">
-                    <div className="flex-grow space-y-1">
-                        <Label htmlFor="newGalleryPhotoUrl">URL на нова снимка за галерията</Label>
-                        <Input 
-                            id="newGalleryPhotoUrl" 
-                            type="text" 
-                            placeholder="https://example.com/gallery-image.jpg" 
-                            value={formData.newGalleryPhotoUrl || ''} 
-                            onChange={(e) => setFormData(prev => ({...prev, newGalleryPhotoUrl: e.target.value}))} 
-                        />
+              <TabsContent value="details" className="space-y-8">
+                <section>
+                  <h3 className="text-xl font-semibold mb-4 border-b pb-2">Основна Информация</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Име на Салона</Label>
+                      <Input id="name" value={formData.name || ''} onChange={handleInputChange} required />
                     </div>
-                    <Button type="button" variant="outline" onClick={handleAddGalleryPhotoUrl} className="whitespace-nowrap">
-                        <ImagePlus size={18} className="mr-2"/> Добави URL
-                    </Button>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="address">Адрес</Label>
+                      <Input id="address" value={formData.address || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="city">Град</Label>
+                      <Input id="city" value={formData.city || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Телефон</Label>
+                      <Input id="phone" value={formData.phone || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Имейл</Label>
+                      <Input id="email" type="email" value={formData.email || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Уебсайт</Label>
+                      <Input id="website" value={formData.website || ''} onChange={handleInputChange} />
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="workingHours">Работно време</Label>
+                      <Input id="workingHours" value={formData.workingHours || ''} onChange={handleInputChange} placeholder="напр. Пон - Пет: 09:00 - 18:00"/>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label htmlFor="description">Описание</Label>
+                      <Textarea id="description" value={formData.description || ''} onChange={handleInputChange} required rows={5} />
+                    </div>
+                  </div>
+                </section>
 
-                {(formData.photos && formData.photos.length > 0) ? (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {formData.photos.map((photoUrl, index) => (
-                      <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
-                        <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail" />
+                <section>
+                  <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
+                  <div className="space-y-2">
+                    <Label htmlFor="newHeroImageUrl">URL на главна снимка</Label>
+                    <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" value={formData.newHeroImageUrl || ''} onChange={handleHeroImageChange} />
+                    {formData.newHeroImageUrl && formData.newHeroImageUrl.trim() !== '' && (
+                      <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
+                        <Image src={formData.newHeroImageUrl} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
                         <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                          onClick={() => removeGalleryPhoto(photoUrl)}
-                          title="Премахни тази снимка"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">Галерията е празна. Добавете URL адреси на снимки.</p>
-                )}
-              </div>
-            </section>
-            
-            {/* Availability Management Section */}
-            <section>
-              <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
-                <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                Управление на наличността
-              </h3>
-              <div className="grid md:grid-cols-2 gap-6 items-start">
-                <div>
-                  <Label className="block mb-2 font-medium">Изберете дата от календара:</Label>
-                  <Calendar
-                    mode="single"
-                    selected={selectedAvailabilityDate}
-                    onSelect={handleAvailabilityDateSelect}
-                    disabled={(date) => date < today}
-                    className="rounded-md border shadow-sm p-0"
-                    modifiers={availableDaysModifier}
-                    modifiersStyles={{
-                        available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
-                    }}
-                    locale={{
-                      localize: {
-                        month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
-                        day: n => ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][n]
-                      },
-                      formatLong: { date: () => 'dd/MM/yyyy' }
-                    } as any}
-                  />
-                </div>
-
-                {selectedAvailabilityDate && (
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="newTimeSlot" className="font-medium">
-                        Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
-                      </Label>
-                      <div className="flex items-center gap-2 mt-2">
-                        <Input
-                          id="newTimeSlot"
-                          type="text"
-                          placeholder="HH:MM (напр. 09:30)"
-                          value={newTimeForSelectedDate}
-                          onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
-                          className="flex-grow"
-                        />
-                        <Button type="button" onClick={handleAddTimeSlot} size="sm">
-                          <PlusCircle size={16} className="mr-1" /> Добави
-                        </Button>
-                      </div>
-                    </div>
-
-                    {(formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.length || 0) > 0 ? (
-                      <div className="space-y-2">
-                        <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
-                            <Badge key={time} variant="secondary" className="text-base py-1 px-2">
-                              {time}
-                              <Button 
-                                type="button" 
-                                variant="ghost" 
-                                size="icon" 
-                                className="ml-1.5 h-4 w-4 p-0 hover:bg-destructive/20"
-                                onClick={() => handleRemoveTimeSlot(format(selectedAvailabilityDate, 'yyyy-MM-dd'), time)}
-                              >
-                                <Trash2 size={12} className="text-destructive" />
-                              </Button>
-                            </Badge>
-                          ))}
-                        </div>
-                         <Button 
-                            type="button" 
-                            variant="destructive" 
-                            size="sm" 
-                            className="mt-2 w-full"
-                            onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={() => setFormData(prev => ({...prev, newHeroImageUrl: ''}))}
+                            title="Изчисти URL на главната снимка"
                           >
-                            <Trash2 size={16} className="mr-1" /> Премахни всички часове за тази дата
+                            <Trash2 size={16} />
                           </Button>
                       </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground text-center py-2">Няма добавени часове за тази дата.</p>
                     )}
                   </div>
-                )}
-                {!selectedAvailabilityDate && (
-                    <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full">
-                        <p>Изберете дата от календара, за да управлявате свободните часове.</p>
-                    </div>
-                )}
-              </div>
-            </section>
+                </section>
 
+                <section>
+                  <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия (URL адреси)</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-end gap-2">
+                        <div className="flex-grow space-y-1">
+                            <Label htmlFor="newGalleryPhotoUrl">URL на нова снимка за галерията</Label>
+                            <Input 
+                                id="newGalleryPhotoUrl" 
+                                type="text" 
+                                placeholder="https://example.com/gallery-image.jpg" 
+                                value={formData.newGalleryPhotoUrl || ''} 
+                                onChange={(e) => setFormData(prev => ({...prev, newGalleryPhotoUrl: e.target.value}))} 
+                            />
+                        </div>
+                        <Button type="button" variant="outline" onClick={handleAddGalleryPhotoUrl} className="whitespace-nowrap">
+                            <ImagePlus size={18} className="mr-2"/> Добави URL
+                        </Button>
+                    </div>
+
+                    {(formData.photos && formData.photos.length > 0) ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {formData.photos.map((photoUrl, index) => (
+                          <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
+                            <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail" />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                              onClick={() => removeGalleryPhoto(photoUrl)}
+                              title="Премахни тази снимка"
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground text-center py-4">Галерията е празна. Добавете URL адреси на снимки.</p>
+                    )}
+                  </div>
+                </section>
+              </TabsContent>
+
+              <TabsContent value="availability" className="space-y-8">
+                 <section>
+                  <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
+                    <CalendarDays className="mr-2 h-5 w-5 text-primary" />
+                    Наличност за Резервации
+                  </h3>
+                  <div className="grid md:grid-cols-2 gap-6 items-start">
+                    <div>
+                      <Label className="block mb-2 font-medium">Изберете дата от календара:</Label>
+                      <Calendar
+                        mode="single"
+                        selected={selectedAvailabilityDate}
+                        onSelect={handleAvailabilityDateSelect}
+                        disabled={(date) => date < today}
+                        className="rounded-md border shadow-sm p-0"
+                        modifiers={availableDaysModifier}
+                        modifiersStyles={{
+                            available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
+                        }}
+                        locale={{
+                          localize: {
+                            month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
+                            day: n => ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'][n]
+                          },
+                          formatLong: { date: () => 'dd/MM/yyyy' }
+                        } as any}
+                      />
+                    </div>
+
+                    {selectedAvailabilityDate && (
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="newTimeSlot" className="font-medium">
+                            Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
+                          </Label>
+                          <div className="flex items-center gap-2 mt-2">
+                            <Input
+                              id="newTimeSlot"
+                              type="text"
+                              placeholder="HH:MM (напр. 09:30)"
+                              value={newTimeForSelectedDate}
+                              onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
+                              className="flex-grow"
+                            />
+                            <Button type="button" onClick={handleAddTimeSlot} size="sm">
+                              <PlusCircle size={16} className="mr-1" /> Добави
+                            </Button>
+                          </div>
+                        </div>
+
+                        {(formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.length || 0) > 0 ? (
+                          <div className="space-y-2">
+                            <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
+                            <div className="flex flex-wrap gap-2">
+                              {formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
+                                <Badge key={time} variant="secondary" className="text-base py-1 px-2">
+                                  {time}
+                                  <Button 
+                                    type="button" 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="ml-1.5 h-4 w-4 p-0 hover:bg-destructive/20"
+                                    onClick={() => handleRemoveTimeSlot(format(selectedAvailabilityDate, 'yyyy-MM-dd'), time)}
+                                  >
+                                    <Trash2 size={12} className="text-destructive" />
+                                  </Button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <Button 
+                                type="button" 
+                                variant="destructive" 
+                                size="sm" 
+                                className="mt-2 w-full"
+                                onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
+                              >
+                                <Trash2 size={16} className="mr-1" /> Премахни всички часове за тази дата
+                              </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-2">Няма добавени часове за тази дата.</p>
+                        )}
+                      </div>
+                    )}
+                    {!selectedAvailabilityDate && (
+                        <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full">
+                            <p>Изберете дата от календара, за да управлявате свободните часове.</p>
+                        </div>
+                    )}
+                  </div>
+                </section>
+              </TabsContent>
+            </Tabs>
           </CardContent>
           <CardFooter className="border-t pt-6">
             <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading}>
@@ -498,4 +502,3 @@ export default function EditBusinessPage() {
     </div>
   );
 }
-
