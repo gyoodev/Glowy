@@ -83,7 +83,7 @@ export default function SalonProfilePage() {
 
     const fetchSalonBySlug = async (name: string) => {
       setIsLoading(true);
-      setSalon(null); 
+      setSalon(null);
       console.log("[SalonProfilePage] Fetching salon from Firestore for name:", name);
 
       try {
@@ -94,11 +94,11 @@ export default function SalonProfilePage() {
         if (!querySnapshot.empty) {
           const salonDoc = querySnapshot.docs[0];
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
-          
+
           salonData.services = salonData.services || [];
           salonData.reviews = salonData.reviews || [];
           salonData.photos = salonData.photos || [];
-          
+
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found in Firestore:", salonData);
         } else {
@@ -131,7 +131,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [slugParam, firestore, toast]); 
+  }, [slugParam, firestore, toast]);
 
   useEffect(() => {
     const fetchUserRoleAndCheckOwnership = async () => {
@@ -147,8 +147,8 @@ export default function SalonProfilePage() {
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data() as UserProfile;
-          setUserRole(userData.role || null); 
-          setIsSalonOwner(salon.ownerId === auth.currentUser.uid); 
+          setUserRole(userData.role || null);
+          setIsSalonOwner(salon.ownerId === auth.currentUser.uid);
         } else {
           console.warn("[SalonProfilePage] User document not found for current user:", auth.currentUser.uid);
           setUserRole(null);
@@ -164,13 +164,13 @@ export default function SalonProfilePage() {
     if(salon) {
       fetchUserRoleAndCheckOwnership();
     }
-  }, [salon, firestore]); 
+  }, [salon, firestore]);
 
   useEffect(() => {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
-  }, [salon?.id, firestore]);
+  }, [salon?.id, auth.currentUser, firestore]); // Added auth.currentUser dependency
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -218,7 +218,7 @@ export default function SalonProfilePage() {
     const bookingServiceName = selectedService.name;
     const bookingDate = new Date(selectedBookingDate);
     const bookingTime = selectedBookingTime;
-    const localSelectedService = selectedService; 
+    const localSelectedService = selectedService;
 
     try {
       const userId = auth.currentUser.uid;
@@ -226,11 +226,12 @@ export default function SalonProfilePage() {
         salonId: salon.id,
         salonName: bookingSalonName,
         userId: userId,
-        service: { 
+        service: {
             id: localSelectedService.id,
             name: bookingServiceName,
             price: localSelectedService.price,
             duration: localSelectedService.duration,
+            description: localSelectedService.description, // Ensure description is passed if needed by createBooking
         },
         date: bookingDate.toISOString(),
         time: bookingTime,
@@ -242,10 +243,10 @@ export default function SalonProfilePage() {
       });
 
       const [hours, minutes] = bookingTime.split(':').map(Number);
-      const bookingDateTime = new Date(bookingDate); 
+      const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
-      
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); 
+
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -298,7 +299,7 @@ export default function SalonProfilePage() {
       });
     }
   };
-  
+
   const handleReviewSubmit = async (rating: number, comment: string) => {
     console.log("[SalonProfilePage] auth.currentUser:", auth.currentUser);
     if (!auth.currentUser) {
@@ -331,7 +332,7 @@ export default function SalonProfilePage() {
         date: new Date().toISOString(),
         userAvatar: userAvatarUrl,
         userId: userId,
-        salonId: salon.id, 
+        salonId: salon.id,
       };
 
       console.log("[SalonProfilePage] Review object to be added:", newReview);
@@ -339,39 +340,47 @@ export default function SalonProfilePage() {
       const docRef = await addDoc(reviewsCollectionRef, newReview);
       console.log("[SalonProfilePage] Review added with ID:", docRef.id);
 
-      const salonsCollectionRef = collection(firestore, 'salons');
-      const q = query(salonsCollectionRef, where('name', '==', salon.name), limit(1));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const salonDoc = querySnapshot.docs[0];
-        const updatedSalonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
-        updatedSalonData.services = updatedSalonData.services || [];
-        updatedSalonData.reviews = updatedSalonData.reviews || [];
-        updatedSalonData.photos = updatedSalonData.photos || [];
+      // Re-fetch salon data to update reviews and rating
+      const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
+      const salonSnapToUpdate = await getDoc(salonDocRefToUpdate);
+      if (salonSnapToUpdate.exists()) {
+        let updatedSalonData = { id: salonSnapToUpdate.id, ...salonSnapToUpdate.data() } as Salon;
         
         const allReviewsQuery = query(collection(firestore, 'reviews'), where('salonId', '==', salon.id));
         const allReviewsSnapshot = await getDocs(allReviewsQuery);
-        const allSalonReviews = allReviewsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Review[];
-        updatedSalonData.reviews = allSalonReviews;
-
+        const allSalonReviews = allReviewsSnapshot.docs.map(reviewDoc => ({ id: reviewDoc.id, ...reviewDoc.data() })) as Review[];
+        
+        updatedSalonData.reviews = allSalonReviews; // Assign all reviews
         if (allSalonReviews.length > 0) {
             const totalRating = allSalonReviews.reduce((acc, rev) => acc + rev.rating, 0);
             updatedSalonData.rating = totalRating / allSalonReviews.length;
-            const salonDocRef = doc(firestore, 'salons', salon.id);
-            await updateDoc(salonDocRef, {
-                rating: updatedSalonData.rating,
-                reviews: updatedSalonData.reviews.map(r => ({ ...r })) 
-            });
         } else {
              updatedSalonData.rating = 0;
         }
-        setSalon(updatedSalonData);
+        
+        // Update salon document in Firestore with new rating and reviews array
+        await updateDoc(salonDocRefToUpdate, {
+            rating: updatedSalonData.rating,
+            // Storing the full review objects or just their IDs in the salon document depends on your data model.
+            // If storing full objects, ensure they are serializable and don't grow too large.
+            // For simplicity here, assuming you might be storing review IDs or a small summary.
+            // If you store full reviews, this part is correct. Otherwise, adjust.
+            reviews: allSalonReviews.map(r => ({ // Example: storing a reference or a subset of fields
+                id: r.id,
+                userName: r.userName,
+                rating: r.rating,
+                comment: r.comment.substring(0,100), // Example: store a snippet
+                date: r.date,
+                userAvatar: r.userAvatar
+            }))
+        });
+        setSalon(updatedSalonData); // Update local state
       }
 
-      fetchUserReviews(); 
+
+      fetchUserReviews();
       setShowReviewForm(false);
-      
+
       toast({
         title: "Отзивът е добавен!",
         description: "Благодарим за Вашия отзив.",
@@ -425,7 +434,7 @@ export default function SalonProfilePage() {
     moderate: 'умерено',
     expensive: 'скъпо',
   };
-  
+
   return (
     <div className="bg-background">
       <div className="relative h-64 md:h-96 w-full group">
@@ -500,17 +509,17 @@ export default function SalonProfilePage() {
                 ) : (
                   <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                 )}
-                 {auth.currentUser && ( 
+                 {auth.currentUser && (
                     <div className="mt-6">
                     {showReviewForm ? (
-                        <AddReviewForm 
-                        onAddReview={handleReviewSubmit} 
-                        onCancel={() => setShowReviewForm(false)} 
+                        <AddReviewForm
+                        onAddReview={handleReviewSubmit}
+                        onCancel={() => setShowReviewForm(false)}
                         />
                     ) : (
-                        <Button 
-                        variant="outline" 
-                        onClick={() => setShowReviewForm(true)} 
+                        <Button
+                        variant="outline"
+                        onClick={() => setShowReviewForm(true)}
                         data-ai-hint="Add review button"
                         className="w-full"
                         >
@@ -561,7 +570,7 @@ export default function SalonProfilePage() {
               <Card className="shadow-md mb-4 border-primary bg-yellow-100/30">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg text-primary-foreground flex items-center">
-                    <Gift className="mr-2 h-5 w-5" /> 
+                    <Gift className="mr-2 h-5 w-5" />
                     Рекламирайте Вашия Салон
                   </CardTitle>
                 </CardHeader>
@@ -602,10 +611,7 @@ export default function SalonProfilePage() {
                 className="w-full py-6 text-lg font-semibold"
                 disabled={!auth.currentUser}
               >
-                {auth.currentUser ?
-                  "Запази час"
-                  : "Влезте за да резервирате"
-                }
+                {auth.currentUser ? "Запази час" : "Влезте за да резервирате"}
               </Button>
             )}
             <div className="bg-card p-6 rounded-lg shadow-lg">
