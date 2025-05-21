@@ -10,7 +10,7 @@ import { getFirestore, collection, query, where, getDocs, orderBy } from 'fireba
 import type { UserProfile, Salon } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Eye, List } from 'lucide-react';
+import { PlusCircle, Edit3, Eye, List, CalendarCheck } from 'lucide-react'; // Added CalendarCheck
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
@@ -26,15 +26,14 @@ export default function BusinessManagePage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         router.push('/login');
-        setIsLoading(false); // Ensure loading stops if no user
+        setIsLoading(false); 
       } else {
         const profile = await getUserProfile(user.uid);
         if (!profile || profile.role !== 'business') {
           router.push('/');
-          setIsLoading(false); // Ensure loading stops if not business user
+          setIsLoading(false); 
         } else {
           setUserProfile(profile);
-          // Fetch businesses only after confirming user is a business user
           const businessesCollection = collection(firestore, 'salons');
           const q = query(businessesCollection, where('ownerId', '==', user.uid), orderBy('createdAt', 'desc'));
           
@@ -47,11 +46,10 @@ export default function BusinessManagePage() {
             setUserBusinesses(businesses);
           } catch (error) {
             console.error("Error fetching businesses:", error);
-            // You might want to show a toast or error message here
           } finally {
              setIsFetchingBusinesses(false);
           }
-          setIsLoading(false); // Overall auth loading, set here after profile check and business fetch attempt
+          setIsLoading(false); 
         }
       }
     });
@@ -70,8 +68,6 @@ export default function BusinessManagePage() {
   }
 
   if (!userProfile) {
-    // This case should ideally be handled by the redirects in useEffect
-    // Or if loading is done and still no profile (e.g. error fetching profile)
     return (
       <div className="container mx-auto py-10 px-6 text-center">
         <p>Грешка: Неуспешно зареждане на потребителски профил. Моля, опитайте да влезете отново.</p>
@@ -79,7 +75,7 @@ export default function BusinessManagePage() {
     );
   }
   
-  const salonNameToSlug = (name: string) => name.replace(/\s+/g, '_');
+  const salonNameToSlug = (name: string) => name ? name.replace(/\s+/g, '_') : 'unknown-salon';
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -109,7 +105,8 @@ export default function BusinessManagePage() {
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-5/6 mt-2" />
               </CardContent>
-              <CardFooter className="flex justify-between">
+              <CardFooter className="flex justify-between flex-wrap gap-2">
+                <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-10 w-24" />
                 <Skeleton className="h-10 w-24" />
               </CardFooter>
@@ -156,7 +153,7 @@ export default function BusinessManagePage() {
                   {business.description}
                 </CardDescription>
               </CardContent>
-              <CardFooter className="p-4 border-t flex justify-between items-center">
+              <CardFooter className="p-4 border-t flex flex-wrap justify-start items-center gap-2">
                 <Button variant="outline" size="sm" asChild>
                   <Link href={`/salons/${salonNameToSlug(business.name)}`}>
                     <Eye className="mr-2 h-4 w-4" />
@@ -165,8 +162,14 @@ export default function BusinessManagePage() {
                 </Button>
                 <Button variant="default" size="sm" asChild>
                   <Link href={`/business/edit/${business.id}`}>
- <Edit3 className="mr-2 h-4 w-4" />
+                    <Edit3 className="mr-2 h-4 w-4" />
                     Редактирай
+                  </Link>
+                </Button>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link href={`/business/salon-bookings/${business.id}`}>
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Резервации
                   </Link>
                 </Button>
               </CardFooter>
