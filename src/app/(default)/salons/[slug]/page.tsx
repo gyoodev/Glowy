@@ -40,12 +40,16 @@ export default function SalonProfilePage() {
       currentSlug = slugParam;
     } else if (Array.isArray(slugParam) && slugParam.length > 0) {
       currentSlug = slugParam[0];
+    } else {
+      // Handle cases where slugParam might be undefined or an empty array
+      currentSlug = undefined;
     }
 
-    const fetchSalonBySlug = async (slug: string) => {
+    const fetchSalonBySlug = async (slugToFetch: string) => {
       setIsLoading(true);
       setSalon(null); 
-      const salonNameFromSlug = slug.replace(/_/g, ' ');
+      const salonNameFromSlug = slugToFetch.replace(/_/g, ' ');
+      console.log("[SalonProfilePage] Fetching salon for slug:", slugToFetch, "Derived name:", salonNameFromSlug);
 
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
@@ -55,17 +59,18 @@ export default function SalonProfilePage() {
         if (!querySnapshot.empty) {
           const salonDoc = querySnapshot.docs[0];
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
-          // Ensure arrays exist
+          // Ensure arrays exist to prevent runtime errors
           salonData.services = salonData.services || [];
           salonData.reviews = salonData.reviews || [];
           salonData.photos = salonData.photos || [];
           setSalon(salonData);
+          console.log("[SalonProfilePage] Salon found:", salonData);
         } else {
-          console.error("Салонът не е намерен по slug (Firestore):", slug);
+          console.error("[SalonProfilePage] Salon not found in Firestore for derived name:", salonNameFromSlug);
           setSalon(null);
         }
       } catch (error) {
-        console.error("Грешка при извличане на салон от Firestore:", error);
+        console.error("[SalonProfilePage] Error fetching salon from Firestore:", error);
         setSalon(null);
         toast({
           title: "Грешка при зареждане",
@@ -80,6 +85,7 @@ export default function SalonProfilePage() {
     if (currentSlug) {
       fetchSalonBySlug(currentSlug);
     } else {
+      console.log("[SalonProfilePage] No valid slug provided, cannot fetch salon.");
       setSalon(null);
       setIsLoading(false);
     }
@@ -131,7 +137,7 @@ export default function SalonProfilePage() {
     const bookingServiceName = selectedService.name;
     const bookingDate = new Date(selectedBookingDate);
     const bookingTime = selectedBookingTime;
-    const localSelectedService = selectedService;
+    const localSelectedService = selectedService; // To satisfy TypeScript within this scope
 
     try {
       const userId = auth.currentUser.uid;
@@ -139,9 +145,9 @@ export default function SalonProfilePage() {
         salonId: salon.id,
         salonName: bookingSalonName,
         userId: userId,
-        serviceId: localSelectedService.id,
+        serviceId: localSelectedService.id, // Use local variable
         serviceName: bookingServiceName,
-        date: bookingDate.toISOString(),
+        date: bookingDate.toISOString(), // Store as ISO string
         time: bookingTime,
       });
 
@@ -151,9 +157,10 @@ export default function SalonProfilePage() {
       });
 
       const [hours, minutes] = bookingTime.split(':').map(Number);
-      const bookingDateTime = new Date(bookingDate);
+      const bookingDateTime = new Date(bookingDate); // Use the original bookingDate which is a Date object
       bookingDateTime.setHours(hours, minutes, 0, 0);
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
+      
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour after booking
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -188,13 +195,13 @@ export default function SalonProfilePage() {
           duration: 6000,
         });
       } else {
-        console.log("Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
+        console.log("[SalonProfilePage] Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
       }
       setSelectedService(undefined);
       setSelectedBookingDate(undefined);
       setSelectedBookingTime(undefined);
     } catch (error) {
-      console.error("Error creating booking:", error);
+      console.error("[SalonProfilePage] Error creating booking:", error);
       toast({
         title: "Възникна грешка при резервацията",
         description: "Моля, опитайте отново по-късно.",
@@ -236,7 +243,7 @@ export default function SalonProfilePage() {
     );
   }
 
-  const priceRangeTranslations: Record<Salon['priceRange'], string> = {
+  const priceRangeTranslations: Record<string, string> = {
     cheap: 'евтино',
     moderate: 'умерено',
     expensive: 'скъпо',
@@ -386,9 +393,9 @@ export default function SalonProfilePage() {
             <div className="bg-card p-6 rounded-lg shadow-lg">
               <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address}</li>
-                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || '(няма предоставен)'}</li>
-                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> { salon.workingHours || 'Пон - Съб: 9:00 - 19:00 (примерно)'}</li>
+                <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}</li>
+                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
+                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> { salon.workingHours || 'Няма предоставено работно време'}</li>
               </ul>
             </div>
           </aside>
@@ -397,3 +404,5 @@ export default function SalonProfilePage() {
     </div>
   );
 }
+
+    
