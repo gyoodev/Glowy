@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, LogOut } from 'lucide-react';
+import { Menu, Search, Sparkles as AppIcon, User } from 'lucide-react'; // Removed LogOut, Added User
 import { auth, getUserProfile } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -18,33 +18,29 @@ const navItems = [
 export function Header() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // Initialize to true
-  const [userRole, setUserRole] = useState<string | null>(null); // State for user role
+  const [isLoading, setIsLoading] = useState(true);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    // setIsLoading(true); // Not needed here as it's initialized to true
-    const unsubscribe = onAuthStateChanged(auth, async (user) => { // Make the callback async
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
         const profile = await getUserProfile(user.uid);
-        setUserRole(profile?.role || null); // Set user role
-      } else {
-        setUserRole(null); // Clear role if no user
-      }
-      // Ensure localStorage is only accessed on the client
-      if (typeof window !== 'undefined') {
-        if (user) {
+        setUserRole(profile?.role || null);
+        if (typeof window !== 'undefined') {
           localStorage.setItem('isUserLoggedIn', 'true');
-        } else {
+        }
+      } else {
+        setUserRole(null);
+        if (typeof window !== 'undefined') {
           localStorage.removeItem('isUserLoggedIn');
         }
       }
-      setIsLoading(false); // Set loading to false after auth state is determined
+      setIsLoading(false);
     });
     
-    // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
+  }, []);
 
   const isLoggedIn = !!currentUser;
 
@@ -57,7 +53,6 @@ export function Header() {
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
-      // Optionally, show a toast error
     }
   };
 
@@ -96,9 +91,6 @@ export function Header() {
     </Button>
   );
 
-
-  // Render loading skeleton if isLoading is true
-  // This will be the case on initial server render and initial client render before useEffect runs
   if (isLoading) {
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -107,13 +99,12 @@ export function Header() {
                     <AppIcon className="h-6 w-6 text-primary" />
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
                 </div>
-                <div className="flex-1"></div> {/* Spacer */}
+                <div className="flex-1"></div>
             </div>
         </header>
     );
   }
 
-  // Render actual header content once loading is false
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center">
@@ -139,8 +130,10 @@ export function Header() {
           </Button>
 
           {isLoggedIn ? (
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="mr-2 h-4 w-4" /> Изход
+            <Button variant="outline" asChild>
+              <Link href="/account">
+                <User className="mr-2 h-4 w-4" /> Профил
+              </Link>
             </Button>
           ) : (
             <>
@@ -172,8 +165,10 @@ export function Header() {
                 {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (
-                  <Button variant="outline" onClick={handleLogout} className="justify-start text-base py-3">
-                     <LogOut className="mr-2 h-4 w-4" /> Изход
+                  <Button variant="outline" asChild className="justify-start text-base py-3">
+                    <Link href="/account">
+                        <User className="mr-2 h-4 w-4" /> Профил
+                    </Link>
                   </Button>
                 ) : (
                   <>
@@ -184,6 +179,12 @@ export function Header() {
                         <Link href="/register">Регистрация</Link>
                     </Button>
                   </>
+                )}
+                 {isLoggedIn && ( // Add a separate logout button for mobile if desired, or place it in account page
+                    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-red-500 hover:text-red-600">
+                        {/* Optionally add LogOut icon back here if this button is dedicated to logout */}
+                        Изход
+                    </Button>
                 )}
               </nav>
             </SheetContent>
