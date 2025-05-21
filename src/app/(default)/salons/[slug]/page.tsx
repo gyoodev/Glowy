@@ -45,7 +45,7 @@ export default function SalonProfilePage() {
     if (currentSlug) {
       setIsLoading(true);
       const salonNameFromSlug = currentSlug.replace(/_/g, ' ');
-      const fetchedSalon = Array.isArray(mockSalons) ? mockSalons.find(s => s.name === salonNameFromSlug) : undefined;
+      const fetchedSalon = Array.isArray(mockSalons) ? mockSalons.find(s => s.salonName === salonNameFromSlug) : undefined;
 
       // Simulate API delay
       const timer = setTimeout(() => {
