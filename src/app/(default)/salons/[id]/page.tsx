@@ -11,7 +11,7 @@ import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors } from 'lucide-react'; // Replaced Cut with Scissors
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth } from '@/lib/firebase';
@@ -77,43 +77,77 @@ export default function SalonProfilePage() {
       return;
     }
 
+    // Capture details for timeout closure
+    const bookingSalonName = salon.name;
+    const bookingServiceName = selectedService.name;
+    const bookingDate = new Date(selectedBookingDate); // Ensure it's a new Date object
+    const bookingTime = selectedBookingTime;
+    const localSelectedService = selectedService;
+
+
     try {
       const userId = auth.currentUser.uid;
 
       await createBooking({
         salonId: salonId,
-        salonName: salon.name,
+        salonName: bookingSalonName,
         userId: userId,
-        service: selectedService,
-        date: selectedBookingDate.toISOString(),
-        time: selectedBookingTime,
+        serviceId: localSelectedService.id,
+        serviceName: bookingServiceName,
+        date: bookingDate.toISOString(),
+        time: bookingTime,
       });
 
       toast({
         title: "Резервацията е потвърдена!",
-        description: `Успешно резервирахте ${selectedService.name} за ${selectedBookingDate.toLocaleDateString('bg-BG')} в ${selectedBookingTime}.`,
+        description: `Успешно резервирахте ${bookingServiceName} за ${bookingDate.toLocaleDateString('bg-BG')} в ${bookingTime}.`,
       });
 
-      try {
-        await sendReviewReminderEmail({
-            salonName: salon.name,
-            serviceName: selectedService.name,
-            bookingDate: selectedBookingDate.toLocaleDateString('bg-BG'),
-            bookingTime: selectedBookingTime,
-        });
+      // Logic for delayed review reminder
+      const [hours, minutes] = bookingTime.split(':').map(Number);
+      const bookingDateTime = new Date(bookingDate);
+      bookingDateTime.setHours(hours, minutes, 0, 0);
+
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour later
+      const now = new Date();
+      const delay = reminderDateTime.getTime() - now.getTime();
+
+      if (delay > 0) {
+        setTimeout(async () => {
+          try {
+            await sendReviewReminderEmail({
+              salonName: bookingSalonName,
+              serviceName: bookingServiceName,
+              bookingDate: bookingDateTime.toLocaleDateString('bg-BG'),
+              bookingTime: bookingTime,
+            });
+            toast({
+              title: "Покана за отзив (симулация)",
+              description: `Напомняне: Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName} приключи, Ви изпратихме покана да оставите отзив.`,
+              variant: "default",
+              duration: 7000,
+            });
+          } catch (emailError) {
+            console.error("Error simulating delayed review reminder email:", emailError);
+            // Optionally, show an error toast for the delayed email simulation itself
+            toast({
+                title: "Грешка (симулация на имейл)",
+                description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
+                variant: "destructive",
+            });
+          }
+        }, delay);
+
         toast({
-            title: "Покана за отзив (симулация)",
-            description: "След преживяването си, ще получите покана да оставите отзив.",
-            variant: "default",
-            duration: 4000,
+          title: "Напомняне за отзив е насрочено",
+          description: `Ще получите покана да оставите отзив 1 час след Вашата резервация в ${bookingSalonName} (ако останете на тази страница).`,
+          variant: "default",
+          duration: 6000,
         });
-      } catch (emailError) {
-          console.error("Error simulating review reminder email:", emailError);
-          toast({
-              title: "Грешка (симулация на имейл)",
-              description: "Възникна грешка при опита за симулация на изпращане на покана за отзив.",
-              variant: "destructive",
-          });
+      } else {
+        console.log("Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
+        // Optionally, you could call sendReviewReminderEmail immediately if the appointment was very recent and an hour has passed.
+        // For now, we are just logging.
       }
 
       setSelectedService(undefined);
@@ -268,7 +302,7 @@ export default function SalonProfilePage() {
                 </CardHeader>
                 <CardContent className="text-sm space-y-2 text-secondary-foreground">
                   <div className="flex items-center">
-                    <Scissors className="mr-2 h-4 w-4 text-primary" /> {/* Replaced Cut with Scissors */}
+                    <Scissors className="mr-2 h-4 w-4 text-primary" />
                     <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
                   </div>
                   <div className="flex items-center">
@@ -310,3 +344,4 @@ export default function SalonProfilePage() {
     </div>
   );
 }
+
