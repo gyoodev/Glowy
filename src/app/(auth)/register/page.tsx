@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react'; // Consolidated import
 import { useState } from 'react';
-import { collection, doc, setDoc, getDoc, getFirestore } from 'firebase/firestore';
+import { collection, doc, setDoc, getDoc, getFirestore, Timestamp } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { auth } from '@/lib/firebase';
@@ -73,9 +73,9 @@ export default function RegisterPage() {
         await setDoc(userRef, {
           email: user.email,
           displayName: data.name,
-          userId: newUserCount, // Use the incremented count as userId
+          userId: user.uid, 
           phoneNumber: data.phoneNumber,
-          createdAt: new Date(),
+          createdAt: Timestamp.fromDate(new Date()),
           role: data.profileType,
         });
         
@@ -88,11 +88,19 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       console.error("Error during registration:", error);
-      toast({
-        title: 'Регистрацията неуспешна',
-        description: error.message || 'Възникна грешка при регистрацията.',
-        variant: 'destructive',
-      });
+      if (error.code === 'auth/email-already-in-use') {
+        toast({
+          title: 'Регистрацията неуспешна',
+          description: 'Този имейл адрес вече се използва. Моля, използвайте друг имейл или влезте в съществуващия си профил.',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Регистрацията неуспешна',
+          description: error.message || 'Възникна грешка при регистрацията.',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -109,12 +117,22 @@ export default function RegisterPage() {
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
+          // Fetch and increment user count for Google sign-ups as well if they are new
+          const counterDocRef = doc(firestore, 'counters', 'users');
+          const counterDocSnap = await getDoc(counterDocRef);
+          let newUserCount = 1;
+          if (counterDocSnap.exists()) {
+            newUserCount = counterDocSnap.data().count + 1;
+          }
+          await setDoc(counterDocRef, { count: newUserCount });
+
+
           await setDoc(userRef, {
             email: user.email,
- userId: user.uid, // Explicitly add userId for Google sign-ups
+            userId: user.uid, 
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '', // Google might not provide phone number directly
-            createdAt: new Date(),
+            createdAt: Timestamp.fromDate(new Date()),
             role: 'customer', // Default to customer for Google sign-ups for now
           });
         }
@@ -127,6 +145,8 @@ export default function RegisterPage() {
       }
     } catch (error: any) {
       console.error('Error during Google Sign-Up:', error);
+      // Firebase often handles "email already in use" gracefully with Google Sign-In by signing the user in.
+      // However, if a different error occurs, we should show it.
       toast({
         title: 'Грешка при регистрация с Google',
         description: error.message || 'Възникна неочаквана грешка.',
@@ -283,4 +303,6 @@ export default function RegisterPage() {
     </Card>
   );
 }
+    
+
     
