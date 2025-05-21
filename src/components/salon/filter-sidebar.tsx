@@ -20,15 +20,14 @@ interface FilterSidebarProps {
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const DEFAULT_MIN_PRICE = 0; // Used as the minimum for the slider
-const DEFAULT_MAX_PRICE = 500; // Used as the maximum for the slider and initial value for maxPrice
-const ANY_PRICE_SLIDER_VALUE = DEFAULT_MAX_PRICE; // Value indicating "any price"
+const DEFAULT_MIN_PRICE = 0; 
+const DEFAULT_MAX_PRICE = 500; 
 
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
-  const [rating, setRating] = useState([0]); // Rating is [value]
-  const [maxPriceValue, setMaxPriceValue] = useState<[number]>([ANY_PRICE_SLIDER_VALUE]); // Price is [maxValue]
+  const [rating, setRating] = useState([0]); 
+  const [maxPriceValue, setMaxPriceValue] = useState<[number]>([DEFAULT_MIN_PRICE]); // Default to 0
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const handleApplyFilters = () => {
@@ -36,7 +35,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       location,
       serviceType,
       minRating: rating[0],
-      maxPrice: maxPriceValue[0] === ANY_PRICE_SLIDER_VALUE ? DEFAULT_MAX_PRICE : maxPriceValue[0],
+      maxPrice: maxPriceValue[0] === DEFAULT_MIN_PRICE ? DEFAULT_MAX_PRICE : maxPriceValue[0],
     });
   };
 
@@ -44,12 +43,12 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setLocation(ALL_CITIES_VALUE);
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
-    setMaxPriceValue([ANY_PRICE_SLIDER_VALUE]);
+    setMaxPriceValue([DEFAULT_MIN_PRICE]); // Reset to 0
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
       minRating: 0,
-      maxPrice: DEFAULT_MAX_PRICE, // Effectively "any price"
+      maxPrice: DEFAULT_MAX_PRICE, // Send DEFAULT_MAX_PRICE to signify "any price"
     });
   };
   
@@ -58,7 +57,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     return cities.find(city => city === value) || "Изберете град";
   }
 
-  const priceLabel = maxPriceValue[0] === ANY_PRICE_SLIDER_VALUE 
+  const priceLabel = maxPriceValue[0] === DEFAULT_MIN_PRICE 
     ? "Всякаква цена" 
     : `До ${maxPriceValue[0]} лв.`;
 
@@ -171,7 +170,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
             id="priceSlider"
             min={DEFAULT_MIN_PRICE}
             max={DEFAULT_MAX_PRICE}
-            step={10}
+            step={10} // You can adjust the step for price
             value={maxPriceValue}
             onValueChange={(value) => setMaxPriceValue(value as [number])}
             className="mt-2"
