@@ -15,17 +15,19 @@ export interface Review {
   rating: number; // 1-5
   comment: string; // Ще бъде преведено в mock-data
   date: string; // ISO date string
+  userId?: string; // Added for consistency
+  salonId?: string; // Added for consistency
 }
 
 export interface Salon {
   id: string;
   name: string; // Ще бъде преведено в mock-data
   description: string; // Ще бъде преведено в mock-data
-  address: string; // Ще бъде преведено в mock-data
-  city: string; // Ще бъде преведено в mock-data
+  address?: string; // Ще бъде преведено в mock-data
+  city?: string; // Ще бъде преведено в mock-data
   rating: number; // 1-5
   priceRange: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
-  photos: string[]; // URLs to photos - Should always be an array, even if empty
+  photos?: string[]; // URLs to photos - Should always be an array, even if empty
   services: Service[]; // In a real app, these might be IDs referencing a separate services collection
   reviews: Review[]; // In a real app, these might be IDs referencing a separate reviews collection
   heroImage?: string; // URL to a hero image - Made optional
@@ -69,4 +71,7 @@ export interface Booking {
   time: string; // "HH:mm"
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   createdAt?: any; // For Firestore Timestamp
+  clientName?: string; // Optional: For displaying in business owner's view
+  clientEmail?: string; // Optional: For displaying in business owner's view
 }
+

@@ -3,24 +3,26 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
-import type { Booking, Salon } from '@/types';
+import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { AlertTriangle, CalendarX2, Info } from 'lucide-react';
+import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SalonBookingsPage() {
   const params = useParams();
   const router = useRouter();
   const businessId = params.businessId as string;
   const firestore = getFirestore();
+  const { toast } = useToast();
 
   const [salon, setSalon] = useState<Salon | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -28,6 +30,7 @@ export default function SalonBookingsPage() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatingStatusFor, setIsUpdatingStatusFor] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -41,7 +44,7 @@ export default function SalonBookingsPage() {
 
   useEffect(() => {
     if (!currentUser || !businessId) {
-      if (!businessId) setIsLoading(false); // No businessId, stop loading
+      if (!businessId) setIsLoading(false);
       return;
     }
 
@@ -49,7 +52,6 @@ export default function SalonBookingsPage() {
       setIsLoading(true);
       setError(null);
       try {
-        // Fetch salon details to verify ownership
         const salonRef = doc(firestore, 'salons', businessId);
         const salonSnap = await getDoc(salonRef);
 
@@ -71,25 +73,46 @@ export default function SalonBookingsPage() {
         }
         setIsOwner(true);
 
-        // Fetch bookings for this salon
         const bookingsQuery = query(
           collection(firestore, 'bookings'),
           where('salonId', '==', businessId),
-          orderBy('date', 'desc'),
-          orderBy('time', 'desc')
+          orderBy('createdAt', 'desc') // Order by creation time
         );
         const bookingsSnapshot = await getDocs(bookingsQuery);
-        const fetchedBookings: Booking[] = [];
-        bookingsSnapshot.forEach((doc) => {
-          fetchedBookings.push({ id: doc.id, ...doc.data() } as Booking);
+        const fetchedBookingsPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
+          const bookingData = bookingDoc.data() as Omit<Booking, 'id' | 'clientName' | 'clientEmail'>;
+          let clientName = 'N/A';
+          let clientEmail = 'N/A';
+
+          if (bookingData.userId) {
+            try {
+              const userRef = doc(firestore, 'users', bookingData.userId);
+              const userSnap = await getDoc(userRef);
+              if (userSnap.exists()) {
+                const userData = userSnap.data() as UserProfile;
+                clientName = userData.displayName || userData.name || 'Клиент';
+                clientEmail = userData.email || 'Няма имейл';
+              }
+            } catch (userError) {
+              console.error(`Error fetching user ${bookingData.userId}:`, userError);
+            }
+          }
+          return {
+            id: bookingDoc.id,
+            ...bookingData,
+            clientName,
+            clientEmail,
+          } as Booking;
         });
-        setBookings(fetchedBookings);
+
+        const resolvedBookings = await Promise.all(fetchedBookingsPromises);
+        setBookings(resolvedBookings);
 
       } catch (err: any) {
         console.error("Error fetching salon bookings:", err);
         setError('Възникна грешка при зареждане на резервациите.');
         if (err.code === 'permission-denied') {
-            setError('Грешка: Нямате права за достъп до тези резервации. Моля, проверете Firestore правилата.');
+          setError('Грешка: Нямате права за достъп до тези данни. Моля, проверете Firestore правилата.');
         }
       } finally {
         setIsLoading(false);
@@ -97,14 +120,41 @@ export default function SalonBookingsPage() {
     };
 
     fetchSalonAndBookings();
-  }, [currentUser, businessId, firestore, router]);
+  }, [currentUser, businessId, firestore]);
 
-  const statusTranslations: Record<Booking['status'], string> = {
-    confirmed: 'потвърдена',
-    pending: 'чакаща',
-    cancelled: 'отказана',
-    completed: 'завършена',
+  const handleStatusChange = async (bookingId: string, newStatus: Booking['status']) => {
+    setIsUpdatingStatusFor(bookingId);
+    try {
+      const bookingRef = doc(firestore, 'bookings', bookingId);
+      await updateDoc(bookingRef, { status: newStatus });
+
+      setBookings(prevBookings =>
+        prevBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
+      );
+      toast({
+        title: 'Статусът е актуализиран',
+        description: `Статусът на резервацията беше успешно променен на '${statusTranslations[newStatus]}'.`,
+      });
+    } catch (err) {
+      console.error("Error updating booking status:", err);
+      toast({
+        title: 'Грешка при актуализация',
+        description: 'Неуспешна промяна на статуса на резервацията.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUpdatingStatusFor(null);
+    }
   };
+
+  const statusOptions: Booking['status'][] = ['pending', 'confirmed', 'completed', 'cancelled'];
+  const statusTranslations: Record<Booking['status'], string> = {
+    pending: 'чакаща',
+    confirmed: 'потвърдена',
+    completed: 'завършена',
+    cancelled: 'отказана',
+  };
+
 
   if (isLoading) {
     return (
@@ -114,13 +164,13 @@ export default function SalonBookingsPage() {
         <Card>
           <TableHeader>
             <TableRow>
-              {[...Array(4)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+              {[...Array(5)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {[...Array(3)].map((_, i) => (
               <TableRow key={i}>
-                {[...Array(4)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
               </TableRow>
             ))}
           </TableBody>
@@ -141,9 +191,8 @@ export default function SalonBookingsPage() {
       </div>
     );
   }
-  
+
   if (!isOwner && !isLoading) {
-    // This state should ideally be caught by the error state if setError is called for permission issues
      return (
       <div className="container mx-auto py-10 px-6 text-center">
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
@@ -155,7 +204,6 @@ export default function SalonBookingsPage() {
       </div>
     );
   }
-
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -191,9 +239,9 @@ export default function SalonBookingsPage() {
                   <TableHead>Услуга</TableHead>
                   <TableHead>Дата</TableHead>
                   <TableHead>Час</TableHead>
-                  <TableHead>Клиент (ID)</TableHead>
+                  <TableHead>Клиент</TableHead>
+                  <TableHead>Имейл на клиент</TableHead>
                   <TableHead>Статус</TableHead>
-                  {/* Add more heads if needed, e.g., Actions */}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -202,13 +250,30 @@ export default function SalonBookingsPage() {
                     <TableCell className="font-medium">{booking.serviceName}</TableCell>
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
+                    <TableCell>{booking.clientName || booking.userId}</TableCell>
+                    <TableCell>{booking.clientEmail || 'N/A'}</TableCell>
                     <TableCell>
-                        <Link href={`/admin/users?userId=${booking.userId}`} className="hover:underline text-primary" title="Виж профил на потребителя (админ)">
-                         {booking.userId.substring(0, 8)}...
-                       </Link>
+                      {isUpdatingStatusFor === booking.id ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Select
+                          value={booking.status}
+                          onValueChange={(newStatus) => handleStatusChange(booking.id, newStatus as Booking['status'])}
+                          disabled={isUpdatingStatusFor === booking.id}
+                        >
+                          <SelectTrigger className="w-[150px]">
+                            <SelectValue placeholder="Промяна на статус" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map(status => (
+                              <SelectItem key={status} value={status}>
+                                {statusTranslations[status]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </TableCell>
-                    <TableCell className="capitalize">{statusTranslations[booking.status] || booking.status}</TableCell>
-                    {/* Add actions cell if needed */}
                   </TableRow>
                 ))}
               </TableBody>
@@ -224,4 +289,3 @@ export default function SalonBookingsPage() {
     </div>
   );
 }
-
