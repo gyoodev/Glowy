@@ -105,14 +105,23 @@ export default function SalonProfilePage() {
           console.error("[SalonProfilePage] Salon not found in Firestore for name:", name);
           setSalon(null);
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("[SalonProfilePage] Error fetching salon from Firestore:", error);
+        if (error.code === 'permission-denied') {
+          toast({
+            title: "Грешка: Няма права за достъп",
+            description: "Неуспешно зареждане на информацията за салона поради липса на права. Моля, проверете Вашите Firestore Security Rules. Трябва да имате правило, което позволява публично четене на данни от колекцията 'salons', например: 'match /salons/{salonId} { allow get, list: if true; }'. Проверете също и правилата за четене на колекцията 'reviews'.",
+            variant: "destructive",
+            duration: 15000, 
+          });
+        } else {
+          toast({
+            title: "Грешка при зареждане",
+            description: "Неуспешно зареждане на информацията за салона. Опитайте отново по-късно.",
+            variant: "destructive",
+          });
+        }
         setSalon(null);
-        toast({
-          title: "Грешка при зареждане",
-          description: "Неуспешно зареждане на информацията за салона.",
-          variant: "destructive",
-        });
       } finally {
         setIsLoading(false);
       }
@@ -170,7 +179,7 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
-  }, [salon?.id, auth.currentUser, firestore]); // Added auth.currentUser dependency
+  }, [salon?.id, auth.currentUser, firestore]);
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -231,7 +240,7 @@ export default function SalonProfilePage() {
             name: bookingServiceName,
             price: localSelectedService.price,
             duration: localSelectedService.duration,
-            description: localSelectedService.description, // Ensure description is passed if needed by createBooking
+            description: localSelectedService.description || '', 
         },
         date: bookingDate.toISOString(),
         time: bookingTime,
@@ -340,7 +349,6 @@ export default function SalonProfilePage() {
       const docRef = await addDoc(reviewsCollectionRef, newReview);
       console.log("[SalonProfilePage] Review added with ID:", docRef.id);
 
-      // Re-fetch salon data to update reviews and rating
       const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
       const salonSnapToUpdate = await getDoc(salonDocRefToUpdate);
       if (salonSnapToUpdate.exists()) {
@@ -350,7 +358,7 @@ export default function SalonProfilePage() {
         const allReviewsSnapshot = await getDocs(allReviewsQuery);
         const allSalonReviews = allReviewsSnapshot.docs.map(reviewDoc => ({ id: reviewDoc.id, ...reviewDoc.data() })) as Review[];
         
-        updatedSalonData.reviews = allSalonReviews; // Assign all reviews
+        updatedSalonData.reviews = allSalonReviews; 
         if (allSalonReviews.length > 0) {
             const totalRating = allSalonReviews.reduce((acc, rev) => acc + rev.rating, 0);
             updatedSalonData.rating = totalRating / allSalonReviews.length;
@@ -358,23 +366,18 @@ export default function SalonProfilePage() {
              updatedSalonData.rating = 0;
         }
         
-        // Update salon document in Firestore with new rating and reviews array
         await updateDoc(salonDocRefToUpdate, {
             rating: updatedSalonData.rating,
-            // Storing the full review objects or just their IDs in the salon document depends on your data model.
-            // If storing full objects, ensure they are serializable and don't grow too large.
-            // For simplicity here, assuming you might be storing review IDs or a small summary.
-            // If you store full reviews, this part is correct. Otherwise, adjust.
-            reviews: allSalonReviews.map(r => ({ // Example: storing a reference or a subset of fields
+            reviews: allSalonReviews.map(r => ({ 
                 id: r.id,
                 userName: r.userName,
                 rating: r.rating,
-                comment: r.comment.substring(0,100), // Example: store a snippet
+                comment: r.comment.substring(0,100),
                 date: r.date,
                 userAvatar: r.userAvatar
             }))
         });
-        setSalon(updatedSalonData); // Update local state
+        setSalon(updatedSalonData); 
       }
 
 
@@ -628,3 +631,5 @@ export default function SalonProfilePage() {
     </div>
   );
 }
+
+    
