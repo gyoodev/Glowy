@@ -15,10 +15,8 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-// For the new price range filter
-const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500; // Must match FilterSidebar
-const DEFAULT_PRICE_RANGE_FILTER: [number, number] = [DEFAULT_MIN_PRICE, DEFAULT_MAX_PRICE];
+const DEFAULT_MIN_PRICE = 0; // Corresponds to FilterSidebar
+const DEFAULT_MAX_PRICE = 500; // Corresponds to FilterSidebar
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -28,7 +26,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    priceRange: DEFAULT_PRICE_RANGE_FILTER, // Initialize with the array [min, max]
+    maxPrice: DEFAULT_MAX_PRICE, // Initialize with the default max, meaning "any price"
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -54,7 +52,6 @@ export default function SalonDirectoryPage() {
 
 
   const uniqueServiceTypes = useMemo(() => {
-    // Consider deriving this from actual salon.services data if it becomes dynamic
     const serviceNames = new Set(mockServices.map(service => service.name));
     return Array.from(serviceNames);
   }, []);
@@ -71,8 +68,8 @@ export default function SalonDirectoryPage() {
 
     if (Object.keys(filters).length > 0) {
       result = result.filter(salon => {
-        const { location, serviceType, minRating, priceRange } = filters;
-        let matchesAll = true; // Start with true and set to false if any filter doesn't match
+        const { location, serviceType, minRating, maxPrice } = filters;
+        let matchesAll = true;
 
         if (location && location !== ALL_CITIES_VALUE && salon.city !== location) {
           matchesAll = false;
@@ -84,18 +81,13 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && priceRange && Array.isArray(priceRange) && priceRange.length === 2) {
-          const [minPriceSelected, maxPriceSelected] = priceRange;
-          // Only apply price filter if the selected range is different from the default "any" range
-          const isDefaultSelectedRange = minPriceSelected === DEFAULT_MIN_PRICE && maxPriceSelected === DEFAULT_MAX_PRICE;
-          
-          if (!isDefaultSelectedRange) {
-            const salonHasMatchingService = (salon.services || []).some(service => 
-              service.price >= minPriceSelected && service.price <= maxPriceSelected
-            );
-            if (!salonHasMatchingService) {
-              matchesAll = false;
-            }
+        // Apply maxPrice filter only if it's different from the default "any price" value
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE) {
+          const salonHasMatchingService = (salon.services || []).some(service => 
+            service.price <= maxPrice
+          );
+          if (!salonHasMatchingService) {
+            matchesAll = false;
           }
         }
         return matchesAll;

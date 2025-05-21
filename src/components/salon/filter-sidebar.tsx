@@ -20,15 +20,15 @@ interface FilterSidebarProps {
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500; // Adjust as needed for a sensible max
-const DEFAULT_PRICE_RANGE: [number, number] = [DEFAULT_MIN_PRICE, DEFAULT_MAX_PRICE];
+const DEFAULT_MIN_PRICE = 0; // Used as the minimum for the slider
+const DEFAULT_MAX_PRICE = 500; // Used as the maximum for the slider and initial value for maxPrice
+const ANY_PRICE_SLIDER_VALUE = DEFAULT_MAX_PRICE; // Value indicating "any price"
 
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
-  const [rating, setRating] = useState([0]);
-  const [priceRangeValue, setPriceRangeValue] = useState<[number, number]>(DEFAULT_PRICE_RANGE);
+  const [rating, setRating] = useState([0]); // Rating is [value]
+  const [maxPriceValue, setMaxPriceValue] = useState<[number]>([ANY_PRICE_SLIDER_VALUE]); // Price is [maxValue]
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const handleApplyFilters = () => {
@@ -36,7 +36,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       location,
       serviceType,
       minRating: rating[0],
-      priceRange: priceRangeValue, // Pass the array [minPrice, maxPrice]
+      maxPrice: maxPriceValue[0] === ANY_PRICE_SLIDER_VALUE ? DEFAULT_MAX_PRICE : maxPriceValue[0],
     });
   };
 
@@ -44,12 +44,12 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setLocation(ALL_CITIES_VALUE);
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
-    setPriceRangeValue(DEFAULT_PRICE_RANGE);
+    setMaxPriceValue([ANY_PRICE_SLIDER_VALUE]);
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
       minRating: 0,
-      priceRange: DEFAULT_PRICE_RANGE,
+      maxPrice: DEFAULT_MAX_PRICE, // Effectively "any price"
     });
   };
   
@@ -57,6 +57,10 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     if (value === ALL_CITIES_VALUE) return "Всички градове";
     return cities.find(city => city === value) || "Изберете град";
   }
+
+  const priceLabel = maxPriceValue[0] === ANY_PRICE_SLIDER_VALUE 
+    ? "Всякаква цена" 
+    : `До ${maxPriceValue[0]} лв.`;
 
   return (
     <Card className="sticky top-20 shadow-lg rounded-lg">
@@ -93,7 +97,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
                   <CommandGroup>
                     <CommandItem
                       value={ALL_CITIES_VALUE}
-                      onSelect={(currentValue) => {
+                      onSelect={() => {
                         setLocation(ALL_CITIES_VALUE);
                         setCityPopoverOpen(false);
                       }}
@@ -160,16 +164,16 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="priceRangeSlider" className="text-sm font-medium">
-            Цена: {priceRangeValue[0]} лв. - {priceRangeValue[1]}{priceRangeValue[1] === DEFAULT_MAX_PRICE ? '+' : ''} лв.
+          <Label htmlFor="priceSlider" className="text-sm font-medium">
+            Цена: {priceLabel}
           </Label>
           <Slider
-            id="priceRangeSlider"
+            id="priceSlider"
             min={DEFAULT_MIN_PRICE}
             max={DEFAULT_MAX_PRICE}
-            step={10} // Adjust step as needed
-            value={priceRangeValue}
-            onValueChange={(value) => setPriceRangeValue(value as [number, number])}
+            step={10}
+            value={maxPriceValue}
+            onValueChange={(value) => setMaxPriceValue(value as [number])}
             className="mt-2"
           />
         </div>
