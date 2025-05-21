@@ -4,8 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
-import { mockSalons, mockServices } from '@/lib/mock-data';
-import type { Salon } from '@/types';
+import { mockServices } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, VenetianMask } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const ANY_PRICE_VALUE = "--any-price--";
+import type { Salon } from '@/types';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 const allBulgarianCities: string[] = [
   "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", 
@@ -37,11 +38,24 @@ export default function SalonDirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setSalons(mockSalons);
+    const fetchSalons = async () => {
+      setIsLoading(true);
+      const firestore = getFirestore();
+      const salonsCollectionRef = collection(firestore, 'salons');
+      try {
+        const querySnapshot = await getDocs(salonsCollectionRef);
+        const salonsList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Salon[];
+        setSalons(salonsList);
+      } catch (error) {
+        console.error("Error fetching salons:", error);
+        // Optionally, show a toast or error message
+      }
       setIsLoading(false);
-    }, 1000);
+    };
+    fetchSalons();
   }, []);
 
   // This is no longer used for the filter's city list, but kept in case it's needed elsewhere or for future dynamic city lists based on actual salon data.
