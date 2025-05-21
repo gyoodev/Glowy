@@ -5,28 +5,28 @@ import { useState, useEffect } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge'; // Import Badge component
+import { Badge } from '@/components/ui/badge';
 import type { UserProfile, Booking } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
-import { auth } from '@/lib/firebase'; 
-import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore'; 
+import { auth } from '@/lib/firebase';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 
 interface FirebaseError extends Error {
   code?: string;
   customMessage?: string;
   details?: string;
 }
-import { getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 
 export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); 
+  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const router = useRouter();
   const firestore = getFirestore();
@@ -34,77 +34,78 @@ export default function AccountPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
-      setFetchError(null); 
-      if (user && user.email) { 
-        setCurrentUser(user); // Keep track of auth user
+      setFetchError(null);
+      if (user && user.uid) { // Check for user.uid as well
+        setCurrentUser(user);
         try {
-          // Use getUserProfile to fetch user data by UID
           const profileData = await getUserProfile(user.uid);
 
           if (profileData) {
-            setUserProfile(profileData);
+            setUserProfile(profileData as UserProfile);
           } else {
-            // If no profile exists, create a default one
-            console.log("User document not found for email:", user.email, "and UID:", user.uid, ". Creating default profile in Firestore using UID.");
+            console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave = {
-              email: user.email,
-              displayName: user.displayName || 'Потребител',
+            const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email?: string | null } = {
+              name: user.displayName || 'Потребител',
+              email: user.email, // Include email from auth user
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
               createdAt: Timestamp.fromDate(new Date()),
-              profileType: 'customer', 
+              // profileType: 'customer', // This field seems to be from an older schema, ensure UserProfile type is up-to-date
             };
-            await setDoc(newUserDocRef, dataToSave);
-            setUserProfile({ 
+            await setDoc(newUserDocRef, { ...dataToSave, role: 'customer', userId: user.uid }); // Add default role and userId
+            setUserProfile({
               id: user.uid,
-              name: dataToSave.displayName,
-              email: dataToSave.email,
+              name: dataToSave.name,
+              email: dataToSave.email || '',
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
- role: 'customer', // Assign a default role
+              role: 'customer', // Assign a default role
+              userId: user.uid,
             });
           }
 
+          // Fetch bookings using UID
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
           bookingSnapshot.forEach((doc) => {
             fetchedBookings.push({
-              id: doc.id, 
+              id: doc.id,
               ...doc.data()
             } as Booking);
           });
           setBookings(fetchedBookings);
 
         } catch (error: any) {
-          console.error("Error fetching/creating user profile or bookings:", error); 
-          setFetchError(error as FirebaseError); 
+          console.error("Error fetching/creating user profile or bookings:", error);
+          setFetchError(error as FirebaseError);
 
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
-          if (error.message) { 
+          if (error.message) {
             console.error("Firebase error message:", error.message);
           }
           if (error.details) {
             console.error("Firebase error details:", error.details);
-          } 
-          if (error.code === 'failed-precondition') { 
-            console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it. The query was likely on the 'email' field in the 'users' collection.");
-            setFetchError({ ...error, customMessage: "A database index is required for querying by email. Please check the browser console for a link from Firebase to create it, then refresh the page." });
+          }
+          if (error.code === 'failed-precondition') {
+            console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it.");
+            setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
+          } else if (error.code === 'permission-denied') {
+             setFetchError({ ...error, customMessage: "ГРЕШКА: Липсват права за достъп до Firestore!"});
           }
           setUserProfile(null);
           setBookings([]);
         } finally {
           setIsLoading(false);
         }
-      } else if (user && !user.email) { 
-        console.warn("User is authenticated but email is null. Cannot fetch profile by email.");
-        setFetchError({customMessage: "Вашият потребителски профил няма асоцииран имейл. Моля, свържете се с поддръжката."});
+      } else if (user && !user.uid) {
+        console.warn("User is authenticated but UID is null. This should not happen.");
+        setFetchError({ customMessage: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката." });
         setIsLoading(false);
-      }
-      else { 
+      } else {
         setCurrentUser(null);
         setUserProfile(null);
         setBookings([]);
@@ -125,10 +126,10 @@ export default function AccountPage() {
           Моят Акаунт
         </h1>
         {userProfile?.role && (
- <Badge variant="secondary" className="text-lg">
+          <Badge variant="secondary" className="text-lg">
             {userProfile.role === 'admin' ? 'Роля: Администратор' : 'Роля: Потребител'}
- </Badge>
- )}
+          </Badge>
+        )}
         <p className="text-lg text-muted-foreground">
           Управлявайте своя профил, предпочитания и преглеждайте историята на резервациите си.
         </p>
@@ -140,43 +141,42 @@ export default function AccountPage() {
             <Edit3 className="mr-2 h-5 w-5" /> Профил
           </TabsTrigger>
           <TabsTrigger value="bookings" className="py-3 text-base">
-            <History className="mr-2 h-5 w-5" /> История на Резервациите
+            <History className="mr-2 h-5 w-5" /> Резервации
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile">
           {isLoading ? (
             <div className="space-y-4 max-w-2xl mx-auto">
-                <div className="flex items-center space-x-4 mb-6">
-                    <Skeleton className="h-20 w-20 rounded-full" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-6 w-48" />
-                        <Skeleton className="h-4 w-64" />
- {/* Add skeleton for role badge */}
- <Skeleton className="h-5 w-24 mt-2" />
-                    </div>
+              <div className="flex items-center space-x-4 mb-6">
+                <Skeleton className="h-20 w-20 rounded-full" />
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64" />
+                  <Skeleton className="h-5 w-24 mt-2" />
                 </div>
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-12 w-32 mt-4" />
+              </div>
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-12 w-32 mt-4" />
             </div>
           ) : userProfile ? (
             <UserProfileForm userProfile={userProfile} />
           ) : (
-             <div className="text-center text-destructive py-8 border border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto">
-                <div className="flex items-center justify-center mb-3">
-                    <AlertTriangle className="w-8 h-8 mr-2 text-destructive" />
-                    <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
-                </div>
-                {fetchError && fetchError.code === 'permission-denied' ? (
+            <div className="text-center text-destructive py-8 border border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto">
+              <div className="flex items-center justify-center mb-3">
+                <AlertTriangle className="w-8 h-8 mr-2 text-destructive" />
+                <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
+              </div>
+              {fetchError?.code === 'permission-denied' || (fetchError?.customMessage && fetchError.customMessage.includes("Липсват права")) ? (
                   <div className="text-sm text-left space-y-3 p-4 bg-destructive/5 border border-destructive/30 rounded-md">
-                    <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore!</p>
+                    <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore (permission-denied)!</p>
                     <p className="text-destructive-foreground/90">
                       Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
-                      Това е проблем с конфигурацията на **Firestore Security Rules** във Вашия Firebase проект.
+                      Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект.
                     </p>
                     <p className="text-destructive-foreground/90">
                       <strong>За да разрешите това, МОЛЯ, направете следното във Вашата Firebase конзола:</strong>
@@ -208,23 +208,23 @@ export default function AccountPage() {
                       След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
                     </p>
                   </div>
-                ) : fetchError && fetchError.customMessage ? (
+                ) : fetchError?.customMessage ? (
                   <p>{fetchError.customMessage}</p>
                 ) : (
-                  <p>
-                    Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
-                    {fetchError?.message && <span className="block mt-2 text-sm">Детайли: {fetchError.message}</span>}
-                  </p>
-                )}
-             </div>
+                <p>
+                  Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
+                  {fetchError?.message && <span className="block mt-2 text-sm">Детайли: {fetchError.message}</span>}
+                </p>
+              )}
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="bookings">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">Вашите минали и предстоящи резервации</h2>
+            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">История на Вашите Резервации</h2>
             {isLoading && bookings.length === 0 ? (
-               <div className="space-y-4">
+              <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <Card key={i} className="shadow-sm">
                     <CardHeader>
@@ -240,7 +240,7 @@ export default function AccountPage() {
               </div>
             ) : bookings.length > 0 ? (
               <div className="space-y-6">
-                {bookings.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(booking => (
+                {bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(booking => (
                   <BookingHistoryItem key={booking.id} booking={booking} />
                 ))}
               </div>
@@ -253,5 +253,3 @@ export default function AccountPage() {
     </div>
   );
 }
-
-    
