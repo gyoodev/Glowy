@@ -125,14 +125,14 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
         </div>
       </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6"> {/* Added space-y-6 for consistent spacing */}
+          <CardContent className="space-y-4"> {/* Adjusted spacing within card content */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Пълно име</FormLabel>
+                  <FormLabel>Вашите имена</FormLabel>
                   <FormControl>
                     <Input placeholder="Вашето пълно име" {...field} />
                   </FormControl>
@@ -154,7 +154,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                 </FormItem>
               )}
             />
-            <h3 className="text-lg font-semibold pt-4 border-t mt-6">Предпочитания</h3>
+            <h3 className="text-lg font-semibold pt-4 border-t mt-6 mb-4">Предпочитания</h3>{/* Adjusted margin bottom */}
             
             <FormField
               control={form.control}

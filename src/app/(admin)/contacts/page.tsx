@@ -1,8 +1,6 @@
 'use client';
 
-'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getFirestore, collection, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 
 interface ContactEntry {

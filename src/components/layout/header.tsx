@@ -7,7 +7,7 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Menu, Search, Sparkles as AppIcon, LogOut } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth, getUserProfile } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
 const navItems = [
@@ -19,11 +19,18 @@ export function Header() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true); // Initialize to true
+  const [userRole, setUserRole] = useState<string | null>(null); // State for user role
 
   useEffect(() => {
     // setIsLoading(true); // Not needed here as it's initialized to true
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => { // Make the callback async
       setCurrentUser(user);
+      if (user) {
+        const profile = await getUserProfile(user.uid);
+        setUserRole(profile?.role || null); // Set user role
+      } else {
+        setUserRole(null); // Clear role if no user
+      }
       // Ensure localStorage is only accessed on the client
       if (typeof window !== 'undefined') {
         if (user) {
@@ -34,7 +41,7 @@ export function Header() {
       }
       setIsLoading(false); // Set loading to false after auth state is determined
     });
-
+    
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []); // Empty dependency array means this runs once on mount and cleanup on unmount
@@ -62,6 +69,12 @@ export function Header() {
         <Link href="/account">Моят Акаунт</Link>
     </Button>
   );
+
+  const adminPanelLinkDesktop = (
+     <Button variant="ghost" asChild>
+      <Link href="/admin/dashboard">Admin Panel</Link>
+    </Button>
+  )
 
   // Render loading skeleton if isLoading is true
   // This will be the case on initial server render and initial client render before useEffect runs

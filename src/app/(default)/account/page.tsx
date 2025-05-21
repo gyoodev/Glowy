@@ -124,9 +124,7 @@ export default function AccountPage() {
           <UserCircle className="w-10 h-10 mr-3 text-primary" />
           Моят Акаунт
         </h1>
-        {userProfile?.role && (
- <Badge variant="secondary" className="text-lg">
-            Роля: {userProfile.role === 'admin' ? 'Администратор' : 'Потребител'}
+        {userProfile?.role && <Badge variant="secondary" className="text-lg">
  </Badge>
         )}
         <p className="text-lg text-muted-foreground">
