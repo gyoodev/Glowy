@@ -12,12 +12,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { auth, getUserProfile } from '@/lib/firebase';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { generateSalonDescription, type GenerateSalonDescriptionInput } from '@/ai/flows/generate-salon-description';
+import { auth } from '@/lib/firebase';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { allBulgarianCities } from '@/lib/mock-data'; // Assuming you might want to reuse this
+import { allBulgarianCities } from '@/lib/mock-data';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the schema for the form
 const createBusinessSchema = z.object({
@@ -48,7 +49,6 @@ const serviceOptions = [
   { value: 'грижа за лицето', label: 'Грижа за Лицето' },
   { value: 'епилация', label: 'Епилация' },
   { value: 'обезкосмяване', label: 'Обезкосмяване' },
-  // Add more services as needed
 ];
 
 const targetCustomerOptions = [
@@ -57,7 +57,6 @@ const targetCustomerOptions = [
   { value: 'унисекс', label: 'Унисекс (Жени и Мъже)' },
   { value: 'младежи', label: 'Младежи' },
   { value: 'семейства', label: 'Семейства' },
-  // Add more target customer groups as needed
 ];
 
 export default function CreateBusinessPage() {
@@ -86,8 +85,9 @@ export default function CreateBusinessPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const profile = await getUserProfile(user.uid);
-        if (profile?.role === 'business') {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data()?.role === 'business') {
           setIsBusinessUser(true);
         } else {
           toast({ title: 'Достъп отказан', description: 'Само бизнес потребители могат да създават бизнеси.', variant: 'destructive' });
@@ -100,25 +100,23 @@ export default function CreateBusinessPage() {
       setIsAuthLoading(false);
     });
     return () => unsubscribe();
-  }, [router, toast]);
+  }, [router, toast, firestore]);
 
   const handleGenerateDescription = async () => {
     const aiInputData = {
-      salonName: form.getValues('name') || 'Моят Салон', // Provide a default or handle if name is empty
-      serviceDescription: serviceOptions.find(opt => opt.value === form.getValues('serviceDetailsForAi'))?.label || '', // Use label for AI
+      salonName: form.getValues('name') || 'Моят Салон',
+      serviceDescription: serviceOptions.find(opt => opt.value === form.getValues('serviceDetailsForAi'))?.label || '',
       atmosphereDescription: form.getValues('atmosphereForAi'),
-      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === form.getValues('targetCustomerForAi'))?.label || '', // Use label for AI
+      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === form.getValues('targetCustomerForAi'))?.label || '',
       uniqueSellingPoints: form.getValues('uniqueSellingPointsForAi'),
     };
 
-    // Basic validation for AI input fields
     if (!aiInputData.salonName || !aiInputData.serviceDescription || !aiInputData.atmosphereDescription || !aiInputData.targetCustomerDescription || !aiInputData.uniqueSellingPoints) {
       toast({
         title: 'Непълна информация за AI',
         description: 'Моля, попълнете всички полета, маркирани за AI генериране на описание.',
         variant: 'destructive',
       });
-      // Trigger validation for specific AI fields
       form.trigger(['name', 'serviceDetailsForAi', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
       return;
     }
@@ -140,25 +138,34 @@ export default function CreateBusinessPage() {
     }
   };
 
-
   const onSubmit: SubmitHandler<CreateBusinessFormValues> = async (data) => {
     if (!auth.currentUser) {
       toast({ title: 'Грешка', description: 'Потребителят не е удостоверен.', variant: 'destructive' });
       return;
     }
 
-    try {
-      await addDoc(collection(firestore, 'salons'), {
-        ...data,
+    const salonDataToSave = {
+        name: data.name,
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        priceRange: data.priceRange,
+        serviceDetailsForAi: data.serviceDetailsForAi,
+        atmosphereForAi: data.atmosphereForAi,
+        targetCustomerForAi: data.targetCustomerForAi,
+        uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
         ownerId: auth.currentUser.uid,
-        rating: 0, // Initial rating
-        reviews: [], // Initial empty reviews
-        photos: ['https://placehold.co/600x400.png'], // Default placeholder
-        heroImage: 'https://placehold.co/1200x400.png', // Default placeholder
-        services: [], // Initialize with empty services array
-        availability: {}, // Initialize empty availability
+        rating: 0,
+        reviews: [],
+        photos: ['https://placehold.co/600x400.png'],
+        heroImage: 'https://placehold.co/1200x400.png',
+        services: [],
+        availability: {},
         createdAt: serverTimestamp(),
-      });
+    };
+
+    try {
+      await addDoc(collection(firestore, 'salons'), salonDataToSave);
       toast({
         title: 'Бизнесът е създаден успешно!',
         description: `${data.name} беше добавен към Вашия списък.`,
@@ -178,7 +185,7 @@ export default function CreateBusinessPage() {
     return <div className="container mx-auto py-10 px-6 text-center">Зареждане на данни...</div>;
   }
   if (!isBusinessUser) {
-    return <div className="container mx-auto py-10 px-6 text-center">Пренасочване...</div>;
+    return <div className="container mx-auto py-10 px-6 text-center">Неоторизиран достъп. Пренасочване...</div>;
   }
 
   return (
@@ -208,7 +215,6 @@ export default function CreateBusinessPage() {
                 )}
               />
 
-
               <div className="space-y-2">
                 <h3 className="text-lg font-medium text-primary">AI Генериране на Описание</h3>
                 <p className="text-sm text-muted-foreground">
@@ -223,18 +229,20 @@ export default function CreateBusinessPage() {
                   <FormItem>
                     <FormLabel>Вид услуги (за AI)</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                        <SelectValue placeholder="Изберете основни услуги" />
+                          <SelectValue placeholder="Изберете основни услуги" />
                         </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>                        {serviceOptions.map(option => (
+                      </FormControl>
+                      <SelectContent>
+                        {serviceOptions.map(option => (
                           <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
                         ))}
-                    </SelectContent>
+                      </SelectContent>
                     </Select>
                     <FormDescription>Изберете основните категории услуги, които предлагате.</FormDescription>
                     <FormMessage />
+                  </FormItem>
                 )}
               />
               <FormField
@@ -258,14 +266,16 @@ export default function CreateBusinessPage() {
                   <FormItem>
                     <FormLabel>Целеви клиенти (за AI)</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
+                      <FormControl>
                         <SelectTrigger>
-                        <SelectValue placeholder="Изберете целева група" />
+                          <SelectValue placeholder="Изберете целева група" />
                         </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>                        {targetCustomerOptions.map(option => (
+                      </FormControl>
+                      <SelectContent>
+                        {targetCustomerOptions.map(option => (
                           <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                        ))}                    </SelectContent>
+                        ))}
+                      </SelectContent>
                     </Select>
                     <FormDescription>Към кого са насочени Вашите услуги?</FormDescription>
                     <FormMessage />
@@ -380,3 +390,4 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
+    
