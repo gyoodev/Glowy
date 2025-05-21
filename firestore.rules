@@ -1,0 +1,59 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if the requester is an admin
+    // Assumes user documents in 'users' collection have a 'role' field.
+    function isAdmin() {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users collection
+    match /users/{userId} {
+      // Any authenticated user can read and write (update) their own profile.
+      // This is crucial for AdminLayout to check the user's role.
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      // Allow authenticated users to CREATE their own user document.
+      // This is a more robust way to handle creation after createUserWithEmailAndPassword.
+      allow create: if request.auth != null && request.auth.uid == userId;
+      // An admin can get any specific user's profile and list all users.
+      allow get, list: if isAdmin();
+      // Optional: If admins need to update other users' profiles (e.g., change their role).
+      // allow update: if isAdmin();
+    }
+
+    // Contacts collection
+    match /contacts/{contactId} {
+      allow create: if true; // Allow anyone to create contacts
+      allow get, list, update: if isAdmin();
+    }
+
+    // Bookings collection
+    match /bookings/{bookingId} {
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow get, list, update: if isAdmin();
+    }
+
+    // Salons collection
+    match /salons/{salonId} {
+      allow get, list: if true; // Anyone can read
+      // Only admins or business users can create
+      allow create: if isAdmin() || (request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business');
+      // Only admins can delete
+      allow delete: if isAdmin();
+      // Admins can update any salon, business users can update their own salons
+  allow update: if isAdmin() != null && (request.auth != null && request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // Counters collection
+    match /counters/users {
+      // Allow unauthenticated users to read and write the user counter during registration.
+      // WARNING: This is still not the most secure approach.
+      // A Cloud Function would be a more robust solution for production.
+      allow read, write: if true;
+    }
+
+  }
+}
