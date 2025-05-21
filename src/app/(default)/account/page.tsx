@@ -124,9 +124,11 @@ export default function AccountPage() {
           <UserCircle className="w-10 h-10 mr-3 text-primary" />
           Моят Акаунт
         </h1>
-        {userProfile?.role && <Badge variant="secondary" className="text-lg">
+        {userProfile?.role && (
+ <Badge variant="secondary" className="text-lg">
+            {userProfile.role === 'admin' ? 'Роля: Администратор' : 'Роля: Потребител'}
  </Badge>
-        )}
+ )}
         <p className="text-lg text-muted-foreground">
           Управлявайте своя профил, предпочитания и преглеждайте историята на резервациите си.
         </p>
