@@ -21,7 +21,14 @@ import { bg } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+
+const predefinedTimeSlots = Array.from({ length: 19 }, (_, i) => { // From 09:00 to 18:00 in 30 min intervals
+  const hour = Math.floor(i / 2) + 9;
+  const minute = (i % 2) * 30;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+});
 
 export default function EditBusinessPage() {
   const router = useRouter();
@@ -177,7 +184,7 @@ export default function EditBusinessPage() {
         }
       };
     });
-    setNewTimeForSelectedDate('');
+    setNewTimeForSelectedDate(''); // Clear input after adding
   };
 
   const handleRemoveTimeSlot = (dateKey: string, timeToRemove: string) => {
@@ -227,7 +234,7 @@ export default function EditBusinessPage() {
         email: formData.email,
         website: formData.website,
         workingHours: formData.workingHours,
-        heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '', // Prioritize new URL, then existing, then empty
+        heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '',
         photos: formData.photos || [],
         availability: formData.availability || {},
     };
@@ -430,26 +437,54 @@ export default function EditBusinessPage() {
                     {selectedAvailabilityDate && (
                       <div className="space-y-4">
                         <div>
-                          <Label htmlFor="newTimeSlot" className="font-medium">
+                          <Label className="font-medium text-base">
                             Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
                           </Label>
-                          <div className="flex items-center gap-2 mt-2">
-                            <Input
-                              id="newTimeSlot"
-                              type="text"
-                              placeholder="HH:MM (напр. 09:30)"
-                              value={newTimeForSelectedDate}
-                              onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
-                              className="flex-grow"
-                            />
-                            <Button type="button" onClick={handleAddTimeSlot} size="sm">
-                              <PlusCircle size={16} className="mr-1" /> Добави
-                            </Button>
+                          
+                          <div className="mt-3 space-y-3">
+                            <div>
+                              <Label htmlFor="predefinedTimeSlot" className="font-medium text-sm text-muted-foreground">
+                                Избери готов час:
+                              </Label>
+                              <Select
+                                onValueChange={(value) => {
+                                  if (value) setNewTimeForSelectedDate(value);
+                                }}
+                              >
+                                <SelectTrigger id="predefinedTimeSlot" className="mt-1">
+                                  <SelectValue placeholder="Избери от списъка" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {predefinedTimeSlots.map(slot => (
+                                    <SelectItem key={slot} value={slot}>{slot}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="newTimeSlot" className="font-medium text-sm text-muted-foreground">
+                                Или въведи ръчно (HH:MM):
+                              </Label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <Input
+                                  id="newTimeSlot"
+                                  type="text"
+                                  placeholder="HH:MM"
+                                  value={newTimeForSelectedDate}
+                                  onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
+                                  className="flex-grow"
+                                />
+                                <Button type="button" onClick={handleAddTimeSlot} size="sm">
+                                  <PlusCircle size={16} className="mr-1" /> Добави
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
 
                         {(formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.length || 0) > 0 ? (
-                          <div className="space-y-2">
+                          <div className="space-y-2 pt-3">
                             <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
                             <div className="flex flex-wrap gap-2">
                               {formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
@@ -478,13 +513,13 @@ export default function EditBusinessPage() {
                               </Button>
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground text-center py-2">Няма добавени часове за тази дата.</p>
+                          <p className="text-sm text-muted-foreground text-center py-2 pt-3">Няма добавени часове за тази дата.</p>
                         )}
                       </div>
                     )}
                     {!selectedAvailabilityDate && (
-                        <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full">
-                            <p>Изберете дата от календара, за да управлявате свободните часове.</p>
+                        <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full p-4 border border-dashed rounded-md">
+                            <p className="text-center">Изберете дата от календара, за да управлявате свободните часове.</p>
                         </div>
                     )}
                   </div>
