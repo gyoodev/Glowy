@@ -12,7 +12,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { generateSalonDescription, type GenerateSalonDescriptionInput } from '@/ai/flows/generate-salon-description';
@@ -20,6 +19,7 @@ import { Building, Sparkles, Loader2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { allBulgarianCities } from '@/lib/mock-data'; // Assuming you might want to reuse this
 
+// Define the schema for the form
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
   description: z.string().min(20, 'Описанието трябва да е поне 20 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
@@ -29,12 +29,11 @@ const createBusinessSchema = z.object({
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
   // Fields for AI generation
-  serviceDetailsForAi: z.string().min(10, 'Моля, опишете услугите по-подробно за AI генерацията.'),
-  atmosphereForAi: z.string().min(10, 'Моля, опишете атмосферата за AI генерацията.'),
-  targetCustomerForAi: z.string().min(10, 'Моля, опишете целевите клиенти за AI генерацията.'),
-  uniqueSellingPointsForAi: z.string().min(10, 'Моля, опишете уникалните предимства за AI генерацията.'),
+  serviceDetailsForAi: z.string().min(5, 'Моля, изберете услуги.'),
+  atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
+  targetCustomerForAi: z.string().min(5, 'Моля, изберете целевите клиенти.'),
+  uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
-
 type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
 
 export default function CreateBusinessPage() {
@@ -80,11 +79,11 @@ export default function CreateBusinessPage() {
   }, [router, toast]);
 
   const handleGenerateDescription = async () => {
-    const aiInputData: GenerateSalonDescriptionInput = {
-      salonName: form.getValues('name'),
-      serviceDescription: form.getValues('serviceDetailsForAi'),
-      atmosphereDescription: form.getValues('atmosphereForAi'),
-      targetCustomerDescription: form.getValues('targetCustomerForAi'),
+    const aiInputData = {
+      salonName: form.getValues('name') || 'Моят Салон', // Provide a default or handle if name is empty
+      serviceDescription: form.getValues('serviceDetailsForAi'), // This will be the selected value
+      atmosphereDescription: form.getValues('atmosphereForAi'), // This will be the selected value
+      targetCustomerDescription: form.getValues('targetCustomerForAi'), // This will be the selected value
       uniqueSellingPoints: form.getValues('uniqueSellingPointsForAi'),
     };
 
@@ -158,8 +157,8 @@ export default function CreateBusinessPage() {
     return <div className="container mx-auto py-10 px-6 text-center">Пренасочване...</div>;
   }
 
-  return (
-    <div className="container mx-auto py-10 px-6">
+ return (
+   <div className="container mx-auto py-10 px-6">
       <Card className="w-full max-w-3xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold flex items-center">
@@ -185,6 +184,7 @@ export default function CreateBusinessPage() {
                 )}
               />
 
+
               <div className="space-y-2">
                 <h3 className="text-lg font-medium text-primary">AI Генериране на Описание</h3>
                 <p className="text-sm text-muted-foreground">
@@ -197,13 +197,25 @@ export default function CreateBusinessPage() {
                 name="serviceDetailsForAi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Подробно описание на услугите</FormLabel>
+                    <FormLabel>Вид услуги (за AI)</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <Textarea placeholder="напр. Предлагаме фризьорство, маникюр, педикюр, козметични процедури, терапии за коса..." {...field} rows={3} />
+                        <SelectTrigger>
+                        <SelectValue placeholder="Изберете основни услуги" />
+                        </SelectTrigger>
                     </FormControl>
-                    <FormDescription>Какви основни услуги предлагате?</FormDescription>
+                    <SelectContent>
+                        <SelectItem value="фризьорство и козметика">Фризьорство и Козметика</SelectItem>
+                        <SelectItem value="маникюр и педикюр">Маникюр и Педикюр</SelectItem>
+                        <SelectItem value="масажи и спа процедури">Масажи и Спа Процедури</SelectItem>
+                        <SelectItem value="комбинирани услуги за красота">Комбинирани Услуги за Красота</SelectItem>
+                        <SelectItem value="специализирани терапии за коса">Специализирани Терапии за Коса</SelectItem>
+                        <SelectItem value="грижа за кожата и лицето">Грижа за Кожата и Лицето</SelectItem>
+                        <SelectItem value="епилация и обезкосмяване">Епилация и Обезкосмяване</SelectItem>
+                    </SelectContent>
+                    </Select>
+                    <FormDescription>Изберете основните категории услуги, които предлагате.</FormDescription>
                     <FormMessage />
-                  </FormItem>
                 )}
               />
               <FormField
@@ -211,11 +223,11 @@ export default function CreateBusinessPage() {
                 name="atmosphereForAi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Описание на атмосферата</FormLabel>
+                    <FormLabel>Атмосфера (за AI)</FormLabel>
                     <FormControl>
                       <Textarea placeholder="напр. Модерна и уютна, с релаксираща музика и комфортни зони за изчакване." {...field} rows={2} />
                     </FormControl>
-                    <FormDescription>Каква е атмосферата във Вашия салон?</FormDescription>
+                    <FormDescription>Опишете усещането и стила на Вашия салон.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -225,10 +237,21 @@ export default function CreateBusinessPage() {
                 name="targetCustomerForAi"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Описание на целевите клиенти</FormLabel>
+                    <FormLabel>Целеви клиенти (за AI)</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
                     <FormControl>
-                      <Textarea placeholder="напр. Жени и мъже на възраст 25-55, които ценят качеството и индивидуалния подход." {...field} rows={2} />
+                        <SelectTrigger>
+                        <SelectValue placeholder="Изберете целева група" />
+                        </SelectTrigger>
                     </FormControl>
+                    <SelectContent>
+                        <SelectItem value="жени">Жени</SelectItem>
+                        <SelectItem value="мъже">Мъже</SelectItem>
+                        <SelectItem value="унисекс">Унисекс (Жени и Мъже)</SelectItem>
+                        <SelectItem value="младежи">Младежи</SelectItem>
+                        <SelectItem value="семейства">Семейства</SelectItem>
+                    </SelectContent>
+                    </Select>
                     <FormDescription>Към кого са насочени Вашите услуги?</FormDescription>
                     <FormMessage />
                   </FormItem>
