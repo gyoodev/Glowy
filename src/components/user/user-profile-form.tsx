@@ -23,7 +23,7 @@ import { getFirestore, doc, setDoc } from 'firebase/firestore'; // Firestore fun
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
-  email: z.string().email('Невалиден имейл адрес.'), // Email is typically not changed without re-auth/verification: z.string().url('Невалиден URL за профилна снимка.').optional().or(z.literal('')),
+  email: z.string().email('Невалиден имейл адрес.'), // Email is typically not changed without re-auth/verification:
   favoriteServices: z.array(z.string()).optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   preferredLocations: z.array(z.string()).optional(),
@@ -46,7 +46,6 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
     defaultValues: {
       name: '', // Initialize with empty and populate via useEffect
       email: '',
-      profilePhotoUrl: '',
       favoriteServices: [],
       priceRange: '',
       preferredLocations: [],
@@ -59,7 +58,6 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
       form.reset({
         name: userProfile.name || '',
         email: userProfile.email || '',
-        profilePhotoUrl: userProfile.profilePhotoUrl || '',
         favoriteServices: userProfile.preferences?.favoriteServices || [],
         priceRange: userProfile.preferences?.priceRange || '',
         preferredLocations: userProfile.preferences?.preferredLocations || [],
@@ -80,7 +78,6 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
         userId: auth.currentUser.uid, // Ensure userId is saved
         displayName: data.name, // Save as displayName in Firestore
         // email: data.email, // Avoid changing email directly without proper Firebase re-authentication flow
-        profilePhotoUrl: data.profilePhotoUrl || null, // Store null if empty string for easier checks
         preferences: {
           favoriteServices: data.favoriteServices || [],
           priceRange: data.priceRange || null, // Store null if empty string
@@ -116,7 +113,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
       <CardHeader>
         <div className="flex items-center space-x-4">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={form.watch('profilePhotoUrl') || userProfile.profilePhotoUrl} alt={userProfile.name} data-ai-hint="person avatar" />
+            <AvatarImage src={userProfile.profilePhotoUrl} alt={userProfile.name} data-ai-hint="person avatar" />
             <AvatarFallback>
               {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : <UserCircle2 className="h-10 w-10"/>}
             </AvatarFallback>
@@ -153,19 +150,6 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                     <Input type="email" placeholder="vashiat.email@example.com" {...field} readOnly disabled />
                   </FormControl>
                   <FormDescription>Имейлът не може да бъде променян оттук.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-             <FormField
-              control={form.control}
-              name="profilePhotoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL на профилна снимка</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://example.com/vashata-snimka.jpg" {...field} />
-                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
