@@ -157,8 +157,8 @@ export default function CreateBusinessPage() {
     return <div className="container mx-auto py-10 px-6 text-center">Пренасочване...</div>;
   }
 
- return (
-   <div className="container mx-auto py-10 px-6">
+  return (
+    <div className="container mx-auto py-10 px-6">
       <Card className="w-full max-w-3xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold flex items-center">
