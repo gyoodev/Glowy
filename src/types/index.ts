@@ -26,32 +26,43 @@ export interface Salon {
   rating: number; // 1-5
   priceRange: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
   photos: string[]; // URLs to photos
-  services: Service[];
-  reviews: Review[];
+  services: Service[]; // In a real app, these might be IDs referencing a separate services collection
+  reviews: Review[]; // In a real app, these might be IDs referencing a separate reviews collection
   heroImage: string; // URL to a hero image
   availability?: Record<string, string[]>; // Date string -> array of time slots e.g., "HH:mm"
+  ownerId?: string; // UID of the business owner
+  // Fields for AI generation, might not be stored directly if only used for generating the main description
+  serviceDetailsForAi?: string;
+  atmosphereForAi?: string;
+  targetCustomerForAi?: string;
+  uniqueSellingPointsForAi?: string;
+  createdAt?: any; // For Firestore Timestamp
 }
 
 export interface UserProfile {
   id: string;
-  name: string; // Ще бъде преведено в mock-data
+  name: string;
   email: string;
-  role?: string;
+  role?: 'customer' | 'business' | 'admin';
   profilePhotoUrl?: string;
   preferences?: {
-    favoriteServices?: string[]; // Ще бъде преведено в mock-data
-    priceRange?: 'cheap' | 'moderate' | 'expensive'; // Стойностите остават на английски
-    preferredLocations?: string[]; // Ще бъде преведено в mock-data
+    favoriteServices?: string[];
+    priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
+    preferredLocations?: string[];
   };
+  userId?: string; // Firebase Auth UID
+  displayName?: string; // From Firebase Auth or user input
 }
 
 export interface Booking {
   id: string;
   salonId: string;
-  salonName: string; // Ще бъде преведено в mock-data
+  salonName: string;
   serviceId: string;
-  serviceName: string; // Ще бъде преведено в mock-data
+  serviceName: string;
+  userId: string; // UID of the user who made the booking
   date: string; // ISO date string
   time: string; // "HH:mm"
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed'; // Стойностите остават на английски за логика, етикетите се превеждат в UI
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  createdAt?: any; // For Firestore Timestamp
 }
