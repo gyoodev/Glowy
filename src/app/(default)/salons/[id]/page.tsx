@@ -82,9 +82,9 @@ export default function SalonProfilePage() {
 
       await createBooking({
         salonId: salonId,
-        salonName: salon.name, // Pass salonName
+        salonName: salon.name,
         userId: userId,
-        service: selectedService, // Pass the whole service object (createBooking will pick fields)
+        service: selectedService,
         date: selectedBookingDate.toISOString(), 
         time: selectedBookingTime,
       });
@@ -266,7 +266,7 @@ export default function SalonProfilePage() {
                 disabled={!auth.currentUser} // Disable if not logged in
               >
                 {auth.currentUser ? 
-                  `Потвърди: ${selectedService.name} на ${selectedBookingDate.toLocaleDateString('bg-BG')} в ${selectedBookingTime}`
+                  "Запази час" 
                   : "Влезте за да резервирате"
                 }
               </Button>
