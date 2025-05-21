@@ -11,7 +11,7 @@ import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+// import { Separator } from '@/components/ui/separator'; // Separator is not used
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking } from '@/lib/firebase'; // Import createBooking
@@ -196,6 +196,9 @@ export default function SalonProfilePage() {
                 ) : (
                   <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                 )}
+                <div className="mt-6 text-center">
+                  <Button variant="outline" onClick={() => {}} data-ai-hint="Add review button">Добави Отзив</Button>
+                </div>
               </TabsContent>
               
               <TabsContent value="gallery" className="bg-card p-6 rounded-lg shadow-md">

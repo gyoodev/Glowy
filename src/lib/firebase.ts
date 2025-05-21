@@ -7,7 +7,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: "glowy-gyoodev.firebaseapp.com",
   projectId: "glowy-gyoodev",
   storageBucket: "glowy-gyoodev.firebasestorage.app",
@@ -84,6 +84,23 @@ export const updateUserRole = async (userId: string, role: string) => {
     console.log(`User ${userId} role updated to ${role}`);
   } catch (error) {
     console.error('Error updating user role:', error);
+    throw error; // Re-throw the error
+  }
+};
+
+// Function to get booking status
+export const getBookingStatus = async (bookingId: string) => {
+  try {
+    const bookingDocRef = doc(firestore, 'bookings', bookingId);
+    const bookingDocSnap = await getDoc(bookingDocRef);
+
+    if (bookingDocSnap.exists()) {
+      return bookingDocSnap.data().status || null; // Return status or null if missing
+    } else {
+      return null; // Booking document not found
+    }
+  } catch (error) {
+    console.error('Error fetching booking status:', error);
     throw error; // Re-throw the error
   }
 };

@@ -106,6 +106,14 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
             ) : (
               <p className="text-sm text-muted-foreground">Няма свободни часове за тази дата.</p>
             )}
+            {selectedTime && (
+              <div className="mt-4">
+                <Button className="w-full">
+                  Book Now
+                  {/* TODO: Implement booking logic here */}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
