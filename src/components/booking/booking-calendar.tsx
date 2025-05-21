@@ -50,6 +50,7 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
   today.setHours(0,0,0,0);
 
 
+
   return (
     <Card className="shadow-lg">
       <CardHeader>
@@ -107,6 +108,7 @@ export function BookingCalendar({ salonName, serviceName, availability = {} }: B
             )}
           </div>
       </CardContent>
+        )}
     </Card>
   );
 }
