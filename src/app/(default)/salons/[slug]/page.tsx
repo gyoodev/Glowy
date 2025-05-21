@@ -300,6 +300,7 @@ export default function SalonProfilePage() {
   };
   
   const handleReviewSubmit = async (rating: number, comment: string) => {
+    console.log("[SalonProfilePage] auth.currentUser:", auth.currentUser);
     if (!auth.currentUser) {
       toast({
         title: "Не сте влезли",
@@ -333,6 +334,7 @@ export default function SalonProfilePage() {
         salonId: salon.id, 
       };
 
+      console.log("[SalonProfilePage] Review object to be added:", newReview);
       const reviewsCollectionRef = collection(firestore, 'reviews');
       const docRef = await addDoc(reviewsCollectionRef, newReview);
       console.log("[SalonProfilePage] Review added with ID:", docRef.id);
