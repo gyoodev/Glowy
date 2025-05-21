@@ -29,12 +29,36 @@ const createBusinessSchema = z.object({
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
   // Fields for AI generation
-  serviceDetailsForAi: z.string().min(5, 'Моля, изберете услуги.'),
+  serviceDetailsForAi: z.string().min(1, 'Моля, изберете услуги.'),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
-  targetCustomerForAi: z.string().min(5, 'Моля, изберете целевите клиенти.'),
+  targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
 type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
+
+// Define options for select components
+const serviceOptions = [
+  { value: 'фризьорство', label: 'Фризьорство' },
+  { value: 'козметика', label: 'Козметика' },
+  { value: 'маникюр', label: 'Маникюр' },
+  { value: 'педикюр', label: 'Педикюр' },
+  { value: 'масажи', label: 'Масажи' },
+  { value: 'спа процедури', label: 'Спа Процедури' },
+  { value: 'грижа за кожата', label: 'Грижа за Кожата' },
+  { value: 'грижа за лицето', label: 'Грижа за Лицето' },
+  { value: 'епилация', label: 'Епилация' },
+  { value: 'обезкосмяване', label: 'Обезкосмяване' },
+  // Add more services as needed
+];
+
+const targetCustomerOptions = [
+  { value: 'жени', label: 'Жени' },
+  { value: 'мъже', label: 'Мъже' },
+  { value: 'унисекс', label: 'Унисекс (Жени и Мъже)' },
+  { value: 'младежи', label: 'Младежи' },
+  { value: 'семейства', label: 'Семейства' },
+  // Add more target customer groups as needed
+];
 
 export default function CreateBusinessPage() {
   const { toast } = useToast();
@@ -81,9 +105,9 @@ export default function CreateBusinessPage() {
   const handleGenerateDescription = async () => {
     const aiInputData = {
       salonName: form.getValues('name') || 'Моят Салон', // Provide a default or handle if name is empty
-      serviceDescription: form.getValues('serviceDetailsForAi'), // This will be the selected value
-      atmosphereDescription: form.getValues('atmosphereForAi'), // This will be the selected value
-      targetCustomerDescription: form.getValues('targetCustomerForAi'), // This will be the selected value
+      serviceDescription: serviceOptions.find(opt => opt.value === form.getValues('serviceDetailsForAi'))?.label || '', // Use label for AI
+      atmosphereDescription: form.getValues('atmosphereForAi'),
+      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === form.getValues('targetCustomerForAi'))?.label || '', // Use label for AI
       uniqueSellingPoints: form.getValues('uniqueSellingPointsForAi'),
     };
 
@@ -204,14 +228,9 @@ export default function CreateBusinessPage() {
                         <SelectValue placeholder="Изберете основни услуги" />
                         </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                        <SelectItem value="фризьорство и козметика">Фризьорство и Козметика</SelectItem>
-                        <SelectItem value="маникюр и педикюр">Маникюр и Педикюр</SelectItem>
-                        <SelectItem value="масажи и спа процедури">Масажи и Спа Процедури</SelectItem>
-                        <SelectItem value="комбинирани услуги за красота">Комбинирани Услуги за Красота</SelectItem>
-                        <SelectItem value="специализирани терапии за коса">Специализирани Терапии за Коса</SelectItem>
-                        <SelectItem value="грижа за кожата и лицето">Грижа за Кожата и Лицето</SelectItem>
-                        <SelectItem value="епилация и обезкосмяване">Епилация и Обезкосмяване</SelectItem>
+                    <SelectContent>                        {serviceOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}
                     </SelectContent>
                     </Select>
                     <FormDescription>Изберете основните категории услуги, които предлагате.</FormDescription>
@@ -244,13 +263,9 @@ export default function CreateBusinessPage() {
                         <SelectValue placeholder="Изберете целева група" />
                         </SelectTrigger>
                     </FormControl>
-                    <SelectContent>
-                        <SelectItem value="жени">Жени</SelectItem>
-                        <SelectItem value="мъже">Мъже</SelectItem>
-                        <SelectItem value="унисекс">Унисекс (Жени и Мъже)</SelectItem>
-                        <SelectItem value="младежи">Младежи</SelectItem>
-                        <SelectItem value="семейства">Семейства</SelectItem>
-                    </SelectContent>
+                    <SelectContent>                        {targetCustomerOptions.map(option => (
+                          <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        ))}                    </SelectContent>
                     </Select>
                     <FormDescription>Към кого са насочени Вашите услуги?</FormDescription>
                     <FormMessage />
