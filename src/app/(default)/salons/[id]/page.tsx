@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState } from 'react';
@@ -15,6 +16,7 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking } from '@/lib/firebase'; // Import createBooking
+import { Button } from '@/components/ui/button'; // Added Button import
 
 export default function SalonProfilePage() {
   const params = useParams();
