@@ -4,28 +4,31 @@
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Corrected import
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
-import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
-import { useState } from 'react';
-import { collection, doc, setDoc, getDoc, getFirestore, Timestamp } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { auth } from '@/lib/firebase';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useToast } from '@/hooks/use-toast';
+
+import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
+
+import { auth } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, collection, doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 
 // Define the schema for the registration form
 const registerSchema = z.object({
- name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
- email: z.string().email('Невалиден имейл адрес.'),
- phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
- password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
- profileType: z.enum(['customer', 'business']),
- confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
+  name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
+  email: z.string().email('Невалиден имейл адрес.'),
+  phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
+  password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
+  profileType: z.enum(['customer', 'business']),
+  confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Паролите не съвпадат.',
   path: ['confirmPassword'],
@@ -37,6 +40,9 @@ export default function RegisterPage() {
   const { toast } = useToast();
   const router = useRouter();
   const firestore = getFirestore();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -48,8 +54,6 @@ export default function RegisterPage() {
       profileType: 'customer',
     },
   });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     try {
@@ -63,7 +67,6 @@ export default function RegisterPage() {
         newUserCount = counterDocSnap.data().count + 1;
       }
       await setDoc(counterDocRef, { count: newUserCount });
-
 
       if (user) {
         const userRef = doc(collection(firestore, 'users'), user.uid);
@@ -121,14 +124,13 @@ export default function RegisterPage() {
           }
           await setDoc(counterDocRef, { count: newUserCount });
 
-
           await setDoc(userRef, {
             email: user.email,
             userId: user.uid,
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
-            role: 'customer',
+            role: 'customer', 
           });
         }
         localStorage.setItem('isUserLoggedIn', 'true');
@@ -156,7 +158,7 @@ export default function RegisterPage() {
           Създаване на Акаунт
         </CardTitle>
         <CardDescription className="text-muted-foreground text-sm md:text-base">
-          <span className="text-muted-foreground text-sm md:text-base block mb-2">
+          <span className="block mb-2">
             Присъединете се към Glowy и се насладете на предимствата:
           </span>
           <ul className="list-disc list-inside text-left text-sm">
@@ -316,3 +318,5 @@ export default function RegisterPage() {
     </Card>
   );
 }
+
+    
