@@ -20,13 +20,32 @@ interface FilterSidebarProps {
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const ANY_PRICE_VALUE = "--any-price--";
+const ANY_PRICE_VALUE_SLIDER = 0; // For slider
+const PRICE_CHEAP_SLIDER = 1;
+const PRICE_MODERATE_SLIDER = 2;
+const PRICE_EXPENSIVE_SLIDER = 3;
+
+const priceRangeLabels: Record<number, string> = {
+  [ANY_PRICE_VALUE_SLIDER]: "Всякаква цена",
+  [PRICE_CHEAP_SLIDER]: "Евтино ($)",
+  [PRICE_MODERATE_SLIDER]: "Умерено ($$)",
+  [PRICE_EXPENSIVE_SLIDER]: "Скъпо ($$$)",
+};
+
+// Helper to convert slider value back to string for filtering logic
+const getPriceRangeStringFromSliderValue = (sliderValue: number): string => {
+  if (sliderValue === PRICE_CHEAP_SLIDER) return 'cheap';
+  if (sliderValue === PRICE_MODERATE_SLIDER) return 'moderate';
+  if (sliderValue === PRICE_EXPENSIVE_SLIDER) return 'expensive';
+  return "--any-price--"; // Corresponds to ANY_PRICE_VALUE_SLIDER or unexpected values
+};
+
 
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
   const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
   const [rating, setRating] = useState([0]);
-  const [priceRange, setPriceRange] = useState(ANY_PRICE_VALUE);
+  const [priceRangeSlider, setPriceRangeSlider] = useState([ANY_PRICE_VALUE_SLIDER]);
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const handleApplyFilters = () => {
@@ -34,7 +53,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
       location,
       serviceType,
       minRating: rating[0],
-      priceRange,
+      priceRange: getPriceRangeStringFromSliderValue(priceRangeSlider[0]),
     });
   };
 
@@ -42,12 +61,12 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
     setLocation(ALL_CITIES_VALUE);
     setServiceType(ALL_SERVICES_VALUE);
     setRating([0]);
-    setPriceRange(ANY_PRICE_VALUE);
+    setPriceRangeSlider([ANY_PRICE_VALUE_SLIDER]);
     onFilterChange({
       location: ALL_CITIES_VALUE,
       serviceType: ALL_SERVICES_VALUE,
       minRating: 0,
-      priceRange: ANY_PRICE_VALUE,
+      priceRange: getPriceRangeStringFromSliderValue(ANY_PRICE_VALUE_SLIDER),
     });
   };
   
@@ -145,7 +164,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="rating" className="text-sm font-medium">Минимален рейтинг: {rating[0] === 0 ? 'Всякакъв' : `${rating[0]}+ Звезди`}</Label>
+          <Label htmlFor="rating" className="text-sm font-medium">Рейтинг: {rating[0] === 0 ? 'Всякакъв' : `${rating[0]}+ Звезди`}</Label>
           <Slider
             id="rating"
             min={0}
@@ -158,18 +177,16 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="priceRange" className="text-sm font-medium">Ценови диапазон</Label>
-          <Select value={priceRange} onValueChange={setPriceRange}>
-            <SelectTrigger id="priceRange">
-              <SelectValue placeholder="Изберете ценови диапазон" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ANY_PRICE_VALUE}>Всякаква цена</SelectItem>
-              <SelectItem value="cheap">Евтино ($)</SelectItem>
-              <SelectItem value="moderate">Умерено ($$)</SelectItem>
-              <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
-            </SelectContent>
-          </Select>
+          <Label htmlFor="priceRangeSlider" className="text-sm font-medium">Ценови диапазон: {priceRangeLabels[priceRangeSlider[0]]}</Label>
+          <Slider
+            id="priceRangeSlider"
+            min={ANY_PRICE_VALUE_SLIDER}
+            max={PRICE_EXPENSIVE_SLIDER}
+            step={1}
+            value={priceRangeSlider}
+            onValueChange={setPriceRangeSlider}
+            className="mt-2"
+          />
         </div>
 
         <Button onClick={handleApplyFilters} className="w-full bg-primary hover:bg-primary/90 text-primary-foreground">

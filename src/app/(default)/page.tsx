@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
-import { mockServices } from '@/lib/mock-data';
+import { mockServices, allBulgarianCities } from '@/lib/mock-data'; // Import allBulgarianCities
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, VenetianMask } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,18 +12,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const ANY_PRICE_VALUE = "--any-price--";
+const ANY_PRICE_VALUE = "--any-price--"; // This constant is used for actual filtering.
 import type { Salon } from '@/types';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
-
-const allBulgarianCities: string[] = [
-  "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", 
-  "Плевен", "Сливен", "Добрич", "Шумен", "Перник", "Хасково", 
-  "Ямбол", "Пазарджик", "Благоевград", "Велико Търново", "Враца", 
-  "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали", 
-  "Търговище", "Ловеч", "Силистра", "Разград", "Смолян"
-];
-
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -33,7 +24,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    priceRange: ANY_PRICE_VALUE,
+    priceRange: ANY_PRICE_VALUE, // This remains the same string for filtering.
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -51,18 +42,12 @@ export default function SalonDirectoryPage() {
         setSalons(salonsList);
       } catch (error) {
         console.error("Error fetching salons:", error);
-        // Optionally, show a toast or error message
       }
       setIsLoading(false);
     };
     fetchSalons();
   }, []);
 
-  // This is no longer used for the filter's city list, but kept in case it's needed elsewhere or for future dynamic city lists based on actual salon data.
-  // const uniqueCities = useMemo(() => {
-  //   const cities = new Set(salons.map(salon => salon.city));
-  //   return Array.from(cities);
-  // }, [salons]);
 
   const uniqueServiceTypes = useMemo(() => {
     const serviceNames = new Set(mockServices.map(service => service.name));
@@ -84,9 +69,9 @@ export default function SalonDirectoryPage() {
         const { location, serviceType, minRating, priceRange } = filters;
         let matches = true;
         if (location && location !== ALL_CITIES_VALUE && salon.city !== location) matches = false;
-        // Ensure service names are compared correctly if mockServices provides Bulgarian names
         if (serviceType && serviceType !== ALL_SERVICES_VALUE && !salon.services.some(s => s.name === serviceType)) matches = false;
         if (minRating && salon.rating < minRating) matches = false; 
+        // The priceRange filter here still expects 'cheap', 'moderate', 'expensive', or ANY_PRICE_VALUE ('--any-price--')
         if (priceRange && priceRange !== ANY_PRICE_VALUE && salon.priceRange !== priceRange) matches = false;
         return matches;
       });
@@ -127,7 +112,7 @@ export default function SalonDirectoryPage() {
         <aside className="lg:col-span-1">
           <FilterSidebar 
             onFilterChange={handleFilterChange} 
-            cities={allBulgarianCities} // Use the comprehensive list here
+            cities={allBulgarianCities} 
             serviceTypes={uniqueServiceTypes}
           />
         </aside>
