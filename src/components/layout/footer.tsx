@@ -54,7 +54,7 @@ export function Footer() {
             <div className="flex flex-col items-center gap-4 md:flex-row md:gap-2">
               <Sparkles className="h-6 w-6 text-primary" />
               <p className="text-center text-sm leading-loose text-muted-foreground md:text-left">
-                Създадено от GKDEV с 💜 &copy; {new Date().getFullYear()} Всички права запазени.
+                Създадено от <a href="https://gkdev.org" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline">GKDEV</a> с 💜 &copy; {new Date().getFullYear()} Всички права запазени.
               </p>
             </div>
             <div className="text-sm text-muted-foreground">
