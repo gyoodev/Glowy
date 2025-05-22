@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  webpack: (config, {isServer}) => {
+    if (isServer) {
+      config.externals.push('@paypal/paypal-js');
+    }
+
+    // Preserve existing webpack configuration
+    return config;
+  },
 };
 
 export default nextConfig;
