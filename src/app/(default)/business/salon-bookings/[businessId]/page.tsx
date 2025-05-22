@@ -76,37 +76,21 @@ export default function SalonBookingsPage() {
         const bookingsQuery = query(
           collection(firestore, 'bookings'),
           where('salonId', '==', businessId),
-          orderBy('createdAt', 'desc') // Order by creation time
+          orderBy('createdAt', 'desc')
         );
         const bookingsSnapshot = await getDocs(bookingsQuery);
-        const fetchedBookingsPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
-          const bookingData = bookingDoc.data() as Omit<Booking, 'id' | 'clientName' | 'clientEmail'>;
-          let clientName = 'N/A';
-          let clientEmail = 'N/A';
-
-          if (bookingData.userId) {
-            try {
-              const userRef = doc(firestore, 'users', bookingData.userId);
-              const userSnap = await getDoc(userRef);
-              if (userSnap.exists()) {
-                const userData = userSnap.data() as UserProfile;
-                clientName = userData.displayName || userData.name || 'Клиент';
-                clientEmail = userData.email || 'Няма имейл';
-              }
-            } catch (userError) {
-              console.error(`Error fetching user ${bookingData.userId}:`, userError);
-            }
-          }
+        const fetchedBookings = bookingsSnapshot.docs.map((bookingDoc) => {
+          const bookingData = bookingDoc.data() as Omit<Booking, 'id'>;
+          // clientName and clientEmail are now part of the booking document
           return {
             id: bookingDoc.id,
             ...bookingData,
-            clientName,
-            clientEmail,
+            clientName: bookingData.clientName || 'Клиент', // Fallback if somehow still missing
+            clientEmail: bookingData.clientEmail || 'Няма имейл', // Fallback
           } as Booking;
         });
 
-        const resolvedBookings = await Promise.all(fetchedBookingsPromises);
-        setBookings(resolvedBookings);
+        setBookings(fetchedBookings);
 
       } catch (err: any) {
         console.error("Error fetching salon bookings:", err);
@@ -162,18 +146,22 @@ export default function SalonBookingsPage() {
         <Skeleton className="h-8 w-1/3 mb-2" />
         <Skeleton className="h-6 w-1/2 mb-6" />
         <Card>
-          <TableHeader>
-            <TableRow>
-              {[...Array(5)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {[...Array(3)].map((_, i) => (
-              <TableRow key={i}>
-                {[...Array(5)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
-              </TableRow>
-            ))}
-          </TableBody>
+          <CardContent className="pt-6"> {/* Added pt-6 for consistency if CardHeader is missing */}
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(3)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
       </div>
     );
@@ -250,7 +238,7 @@ export default function SalonBookingsPage() {
                     <TableCell className="font-medium">{booking.serviceName}</TableCell>
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
-                    <TableCell>{booking.clientName || booking.userId}</TableCell>
+                    <TableCell>{booking.clientName || 'N/A'}</TableCell>
                     <TableCell>{booking.clientEmail || 'N/A'}</TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
