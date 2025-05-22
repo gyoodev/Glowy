@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
 import { Menu, Sparkles as AppIcon, User, LogOut } from 'lucide-react';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
@@ -20,6 +20,7 @@ export function Header() {
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // State for mobile menu
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -51,6 +52,7 @@ export function Header() {
         localStorage.removeItem('isUserLoggedIn');
       }
       setUserRole(null); 
+      setIsMobileMenuOpen(false); // Close menu on logout
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -59,13 +61,13 @@ export function Header() {
 
  const businessManageLinkMobile = (
     <Button variant="ghost" asChild className="justify-start text-base py-3">
-      <Link href="/business/manage">Управление на Бизнеса</Link>
+      <Link href="/business/manage" onClick={() => setIsMobileMenuOpen(false)}>Управление на Бизнеса</Link>
     </Button>
   );
 
  const adminPanelLinkMobile = (
  <Button variant="ghost" asChild className="justify-start text-base py-3">
- <Link href="/admin/dashboard">Админ панел</Link>
+  <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Админ панел</Link>
  </Button>
  );
 
@@ -89,7 +91,7 @@ export function Header() {
 
   const myAccountLinkMobile = (
     <Button variant="outline" asChild className="justify-start text-base py-3">
-        <Link href="/account">
+        <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
             <User className="mr-2 h-4 w-4" /> Профил
         </Link>
     </Button>
@@ -134,8 +136,6 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
-          {/* Search button removed */}
-
           {isLoggedIn ? (
             <>
               <Button variant="outline" asChild>
@@ -155,13 +155,13 @@ export function Header() {
             </>
           )}
 
-          <Sheet>
+          <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Отвори менюто">
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Отвори менюто" onClick={() => setIsMobileMenuOpen(true)}>
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="right">
+            <SheetContent side="right" className="w-[300px] sm:w-[400px]"> {/* Optional: Adjust width */}
               <SheetTitle className="sr-only">Меню за навигация</SheetTitle>
               <nav className="flex flex-col space-y-2 mt-6">
                 {navItems.map((item) => {
@@ -170,31 +170,45 @@ export function Header() {
                   }
                   return (
                     <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3">
-                      <Link href={item.href}>{item.label}</Link>
+                      {/* Forcing sheet to close on nav item click is more standard UX */}
+                      <Link href={item.href} onClick={() => setIsMobileMenuOpen(false)}>{item.label}</Link>
                     </Button>
                   );
                 })}
-                {isLoggedIn && userRole === 'business' && businessManageLinkMobile}
-                {isLoggedIn && userRole === 'admin' && adminPanelLinkMobile}
+                {isLoggedIn && userRole === 'business' && (
+                   <Button variant="ghost" asChild className="justify-start text-base py-3">
+                    <Link href="/business/manage" onClick={() => setIsMobileMenuOpen(false)}>Управление на Бизнеса</Link>
+                  </Button>
+                )}
+                {isLoggedIn && userRole === 'admin' && (
+                  <Button variant="ghost" asChild className="justify-start text-base py-3">
+                    <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Админ панел</Link>
+                  </Button>
+                )}
                 
                 <hr className="my-2"/>
                 
                 {isLoggedIn ? (
                   <>
-                    {myAccountLinkMobile}
-                    {logoutButtonMobile} 
+                    <Button variant="outline" asChild className="justify-start text-base py-3">
+                        <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
+                            <User className="mr-2 h-4 w-4" /> Профил
+                        </Link>
+                    </Button>
+                    {logoutButtonMobile}
                   </>
                 ) : (
                   <>
                     <Button variant="outline" asChild className="justify-start text-base py-3">
-                        <Link href="/login">Вход</Link>
+                        <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>Вход</Link>
                     </Button>
                     <Button variant="default" asChild className="justify-start text-base py-3">
-                        <Link href="/register">Регистрация</Link>
+                        <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>Регистрация</Link>
                     </Button>
                   </>
                 )}
               </nav>
+               {/* Explicit SheetClose can be added if needed, but onOpenChange handles overlay/esc/X button */}
             </SheetContent>
           </Sheet>
         </div>
