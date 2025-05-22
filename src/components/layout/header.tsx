@@ -119,11 +119,16 @@ export function Header() {
         </Link>
 
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
-          {navItems.map((item) => (
-            <Button key={item.label} variant="ghost" asChild>
-              <Link href={item.href}>{item.label}</Link>
-            </Button>
-          ))}
+          {navItems.map((item) => {
+            if (item.href === '/recommendations' && !isLoggedIn) {
+              return null; // Hide AI Recommendations for guests
+            }
+            return (
+              <Button key={item.label} variant="ghost" asChild>
+                <Link href={item.href}>{item.label}</Link>
+              </Button>
+            );
+          })}
           {isLoggedIn && userRole === 'admin' && adminPanelLinkDesktop}
           {isLoggedIn && userRole === 'business' && businessManageLinkDesktop}
         </nav>
@@ -161,11 +166,16 @@ export function Header() {
             <SheetContent side="right">
               <SheetTitle className="sr-only">Меню за навигация</SheetTitle>
               <nav className="flex flex-col space-y-2 mt-6">
-                {navItems.map((item) => (
-                  <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3">
-                    <Link href={item.href}>{item.label}</Link>
-                  </Button>
-                ))}
+                {navItems.map((item) => {
+                  if (item.href === '/recommendations' && !isLoggedIn) {
+                    return null; // Hide AI Recommendations for guests in mobile
+                  }
+                  return (
+                    <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3">
+                      <Link href={item.href}>{item.label}</Link>
+                    </Button>
+                  );
+                })}
                 {isLoggedIn && userRole === 'business' && businessManageLinkMobile}
                 {isLoggedIn && userRole === 'admin' && adminPanelLinkMobile}
                 
@@ -194,3 +204,4 @@ export function Header() {
     </header>
   );
 }
+
