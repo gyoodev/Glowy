@@ -10,6 +10,7 @@ import { Search, MapPin } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { isFuture } from 'date-fns'; // Added import
 
 import type { Salon } from '@/types';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
@@ -17,7 +18,7 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500;
+const DEFAULT_MAX_PRICE = 500; // This represents "any price" or the upper limit of the slider
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -27,7 +28,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    maxPrice: DEFAULT_MIN_PRICE,
+    maxPrice: DEFAULT_MAX_PRICE, // Default to showing all prices
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -58,7 +59,18 @@ export default function SalonDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    let result = salons;
+    let result = [...salons]; // Create a mutable copy
+
+    // Sort by promotion status first
+    result.sort((a, b) => {
+      const isAPromoted = a.promotion && a.promotion.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
+      const isBPromoted = b.promotion && b.promotion.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
+
+      if (isAPromoted && !isBPromoted) return -1; // a (promoted) comes before b (not promoted)
+      if (!isAPromoted && isBPromoted) return 1;  // b (promoted) comes before a (not promoted)
+      // TODO: Add secondary sort criteria if needed, e.g., by rating or name for non-promoted, or among promoted
+      return 0; 
+    });
 
     if (searchTerm) {
       result = result.filter(salon =>
@@ -78,11 +90,12 @@ export default function SalonDirectoryPage() {
         if (matchesAll && serviceType && serviceType !== ALL_SERVICES_VALUE && !(salon.services || []).some(s => s.name === serviceType)) {
           matchesAll = false;
         }
-        if (matchesAll && minRating && salon.rating < minRating) {
+        if (matchesAll && minRating && (salon.rating || 0) < minRating) {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice <= DEFAULT_MAX_PRICE) {
+        // Apply maxPrice filter only if it's not set to the default "any price"
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE && maxPrice >= DEFAULT_MIN_PRICE) {
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -121,7 +134,7 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          <div className="relative z-10 md:col-span-1 space-y-4"> {/* Added relative z-10 here */}
+          <div className="relative z-10 md:col-span-1 space-y-4">
             <div>
               <Image
                 src="https://placehold.co/560x320.png"
