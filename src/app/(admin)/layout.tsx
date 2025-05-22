@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Keep useToast for potential future use or other parts of layout
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,64 +15,61 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false); // Use a dedicated state for authorization
-  const { toast } = useToast();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const { toast } = useToast(); // Toast can still be used for other general layout messages if needed
 
   useEffect(() => {
-    setIsLoading(true); // Explicitly set loading at the start of the effect
+    setIsLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      let authorized = false; // Local variable to determine authorization within this effect run
+      let newAuthorizedState = false;
       try {
         if (user) {
-          toast({ title: 'AdminLayout: Потребителят е удостоверен.', description: 'Проверка на ролята...', duration: 2000 });
+          // User is signed in
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
-            toast({ title: 'AdminLayout: Достъп разрешен.', description: 'Потребителят е администратор.', variant: 'default', duration: 2000 });
-            authorized = true;
+            // toast({ title: 'AdminLayout: Достъп разрешен.', description: 'Потребителят е администратор.', duration: 1500 });
+            newAuthorizedState = true;
           } else {
-            toast({
-              title: 'AdminLayout: Достъп отказан.',
-              description: `Ролята на потребителя е '${profile?.role || 'недефинирана'}'. Необходима е роля 'admin'. Пренасочване към началната страница.`,
-              variant: 'destructive',
-              duration: 5000,
-            });
-            router.push('/');
+            console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
+            if (router.pathname !== '/') {
+              router.push('/');
+            }
           }
         } else {
-          toast({
-            title: 'AdminLayout: Необходимо е удостоверяване.',
-            description: 'Потребителят не е удостоверен. Пренасочване към страницата за вход.',
-            variant: 'default',
-            duration: 3000,
-          });
-          router.push('/login');
+          // User is signed out
+          console.warn('AdminLayout: User not authenticated. Redirecting to login.');
+          if (router.pathname !== '/login') {
+            router.push('/login');
+          }
         }
-      } catch (error) {
-        console.error('AdminLayout: Грешка при проверка на админ права:', error);
-        toast({
+      } catch (error: any) {
+        console.error('AdminLayout: Error during auth check:', error.message || error);
+        toast({ // Toast for unexpected errors is fine here
           title: 'AdminLayout: Грешка при проверка на правата.',
-          description: `Възникна грешка: ${(error as Error).message}. Пренасочване към началната страница.`,
+          description: `Възникна грешка при удостоверяване. Моля, опитайте отново. (${error.message || 'Неизвестна грешка'})`,
           variant: 'destructive',
           duration: 5000,
         });
-        router.push('/');
+        if (router.pathname !== '/') {
+          router.push('/');
+        }
       } finally {
-        setIsAuthorized(authorized); // Update the authorization state
-        setIsLoading(false); // Stop loading after all checks and potential redirects
+        setIsAuthorized(newAuthorizedState);
+        setIsLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [router, toast]);
+  }, [router]); // Removed toast from main effect dependencies
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
   }
 
   if (!isAuthorized) {
-    // If not authorized (and not loading), it means a redirect should have occurred or is in progress.
-    // This message is a fallback or will be shown briefly during client-side redirect.
-    return <div className="flex justify-center items-center h-screen">Пренасочване... (Проверка на правата)</div>;
+    // This state implies a redirect should have already been initiated or is in progress.
+    // Or the user simply isn't authorized and an error message is displayed.
+    return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате...</div>;
   }
 
   // If loading is false and isAuthorized is true, render the layout
