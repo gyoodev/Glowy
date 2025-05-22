@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Search, Sparkles as AppIcon, User, LogOut } from 'lucide-react';
+import { Menu, Sparkles as AppIcon, User, LogOut } from 'lucide-react';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 
@@ -81,17 +81,17 @@ export function Header() {
     </Button>
   );
 
+  const logoutButtonMobile = (
+    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-destructive hover:text-destructive">
+        <LogOut className="mr-2 h-4 w-4" /> Изход
+    </Button>
+  );
+
   const myAccountLinkMobile = (
     <Button variant="outline" asChild className="justify-start text-base py-3">
         <Link href="/account">
             <User className="mr-2 h-4 w-4" /> Профил
         </Link>
-    </Button>
-  );
-
-  const logoutButtonMobile = (
-    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-destructive hover:text-destructive">
-        <LogOut className="mr-2 h-4 w-4" /> Изход
     </Button>
   );
 
@@ -134,9 +134,7 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-none">
-          <Button variant="ghost" size="icon" aria-label="Търсене">
-            <Search className="h-5 w-5" />
-          </Button>
+          {/* Search button removed */}
 
           {isLoggedIn ? (
             <>
