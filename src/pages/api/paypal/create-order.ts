@@ -1,6 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { PayPalHttpClient } from '@paypal/paypal-js';
-import { OrdersCreateRequest } from '@paypal/paypal-js/lib/orders/orders_create_request';
+import { PayPalHttpClient, OrdersCreateRequest } from '@paypal/paypal-js';
 
 // Replace with your actual PayPal credentials from environment variables
 const clientId = process.env.PAYPAL_CLIENT_ID;
