@@ -106,7 +106,7 @@ type EditBusinessFormValues = z.infer<typeof editBusinessSchema>;
 export default function EditBusinessPage() {
   const router = useRouter();
   const params = useParams();
-  const businessId = params.businessId as string;
+  const businessId = params?.businessId as string;
   const authInstance = getAuth();
   const firestore = getFirestore();
   const { toast } = useToast();
