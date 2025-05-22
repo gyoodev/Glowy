@@ -29,7 +29,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE, // Default to 0, meaning "any price"
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -93,7 +93,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { // Apply if maxPrice is not "any price"
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) {
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -147,22 +147,22 @@ export default function SalonDirectoryPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Image
-                  src="https://placehold.co/270x270.png"
-                  alt="Бръснарски салон"
-                  width={270}
-                  height={270}
-                  className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="barber shop"
-                />
-              </div>
-              <div>
-                <Image
-                  src="https://placehold.co/270x270.png"
+                  src="https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080"
                   alt="Студио за маникюр"
                   width={270}
                   height={270}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="nail studio"
+                  data-ai-hint="nail salon"
+                />
+              </div>
+              <div>
+                <Image
+                  src="https://images.unsplash.com/photo-1595475693741-b445b025aec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxIYWlyJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzUwM3ww&ixlib=rb-4.1.0&q=80&w=1080"
+                  alt="Фризьорски салон"
+                  width={270}
+                  height={270}
+                  className="w-full h-auto object-cover rounded-lg shadow-xl"
+                  data-ai-hint="hair studio"
                 />
               </div>
             </div>
@@ -214,7 +214,7 @@ export default function SalonDirectoryPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> {/* Changed from MapPin to Search for no results */}
+              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
               <h3 className="text-2xl font-semibold text-foreground mb-2">Няма намерени салони</h3>
               <p className="text-muted-foreground">
                 Опитайте да промените критериите за търсене или филтрите.
