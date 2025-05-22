@@ -98,6 +98,9 @@ export default function SalonProfilePage() {
           salonData.services = salonData.services || [];
           salonData.reviews = salonData.reviews || [];
           salonData.photos = salonData.photos || [];
+          salonData.phone = salonData.phone || 'Няма предоставен телефон';
+          salonData.workingHours = salonData.workingHours || 'Няма предоставено работно време';
+
 
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found in Firestore:", salonData);
@@ -112,7 +115,7 @@ export default function SalonProfilePage() {
             title: "Грешка: Няма права за достъп",
             description: "Неуспешно зареждане на информацията за салона поради липса на права. Моля, проверете Вашите Firestore Security Rules. Трябва да имате правило, което позволява публично четене на данни от колекцията 'salons', например: 'match /salons/{salonId} { allow get, list: if true; }'. Проверете също и правилата за четене на колекцията 'reviews'.",
             variant: "destructive",
-            duration: 15000, 
+            duration: 15000,
           });
         } else {
           toast({
@@ -179,7 +182,7 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
-  }, [salon?.id, auth.currentUser, firestore]);
+  }, [salon?.id, auth.currentUser, firestore, showReviewForm]); // Added showReviewForm to re-fetch reviews after submission
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -240,10 +243,12 @@ export default function SalonProfilePage() {
             name: bookingServiceName,
             price: localSelectedService.price,
             duration: localSelectedService.duration,
-            description: localSelectedService.description || '', 
+            description: localSelectedService.description || '',
         },
         date: bookingDate.toISOString(),
         time: bookingTime,
+        clientName: auth.currentUser.displayName || 'Клиент',
+        clientEmail: auth.currentUser.email || 'Няма имейл',
       });
 
       toast({
@@ -330,12 +335,27 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
-      const userDisplayName = auth.currentUser.displayName || 'Анонимен потребител';
+      let reviewerName = auth.currentUser.displayName;
+
+      if (!reviewerName) {
+        try {
+          const userProfileDocRef = doc(firestore, 'users', userId);
+          const userProfileDocSnap = await getDoc(userProfileDocRef);
+          if (userProfileDocSnap.exists()) {
+            const userProfileData = userProfileDocSnap.data() as UserProfile;
+            reviewerName = userProfileData.displayName || userProfileData.name;
+          }
+        } catch (profileError) {
+          console.error("Error fetching user profile for review name:", profileError);
+          // Continue without a fetched name, will fallback to 'Анонимен потребител'
+        }
+      }
+      reviewerName = reviewerName || 'Анонимен потребител';
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
       console.log(`[SalonProfilePage] Submitting review for salonId: ${salon.id} by userId: ${userId}`);
-      const newReview = {
-        userName: userDisplayName,
+      const newReviewData = {
+        userName: reviewerName,
         rating: rating,
         comment: comment,
         date: new Date().toISOString(),
@@ -344,44 +364,46 @@ export default function SalonProfilePage() {
         salonId: salon.id,
       };
 
-      console.log("[SalonProfilePage] Review object to be added:", newReview);
+      console.log("[SalonProfilePage] Review object to be added:", newReviewData);
       const reviewsCollectionRef = collection(firestore, 'reviews');
-      const docRef = await addDoc(reviewsCollectionRef, newReview);
+      const docRef = await addDoc(reviewsCollectionRef, newReviewData);
       console.log("[SalonProfilePage] Review added with ID:", docRef.id);
 
       const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
       const salonSnapToUpdate = await getDoc(salonDocRefToUpdate);
       if (salonSnapToUpdate.exists()) {
-        let updatedSalonData = { id: salonSnapToUpdate.id, ...salonSnapToUpdate.data() } as Salon;
-        
         const allReviewsQuery = query(collection(firestore, 'reviews'), where('salonId', '==', salon.id));
         const allReviewsSnapshot = await getDocs(allReviewsQuery);
         const allSalonReviews = allReviewsSnapshot.docs.map(reviewDoc => ({ id: reviewDoc.id, ...reviewDoc.data() })) as Review[];
-        
-        updatedSalonData.reviews = allSalonReviews; 
+
+        let newAverageRating = 0;
         if (allSalonReviews.length > 0) {
             const totalRating = allSalonReviews.reduce((acc, rev) => acc + rev.rating, 0);
-            updatedSalonData.rating = totalRating / allSalonReviews.length;
-        } else {
-             updatedSalonData.rating = 0;
+            newAverageRating = totalRating / allSalonReviews.length;
         }
-        
+
         await updateDoc(salonDocRefToUpdate, {
-            rating: updatedSalonData.rating,
-            reviews: allSalonReviews.map(r => ({ 
-                id: r.id,
+            rating: newAverageRating,
+            reviews: allSalonReviews.map(r => ({ // Storing simplified review stubs in salon document
+                id: r.id, // Or just a subset of fields like rating, comment snippet
                 userName: r.userName,
                 rating: r.rating,
-                comment: r.comment.substring(0,100),
+                comment: r.comment.substring(0,100), // Example: store only a snippet
                 date: r.date,
                 userAvatar: r.userAvatar
             }))
         });
-        setSalon(updatedSalonData); 
+
+        // Optimistically update local salon state for immediate UI reflection
+        setSalon(prevSalon => prevSalon ? ({
+            ...prevSalon,
+            rating: newAverageRating,
+            reviews: allSalonReviews // Reflect all reviews locally
+        }) : null);
       }
 
 
-      fetchUserReviews();
+      // fetchUserReviews(); // No longer strictly needed if salon.reviews is updated locally
       setShowReviewForm(false);
 
       toast({
@@ -631,5 +653,3 @@ export default function SalonProfilePage() {
     </div>
   );
 }
-
-    
