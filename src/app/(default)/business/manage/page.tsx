@@ -10,7 +10,7 @@ import { getFirestore, collection, query, where, getDocs, orderBy } from 'fireba
 import type { UserProfile, Salon } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Eye, List, CalendarCheck } from 'lucide-react'; // Added CalendarCheck
+import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift } from 'lucide-react'; // Added Gift
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
@@ -172,6 +172,12 @@ export default function BusinessManagePage() {
                     Резервации
                   </Link>
                 </Button>
+                <Button variant="outline" size="sm" asChild className="border-primary text-primary hover:bg-primary/10 hover:text-primary">
+                  <Link href={`/business/promote/${business.id}`}>
+                    <Gift className="mr-2 h-4 w-4" />
+                    Промотирай
+                  </Link>
+                </Button>
               </CardFooter>
             </Card>
           ))}
@@ -180,3 +186,4 @@ export default function BusinessManagePage() {
     </div>
   );
 }
+
