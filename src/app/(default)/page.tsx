@@ -18,8 +18,8 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0; 
-const DEFAULT_MAX_PRICE = 500; 
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500;
 
 interface HeroImage {
   src: string;
@@ -86,7 +86,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE, 
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
   // Initialize with a static set of images for SSR/initial client render
@@ -118,7 +118,7 @@ export default function SalonDirectoryPage() {
 
     const interval = setInterval(() => {
       setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
-    }, 7000); // Change images every 7 seconds
+    }, 3000); // Change images every 3 seconds
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
