@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
@@ -22,10 +22,13 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { allBulgarianCities } from '@/lib/mock-data';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 
 
-const predefinedTimeSlots = Array.from({ length: 19 }, (_, i) => { // From 09:00 to 18:00 in 30 min intervals
-  const hour = Math.floor(i / 2) + 9;
+const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
+  const hour = Math.floor(i / 2) + 8;
   const minute = (i % 2) * 30;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 });
@@ -51,7 +54,7 @@ export default function EditBusinessPage() {
     phone: '',
     email: '',
     website: '',
-    workingHours: '',
+    workingHours: '', // Will be replaced by structured workingHours
     heroImage: '',
     photos: [],
     newHeroImageUrl: '',
@@ -61,6 +64,10 @@ export default function EditBusinessPage() {
 
   const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
+  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+
+  const sortedBulgarianCities = useMemo(() => [...allBulgarianCities].sort((a, b) => a.localeCompare(b, 'bg')), []);
+
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(authInstance, (user) => {
@@ -100,7 +107,7 @@ export default function EditBusinessPage() {
             phone: businessData.phone || '',
             email: businessData.email || '',
             website: businessData.website || '',
-            workingHours: businessData.workingHours || '',
+            workingHours: businessData.workingHours || '', // This might need conversion if old format
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
             newHeroImageUrl: businessData.heroImage || '', 
@@ -121,6 +128,10 @@ export default function EditBusinessPage() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [id]: value }));
+  };
+
+   const handleSelectChange = (id: keyof Salon, value: string) => {
     setFormData((prevData) => ({ ...prevData, [id]: value }));
   };
   
@@ -233,7 +244,7 @@ export default function EditBusinessPage() {
         phone: formData.phone,
         email: formData.email,
         website: formData.website,
-        workingHours: formData.workingHours,
+        workingHours: formData.workingHours, // This will be the structured object
         heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '',
         photos: formData.photos || [],
         availability: formData.availability || {},
@@ -311,10 +322,56 @@ export default function EditBusinessPage() {
                       <Label htmlFor="address">Адрес</Label>
                       <Input id="address" value={formData.address || ''} onChange={handleInputChange} />
                     </div>
+                    
                     <div className="space-y-2">
                       <Label htmlFor="city">Град</Label>
-                      <Input id="city" value={formData.city || ''} onChange={handleInputChange} />
+                      <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={cityPopoverOpen}
+                            className="w-full justify-between font-normal"
+                          >
+                            {formData.city
+                              ? sortedBulgarianCities.find(
+                                  (city) => city === formData.city
+                                )
+                              : "Изберете град..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                          <Command>
+                            <CommandInput placeholder="Търсене на град..." />
+                            <CommandList>
+                              <CommandEmpty>Няма намерен град.</CommandEmpty>
+                              <CommandGroup>
+                                {sortedBulgarianCities.map((city) => (
+                                  <CommandItem
+                                    key={city}
+                                    value={city}
+                                    onSelect={(currentValue) => {
+                                      setFormData(prev => ({ ...prev, city: currentValue === formData.city ? "" : currentValue }));
+                                      setCityPopoverOpen(false);
+                                    }}
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        formData.city === city ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    {city}
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
+
                     <div className="space-y-2">
                       <Label htmlFor="phone">Телефон</Label>
                       <Input id="phone" value={formData.phone || ''} onChange={handleInputChange} />
@@ -327,9 +384,26 @@ export default function EditBusinessPage() {
                       <Label htmlFor="website">Уебсайт</Label>
                       <Input id="website" value={formData.website || ''} onChange={handleInputChange} />
                     </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="priceRange">Ценови диапазон</Label>
+                        <Select
+                            value={formData.priceRange}
+                            onValueChange={(value) => handleSelectChange('priceRange', value as Salon['priceRange'])}
+                        >
+                            <SelectTrigger id="priceRange">
+                                <SelectValue placeholder="Изберете ценови диапазон" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="cheap">Евтино ($)</SelectItem>
+                                <SelectItem value="moderate">Умерено ($$)</SelectItem>
+                                <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
                     <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="workingHours">Работно време</Label>
-                      <Input id="workingHours" value={formData.workingHours || ''} onChange={handleInputChange} placeholder="напр. Пон - Пет: 09:00 - 18:00"/>
+                      <Label htmlFor="workingHours">Работно време (текст)</Label>
+                      <Input id="workingHours" value={formData.workingHours as string || ''} onChange={handleInputChange} placeholder="напр. Пон - Пет: 09:00 - 18:00"/>
+                       {/* TODO: Implement structured working hours editor here */}
                     </div>
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="description">Описание</Label>
@@ -470,7 +544,7 @@ export default function EditBusinessPage() {
                                 <Input
                                   id="newTimeSlot"
                                   type="text"
-                                  placeholder="HH:MM"
+                                  placeholder="HH:MM (напр. 09:30)"
                                   value={newTimeForSelectedDate}
                                   onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
                                   className="flex-grow"
@@ -537,3 +611,5 @@ export default function EditBusinessPage() {
     </div>
   );
 }
+
+    
