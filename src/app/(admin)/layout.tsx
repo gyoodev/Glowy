@@ -19,20 +19,26 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { toast } = useToast();
 
   useEffect(() => {
+    setIsLoading(true); // Set loading to true at the start of the check
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // Set loading to true at the beginning of each auth state change check
-      // This might be redundant if initial state is true, but ensures it's true for re-checks
-      // setIsLoading(true); // Re-consider if this is needed or causes flicker
-
       try {
         if (user) {
+          toast({ title: 'Проверка на потребител', description: 'Потребителят е удостоверен, проверка на ролята...' });
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
+            toast({ title: 'Достъп разрешен', description: 'Потребителят е администратор.', variant: 'default' });
             setIsAdmin(true);
-          } else {
+          } else if (profile) {
             toast({
               title: 'Достъп отказан',
-              description: 'Нямате необходимите права за достъп до административния панел.',
+              description: `Ролята на потребителя е '${profile.role || 'недефинирана'}'. Необходима е роля 'admin'. Пренасочване към началната страница.`,
+              variant: 'destructive',
+            });
+            router.push('/');
+          } else {
+            toast({
+              title: 'Грешка при извличане на профил',
+              description: 'Не може да се зареди потребителският профил. Пренасочване към началната страница.',
               variant: 'destructive',
             });
             router.push('/');
@@ -40,7 +46,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         } else {
           toast({
             title: 'Необходимо е удостоверяване',
-            description: 'Моля, влезте, за да получите достъп до административния панел.',
+            description: 'Потребителят не е удостоверен. Пренасочване към страницата за вход.',
             variant: 'default',
           });
           router.push('/login');
@@ -49,17 +55,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         console.error('Грешка при проверка на админ права в AdminLayout:', error);
         toast({
           title: 'Грешка при проверка на правата',
-          description: 'Възникна грешка при опит за валидиране на вашите права.',
+          description: 'Възникна грешка при опит за валидиране на вашите права. Пренасочване към началната страница.',
           variant: 'destructive',
         });
-        router.push('/'); // Fallback redirect on any error during auth/profile check
+        router.push('/');
       } finally {
-        setIsLoading(false); // Ensure loading is set to false after all checks and potential redirects
+        setIsLoading(false); // Ensure loading is set to false after all checks
       }
     });
 
     return () => unsubscribe();
-  }, [router, toast]); // toast is a dependency of this effect
+  }, [router, toast]); // Added toast as dependency because it's used
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
@@ -67,8 +73,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (!isAdmin) {
     // This state should ideally be covered by the redirect in useEffect,
-    // but it's a good fallback if the redirect hasn't completed yet.
-    return <div className="flex justify-center items-center h-screen text-red-500">Достъп отказан. Пренасочване...</div>;
+    // but it's a good fallback. The toasts in useEffect should give more context.
+    return <div className="flex justify-center items-center h-screen text-red-500">Проверка на достъпа...</div>;
   }
 
   return (
@@ -89,7 +95,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <main className="flex-1 overflow-y-auto p-6">
         <header className="flex justify-between items-center pb-4 border-b border-gray-300 mb-6">
           <h1 className="text-3xl font-semibold">Административно съдържание</h1>
-          {/* You can add dynamic header content here if needed */}
         </header>
         {children}
       </main>
