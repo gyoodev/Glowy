@@ -9,7 +9,7 @@ interface BusinessProfilePageProps {
 
 export default function BusinessProfilePage({}: BusinessProfilePageProps) {
   const params = useParams();
-  const businessId = params.businessId as string;
+  const businessId = params?.businessId as string;
 
   // TODO: Fetch business data based on businessId and display it
 
