@@ -64,7 +64,7 @@ export default function AccountPage() {
             const newUserDocRef = doc(firestore, 'users', user.uid);
             const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email?: string | null, userId: string } = {
               name: user.displayName || 'Потребител',
-              email: user.email,
+              email: user.email || '',
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
               createdAt: Timestamp.fromDate(new Date()),
