@@ -92,4 +92,6 @@ export interface Booking {
   clientName: string;
   clientEmail: string;
   clientPhoneNumber: string;
+  salonAddress?: string; // Added for displaying in booking history
+  salonPhoneNumber?: string; // Added for displaying in booking history
 }
