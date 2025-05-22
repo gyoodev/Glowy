@@ -76,7 +76,7 @@ export default function PromoteBusinessPage() {
       // Configure other options as needed, e.g., environment: 'sandbox' or 'production'
     });
     setRevolutCheckout(rc);
-  };
+  });
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
