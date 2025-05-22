@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import type { Review, Salon, Service, UserProfile } from '@/types';
+import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card';
@@ -22,6 +22,41 @@ import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
+
+const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const dayTranslations: Record<string, string> = {
+  monday: "Пон",
+  tuesday: "Вт",
+  wednesday: "Ср",
+  thursday: "Четв",
+  friday: "Пет",
+  saturday: "Съб",
+  sunday: "Нед",
+};
+
+
+function formatWorkingHours(workingHours?: WorkingHoursStructure | string): string {
+  if (!workingHours) {
+    return 'Няма предоставено работно време';
+  }
+  if (typeof workingHours === 'string') {
+    return workingHours; // For backward compatibility or simple string format
+  }
+
+  const parts: string[] = [];
+  daysOrder.forEach(dayKey => {
+    const dayInfo = workingHours[dayKey] as DayWorkingHours | undefined;
+    if (dayInfo) {
+      if (dayInfo.isOff || !dayInfo.open || !dayInfo.close) {
+        parts.push(`${dayTranslations[dayKey] || dayKey}: Почивен ден`);
+      } else {
+        parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
+      }
+    }
+  });
+  return parts.join('; ') || 'Няма предоставено работно време';
+}
+
 
 export default function SalonProfilePage() {
   const params = useParams();
@@ -96,10 +131,20 @@ export default function SalonProfilePage() {
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
 
           salonData.services = salonData.services || [];
+          // Ensure reviews are always an array, even if undefined in Firestore
           salonData.reviews = salonData.reviews || [];
           salonData.photos = salonData.photos || [];
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
-          salonData.workingHours = salonData.workingHours || 'Няма предоставено работно време';
+          // salonData.workingHours is handled by the formatWorkingHours function
+          if (!salonData.workingHours || typeof salonData.workingHours === 'string') {
+              // Provide default structured working hours if missing or old format
+              const defaultHours: WorkingHoursStructure = {};
+              daysOrder.forEach(day => {
+                  defaultHours[day] = { open: '09:00', close: '18:00', isOff: day === 'sunday' };
+                  if (day === 'saturday') defaultHours[day] = { open: '10:00', close: '14:00', isOff: false };
+              });
+              salonData.workingHours = defaultHours;
+          }
 
 
           setSalon(salonData);
@@ -107,13 +152,18 @@ export default function SalonProfilePage() {
         } else {
           console.error("[SalonProfilePage] Salon not found in Firestore for name:", name);
           setSalon(null);
+          toast({
+            title: "Салонът не е намерен",
+            description: `Салон с име '${name}' не беше открит. Моля, проверете адреса или се върнете към списъка със салони.`,
+            variant: "destructive",
+          });
         }
       } catch (error: any) {
         console.error("[SalonProfilePage] Error fetching salon from Firestore:", error);
         if (error.code === 'permission-denied') {
           toast({
             title: "Грешка: Няма права за достъп",
-            description: "Неуспешно зареждане на информацията за салона поради липса на права. Моля, проверете Вашите Firestore Security Rules. Трябва да имате правило, което позволява публично четене на данни от колекцията 'salons', например: 'match /salons/{salonId} { allow get, list: if true; }'. Проверете също и правилата за четене на колекцията 'reviews'.",
+            description: "Неуспешно зареждане на информацията за салона поради липса на права. Моля, проверете Вашите Firestore Security Rules.",
             variant: "destructive",
             duration: 15000,
           });
@@ -247,8 +297,8 @@ export default function SalonProfilePage() {
         },
         date: bookingDate.toISOString(),
         time: bookingTime,
-        clientName: auth.currentUser.displayName || 'Клиент',
-        clientEmail: auth.currentUser.email || 'Няма имейл',
+        clientName: auth.currentUser.displayName || 'Клиент', // Added clientName
+        clientEmail: auth.currentUser.email || 'Няма имейл',   // Added clientEmail
       });
 
       toast({
@@ -644,7 +694,7 @@ export default function SalonProfilePage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}</li>
                 <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
-                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> { salon.workingHours || 'Няма предоставено работно време'}</li>
+                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
               </ul>
             </div>
           </aside>
@@ -653,3 +703,4 @@ export default function SalonProfilePage() {
     </div>
   );
 }
+
