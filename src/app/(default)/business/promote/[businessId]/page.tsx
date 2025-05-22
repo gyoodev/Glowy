@@ -13,7 +13,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
-import RevolutCheckout from '@revolut/checkout';
 import type { RevolutCheckoutInstance } from '@revolut/checkout';
 import { bg } from 'date-fns/locale/bg'; // Ensure this is the correct import path
 
@@ -70,13 +69,23 @@ export default function PromoteBusinessPage() {
     }
   };
 
+  // Dynamically import RevolutCheckout to ensure it only runs on the client side
   // Initialize Revolut Checkout
   useEffect(() => {
-    const rc = new RevolutCheckout(process.env.NEXT_PUBLIC_REVOLUT_PUBLIC_API_KEY!, { // Replace with your Revolut Public API Key
-      // Configure other options as needed, e.g., environment: 'sandbox' or 'production'
-    });
-    setRevolutCheckout(rc);
-  });
+    const initializeRevolut = async () => {
+      try {
+        const RevolutCheckout = (await import('@revolut/checkout')).default;
+        const rc = new RevolutCheckout(process.env.NEXT_PUBLIC_REVOLUT_PUBLIC_API_KEY!, {
+          // Configure other options as needed, e.g., environment: 'sandbox' or 'production'
+        });
+        setRevolutCheckout(rc);
+      } catch (error) {
+        console.error("Error loading Revolut Checkout:", error);
+        toast({ title: 'Error', description: 'Failed to load payment gateway.', variant: 'destructive' });
+      }
+    };
+    initializeRevolut();
+  }, []); // Empty dependency array ensures this runs only once on mount
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -93,6 +102,7 @@ export default function PromoteBusinessPage() {
       }
     });
     return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, router]);
 
 
