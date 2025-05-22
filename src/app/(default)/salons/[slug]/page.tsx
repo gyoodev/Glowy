@@ -6,7 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours } from '@/types';
-import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card';
 import AddReviewForm from '@/components/salon/AddReviewForm';
@@ -40,18 +40,31 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
     return 'Няма предоставено работно време';
   }
   if (typeof workingHours === 'string') {
-    return workingHours; // For backward compatibility or simple string format
+    // Attempt to parse if it's a JSON string (legacy or simple format)
+    try {
+      const parsed = JSON.parse(workingHours);
+      if (typeof parsed === 'object' && parsed !== null) {
+        workingHours = parsed as WorkingHoursStructure;
+      } else {
+        return workingHours; // Return as is if not a parsable object
+      }
+    } catch (e) {
+      return workingHours; // Return as is if not JSON
+    }
   }
 
   const parts: string[] = [];
   daysOrder.forEach(dayKey => {
-    const dayInfo = workingHours[dayKey] as DayWorkingHours | undefined;
+    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined; // Add definite assignment assertion
     if (dayInfo) {
       if (dayInfo.isOff || !dayInfo.open || !dayInfo.close) {
         parts.push(`${dayTranslations[dayKey] || dayKey}: Почивен ден`);
       } else {
         parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
       }
+    } else {
+      // If a day is missing from the structure, assume it's a day off or info not provided
+      parts.push(`${dayTranslations[dayKey] || dayKey}: Няма информация`);
     }
   });
   return parts.join('; ') || 'Няма предоставено работно време';
@@ -63,8 +76,10 @@ export default function SalonProfilePage() {
   const slugParam = params.slug;
 
   const [salon, setSalon] = useState<Salon | null>(null);
+  const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
+  const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [userReviews, setUserReviews] = useState<Review[]>([]);
+  const [userReviews, setUserReviews] = useState<Review[]>([]); // User's own reviews for this salon
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -74,32 +89,6 @@ export default function SalonProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const firestore = getFirestore();
   const reminderTimeoutId = useRef<NodeJS.Timeout | null>(null);
-
-  const fetchUserReviews = async () => {
-    if (!auth.currentUser || !salon?.id) {
-        setUserReviews([]);
-        return;
-    }
-    try {
-        console.log(`[SalonProfilePage] Fetching user reviews for salonId: ${salon.id} and userId: ${auth.currentUser.uid}`);
-        const reviewsCollectionRef = collection(firestore, 'reviews');
-        const q = query(
-            reviewsCollectionRef,
-            where('salonId', '==', salon.id),
-            where('userId', '==', auth.currentUser.uid)
-        );
-        const querySnapshot = await getDocs(q);
-        const reviewsData = querySnapshot.docs.map(docSnap => ({
-            id: docSnap.id,
-            ...docSnap.data()
-        })) as Review[];
-        console.log("[SalonProfilePage] User reviews found:", reviewsData);
-        setUserReviews(reviewsData);
-    } catch (error) {
-        console.error("[SalonProfilePage] Error fetching user reviews:", error);
-        setUserReviews([]);
-    }
-  };
 
 
   useEffect(() => {
@@ -119,6 +108,7 @@ export default function SalonProfilePage() {
     const fetchSalonBySlug = async (name: string) => {
       setIsLoading(true);
       setSalon(null);
+      setDisplayedReviews([]);
       console.log("[SalonProfilePage] Fetching salon from Firestore for name:", name);
 
       try {
@@ -131,13 +121,10 @@ export default function SalonProfilePage() {
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
 
           salonData.services = salonData.services || [];
-          // Ensure reviews are always an array, even if undefined in Firestore
-          salonData.reviews = salonData.reviews || [];
           salonData.photos = salonData.photos || [];
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
-          // salonData.workingHours is handled by the formatWorkingHours function
+          
           if (!salonData.workingHours || typeof salonData.workingHours === 'string') {
-              // Provide default structured working hours if missing or old format
               const defaultHours: WorkingHoursStructure = {};
               daysOrder.forEach(day => {
                   defaultHours[day] = { open: '09:00', close: '18:00', isOff: day === 'sunday' };
@@ -222,17 +209,78 @@ export default function SalonProfilePage() {
         setIsSalonOwner(false);
       }
     };
+     const fetchSalonReviews = async () => {
+      if (!salon?.id) return;
+      setIsLoadingReviews(true);
+      try {
+        console.log(`[SalonProfilePage] Fetching reviews for salonId: ${salon.id}`);
+        const reviewsCollectionRef = collection(firestore, 'reviews');
+        const q = query(reviewsCollectionRef, where('salonId', '==', salon.id), orderBy('date', 'desc'));
+        const querySnapshot = await getDocs(q);
+        const reviewsData = querySnapshot.docs.map(docSnap => ({
+          id: docSnap.id,
+          ...docSnap.data()
+        })) as Review[];
+        console.log("[SalonProfilePage] Reviews found:", reviewsData);
+        setDisplayedReviews(reviewsData);
+
+        if (reviewsData.length > 0) {
+            const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
+            const newAverageRating = totalRating / reviewsData.length;
+            setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
+        } else {
+             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null);
+        }
+
+      } catch (error) {
+        console.error("[SalonProfilePage] Error fetching salon reviews:", error);
+        setDisplayedReviews([]);
+      } finally {
+        setIsLoadingReviews(false);
+      }
+    };
+
 
     if(salon) {
       fetchUserRoleAndCheckOwnership();
+      fetchSalonReviews();
     }
-  }, [salon, firestore]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salon?.id, firestore]); // salon?.id will re-trigger if salon object identity changes
+
+  const fetchUserReviews = async () => {
+    if (!auth.currentUser || !salon?.id) {
+        setUserReviews([]);
+        return;
+    }
+    try {
+        console.log(`[SalonProfilePage] Fetching user reviews for salonId: ${salon.id} and userId: ${auth.currentUser.uid}`);
+        const reviewsCollectionRef = collection(firestore, 'reviews');
+        const q = query(
+            reviewsCollectionRef,
+            where('salonId', '==', salon.id),
+            where('userId', '==', auth.currentUser.uid)
+        );
+        const querySnapshot = await getDocs(q);
+        const reviewsData = querySnapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        })) as Review[];
+        console.log("[SalonProfilePage] User reviews found:", reviewsData);
+        setUserReviews(reviewsData);
+    } catch (error) {
+        console.error("[SalonProfilePage] Error fetching user reviews:", error);
+        setUserReviews([]);
+    }
+  };
 
   useEffect(() => {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
-  }, [salon?.id, auth.currentUser, firestore, showReviewForm]); // Added showReviewForm to re-fetch reviews after submission
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salon?.id, auth.currentUser?.uid, firestore, showReviewForm]);
+
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -284,6 +332,9 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
+      const clientName = auth.currentUser.displayName || 'Клиент';
+      const clientEmail = auth.currentUser.email || 'Няма имейл';
+
       await createBooking({
         salonId: salon.id,
         salonName: bookingSalonName,
@@ -297,8 +348,8 @@ export default function SalonProfilePage() {
         },
         date: bookingDate.toISOString(),
         time: bookingTime,
-        clientName: auth.currentUser.displayName || 'Клиент', // Added clientName
-        clientEmail: auth.currentUser.email || 'Няма имейл',   // Added clientEmail
+        clientName: clientName,
+        clientEmail: clientEmail,
       });
 
       toast({
@@ -310,7 +361,7 @@ export default function SalonProfilePage() {
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour after booking
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -328,7 +379,7 @@ export default function SalonProfilePage() {
             });
             toast({
               title: "Покана за отзив изпратена",
-              description: `Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName} приключи, Ви изпратихме покана по имейл да оставите отзив.`,
+              description: `Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName || 'услугата'} приключи, Ви изпратихме покана по имейл да оставите отзив.`,
               variant: "default",
               duration: 7000,
             });
@@ -364,22 +415,13 @@ export default function SalonProfilePage() {
     }
   };
 
-  const handleReviewSubmit = async (rating: number, comment: string) => {
-    console.log("[SalonProfilePage] auth.currentUser:", auth.currentUser);
+ const handleReviewSubmit = async (rating: number, comment: string) => {
     if (!auth.currentUser) {
-      toast({
-        title: "Не сте влезли",
-        description: "Моля, влезте в профила си, за да оставите отзив.",
-        variant: "destructive",
-      });
+      toast({ title: "Не сте влезли", description: "Моля, влезте, за да оставите отзив.", variant: "destructive" });
       return;
     }
     if (!salon) {
-      toast({
-        title: "Грешка",
-        description: "Няма информация за салона.",
-        variant: "destructive",
-      });
+      toast({ title: "Грешка", description: "Няма информация за салона.", variant: "destructive" });
       return;
     }
 
@@ -397,76 +439,50 @@ export default function SalonProfilePage() {
           }
         } catch (profileError) {
           console.error("Error fetching user profile for review name:", profileError);
-          // Continue without a fetched name, will fallback to 'Анонимен потребител'
         }
       }
       reviewerName = reviewerName || 'Анонимен потребител';
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
-      console.log(`[SalonProfilePage] Submitting review for salonId: ${salon.id} by userId: ${userId}`);
       const newReviewData = {
         userName: reviewerName,
         rating: rating,
         comment: comment,
-        date: new Date().toISOString(),
+        date: Timestamp.fromDate(new Date()).toDate().toISOString(),
         userAvatar: userAvatarUrl,
         userId: userId,
         salonId: salon.id,
       };
 
-      console.log("[SalonProfilePage] Review object to be added:", newReviewData);
-      const reviewsCollectionRef = collection(firestore, 'reviews');
-      const docRef = await addDoc(reviewsCollectionRef, newReviewData);
-      console.log("[SalonProfilePage] Review added with ID:", docRef.id);
+      const docRef = await addDoc(collection(firestore, 'reviews'), newReviewData);
+      const newReviewWithId = { ...newReviewData, id: docRef.id };
 
-      const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
-      const salonSnapToUpdate = await getDoc(salonDocRefToUpdate);
-      if (salonSnapToUpdate.exists()) {
-        const allReviewsQuery = query(collection(firestore, 'reviews'), where('salonId', '==', salon.id));
-        const allReviewsSnapshot = await getDocs(allReviewsQuery);
-        const allSalonReviews = allReviewsSnapshot.docs.map(reviewDoc => ({ id: reviewDoc.id, ...reviewDoc.data() })) as Review[];
-
-        let newAverageRating = 0;
-        if (allSalonReviews.length > 0) {
-            const totalRating = allSalonReviews.reduce((acc, rev) => acc + rev.rating, 0);
-            newAverageRating = totalRating / allSalonReviews.length;
-        }
-
-        await updateDoc(salonDocRefToUpdate, {
-            rating: newAverageRating,
-            reviews: allSalonReviews.map(r => ({ // Storing simplified review stubs in salon document
-                id: r.id, // Or just a subset of fields like rating, comment snippet
-                userName: r.userName,
-                rating: r.rating,
-                comment: r.comment.substring(0,100), // Example: store only a snippet
-                date: r.date,
-                userAvatar: r.userAvatar
-            }))
-        });
-
-        // Optimistically update local salon state for immediate UI reflection
-        setSalon(prevSalon => prevSalon ? ({
-            ...prevSalon,
-            rating: newAverageRating,
-            reviews: allSalonReviews // Reflect all reviews locally
-        }) : null);
+      // Update local state for reviews immediately
+      const updatedReviews = [...displayedReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setDisplayedReviews(updatedReviews);
+      
+      // Re-fetch user-specific reviews if the new review is by the current user
+      if(userId === auth.currentUser.uid) {
+          setUserReviews(prevUserReviews => [...prevUserReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
 
 
-      // fetchUserReviews(); // No longer strictly needed if salon.reviews is updated locally
+      // Update salon's average rating in Firestore and locally
+      if (updatedReviews.length > 0) {
+        const totalRating = updatedReviews.reduce((acc, rev) => acc + rev.rating, 0);
+        const newAverageRating = totalRating / updatedReviews.length;
+        
+        const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
+        await updateDoc(salonDocRefToUpdate, { rating: newAverageRating });
+        
+        setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
+      }
+      
       setShowReviewForm(false);
-
-      toast({
-        title: "Отзивът е добавен!",
-        description: "Благодарим за Вашия отзив.",
-      });
+      toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив." });
     } catch (error) {
       console.error("[SalonProfilePage] Error adding review:", error);
-      toast({
-        title: "Възникна грешка при добавяне на отзив",
-        description: "Моля, опитайте отново по-късно.",
-        variant: "destructive",
-      });
+      toast({ title: "Грешка при добавяне на отзив", description: "Моля, опитайте отново.", variant: "destructive" });
     }
   };
 
@@ -508,6 +524,7 @@ export default function SalonProfilePage() {
     cheap: 'евтино',
     moderate: 'умерено',
     expensive: 'скъпо',
+    '': 'не е посочен'
   };
 
   return (
@@ -537,11 +554,11 @@ export default function SalonProfilePage() {
                 <div>
                   <div className="flex items-center mb-1">
                     <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
-                    <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? 'N/A'}</span>
-                    <span className="ml-2 text-muted-foreground">({salon.reviews?.length ?? 0} отзива)</span>
+                    <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
+                    <span className="ml-2 text-muted-foreground">({displayedReviews.length} отзива)</span>
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
-                    <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}
+                    <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
                   </div>
                 </div>
                 {salon.priceRange && (
@@ -575,9 +592,24 @@ export default function SalonProfilePage() {
                 <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                   <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
                 </h2>
-                {salon.reviews && salon.reviews.length > 0 ? (
+                {isLoadingReviews ? (
+                     <div className="space-y-4">
+                        {[...Array(3)].map((_, i) => (
+                        <Card key={i} className="shadow-sm">
+                            <CardHeader>
+                            <Skeleton className="h-5 w-1/3 mb-1" />
+                            <Skeleton className="h-4 w-1/4" />
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-2/3" />
+                            </CardContent>
+                        </Card>
+                        ))}
+                    </div>
+                ) : displayedReviews.length > 0 ? (
                   <div className="space-y-6">
-                    {salon.reviews.map(review => (
+                    {displayedReviews.map(review => (
                       <ReviewCard key={review.id} review={review} />
                     ))}
                   </div>
@@ -603,10 +635,10 @@ export default function SalonProfilePage() {
                     )}
                     </div>
                 )}
-                 {auth.currentUser && userReviews.length > 0 && (
+                 {auth.currentUser && userReviews.length > 0 && !showReviewForm && (
                     <div className="mt-8 bg-card p-6 rounded-lg shadow-md">
                          <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                            <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Вашите Отзиви
+                            <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Вашите Отзиви за този салон
                          </h2>
                          <div className="space-y-6">
                             {userReviews.map(review => (
@@ -642,23 +674,25 @@ export default function SalonProfilePage() {
             </div>
 
             {(userRole === 'business' && isSalonOwner) && (
-              <Card className="shadow-md mb-4 border-primary bg-yellow-100/30">
+              <Card className="shadow-md mb-4 border-primary bg-yellow-100/30 dark:bg-yellow-800/30">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg text-primary-foreground flex items-center">
                     <Gift className="mr-2 h-5 w-5" />
                     Рекламирайте Вашия Салон
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="text-sm space-y-2 text-secondary-foreground">
+                <CardContent className="text-sm space-y-2 text-primary-foreground/90 dark:text-yellow-200/90">
                   <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
-                  <Button variant="default" className="mt-2">Научете повече / Активирайте</Button>
+                  <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Link href={salon.id ? `/business/promote/${salon.id}` : '#'}>Научете повече / Активирайте</Link>
+                  </Button>
                 </CardContent>
               </Card>
             )}
             {selectedService && selectedBookingDate && selectedBookingTime && (
-              <Card className="shadow-md mb-4 border-primary bg-secondary/30">
+              <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
                 <CardHeader className="pb-3 pt-4">
-                  <CardTitle className="text-lg text-primary-foreground flex items-center">
+                  <CardTitle className="text-lg text-secondary-foreground flex items-center">
                     <Info className="mr-2 h-5 w-5" />
                     Вашата Резервация
                   </CardTitle>
@@ -692,7 +726,7 @@ export default function SalonProfilePage() {
             <div className="bg-card p-6 rounded-lg shadow-lg">
               <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}</li>
+                <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
                 <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
                 <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
               </ul>
@@ -704,3 +738,5 @@ export default function SalonProfilePage() {
   );
 }
 
+
+    
