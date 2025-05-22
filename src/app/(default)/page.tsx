@@ -6,19 +6,20 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin } from 'lucide-react';
+import { Search } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { isFuture } from 'date-fns'; // Added import
+import { isFuture } from 'date-fns';
 
 import type { Salon } from '@/types';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
+const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500; // This represents "any price" or the upper limit of the slider
+const DEFAULT_MAX_PRICE = 500;
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -27,8 +28,8 @@ export default function SalonDirectoryPage() {
   const [filters, setFilters] = useState<Record<string, any>>({
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
-    minRating: 0,
-    maxPrice: DEFAULT_MAX_PRICE, // Default to showing all prices
+    minRating: DEFAULT_MIN_RATING,
+    maxPrice: DEFAULT_MIN_PRICE, // Default to 0, meaning "any price"
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -45,7 +46,7 @@ export default function SalonDirectoryPage() {
         })) as Salon[];
         setSalons(salonsList);
       } catch (error) {
-        console.error("Error fetching salons:", error);
+        console.error("Грешка при извличане на салони:", error);
       }
       setIsLoading(false);
     };
@@ -59,17 +60,15 @@ export default function SalonDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    let result = [...salons]; // Create a mutable copy
+    let result = [...salons];
 
-    // Sort by promotion status first
     result.sort((a, b) => {
       const isAPromoted = a.promotion && a.promotion.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
       const isBPromoted = b.promotion && b.promotion.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
 
-      if (isAPromoted && !isBPromoted) return -1; // a (promoted) comes before b (not promoted)
-      if (!isAPromoted && isBPromoted) return 1;  // b (promoted) comes before a (not promoted)
-      // TODO: Add secondary sort criteria if needed, e.g., by rating or name for non-promoted, or among promoted
-      return 0; 
+      if (isAPromoted && !isBPromoted) return -1;
+      if (!isAPromoted && isBPromoted) return 1;
+      return 0;
     });
 
     if (searchTerm) {
@@ -94,8 +93,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's not set to the default "any price"
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE && maxPrice >= DEFAULT_MIN_PRICE) {
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { // Apply if maxPrice is not "any price"
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -137,12 +135,12 @@ export default function SalonDirectoryPage() {
           <div className="relative z-10 md:col-span-1 space-y-4">
             <div>
               <Image
-                src="https://placehold.co/560x320.png"
-                alt="Интериор на фризьорски салон"
+                src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080"
+                alt="Интериор на фризьорски или бръснарски салон"
                 width={560}
                 height={320}
                 className="w-full h-auto object-cover rounded-lg shadow-xl"
-                data-ai-hint="hair salon"
+                data-ai-hint="barber salon"
                 priority
               />
             </div>
@@ -216,7 +214,7 @@ export default function SalonDirectoryPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <MapPin className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> {/* Changed from MapPin to Search for no results */}
               <h3 className="text-2xl font-semibold text-foreground mb-2">Няма намерени салони</h3>
               <p className="text-muted-foreground">
                 Опитайте да промените критериите за търсене или филтрите.
