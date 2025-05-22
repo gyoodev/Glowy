@@ -82,7 +82,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice < DEFAULT_MAX_PRICE) {
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice <= DEFAULT_MAX_PRICE) {
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -121,7 +121,7 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          <div className="md:col-span-1 space-y-4">
+          <div className="relative z-10 md:col-span-1 space-y-4"> {/* Added relative z-10 here */}
             <div>
               <Image
                 src="https://placehold.co/560x320.png"
