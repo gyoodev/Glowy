@@ -56,17 +56,12 @@ export function Header() {
     }
   };
 
-  const myAccountLinkDesktop = (
-    <Button variant="ghost" asChild>
-      <Link href="/account">Профил</Link>
-    </Button>
-  );
+  // const myAccountLinkMobile = ( // This was the button to be removed
+  //    <Button variant="ghost" asChild className="justify-start">
+  //       <Link href="/account">Профил</Link>
+  //   </Button>
+  // );
 
-  const myAccountLinkMobile = (
-     <Button variant="ghost" asChild className="justify-start">
-        <Link href="/account">Профил</Link>
-    </Button>
-  );
  const businessManageLinkMobile = (
     <Button variant="ghost" asChild className="justify-start">
       <Link href="/business/manage">Управление на Бизнеса</Link>
@@ -119,7 +114,7 @@ export function Header() {
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
-          {isLoggedIn && myAccountLinkDesktop}
+          {/* Profile link removed from main nav as per previous request */}
           {userRole === 'admin' && adminPanelLinkDesktop}
           {userRole === 'business' && businessManageLinkDesktop}
         </nav>
@@ -130,11 +125,16 @@ export function Header() {
           </Button>
 
           {isLoggedIn ? (
-            <Button variant="outline" asChild>
-              <Link href="/account">
-                <User className="mr-2 h-4 w-4" /> Профил
-              </Link>
-            </Button>
+            <>
+              <Button variant="outline" asChild>
+                <Link href="/account">
+                  <User className="mr-2 h-4 w-4" /> Профил
+                </Link>
+              </Button>
+              <Button variant="ghost" onClick={handleLogout}>
+                Изход
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="outline" asChild>
@@ -160,16 +160,21 @@ export function Header() {
                     <Link href={item.href}>{item.label}</Link>
                   </Button>
                 ))}
-                {isLoggedIn && myAccountLinkMobile}
+                {/* {isLoggedIn && myAccountLinkMobile}  <- This line is removed */}
                 {userRole === 'business' && businessManageLinkMobile}
                 {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
                 {isLoggedIn ? (
-                  <Button variant="outline" asChild className="justify-start text-base py-3">
-                    <Link href="/account">
-                        <User className="mr-2 h-4 w-4" /> Профил
-                    </Link>
-                  </Button>
+                  <>
+                    <Button variant="outline" asChild className="justify-start text-base py-3">
+                        <Link href="/account">
+                            <User className="mr-2 h-4 w-4" /> Профил
+                        </Link>
+                    </Button>
+                    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-red-500 hover:text-red-600">
+                        Изход
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button variant="outline" asChild className="justify-start text-base py-3">
@@ -179,11 +184,6 @@ export function Header() {
                         <Link href="/register">Регистрация</Link>
                     </Button>
                   </>
-                )}
-                 {isLoggedIn && ( 
-                    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-red-500 hover:text-red-600">
-                        Изход
-                    </Button>
                 )}
               </nav>
             </SheetContent>
