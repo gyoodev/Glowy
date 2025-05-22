@@ -2,11 +2,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Correct import for App Router
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
+// import { useToast } from '@/hooks/use-toast'; // Temporarily removed for simplification
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,64 +14,45 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
+  // const { toast } = useToast(); // Temporarily removed
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      let newAuthorizedState = false;
-      try {
-        if (user) {
-          // toast({ title: 'AdminLayout: User authenticated.', description: `UID: ${user.uid}`, duration: 1500 });
+      let authorized = false;
+      if (user) {
+        try {
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
-            // toast({ title: 'AdminLayout: Достъп разрешен.', description: 'Потребителят е администратор.', duration: 1500 });
-            newAuthorizedState = true;
+            authorized = true;
           } else {
-            console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
-            // toast({ title: 'AdminLayout: Достъп отказан.', description: 'Не сте администратор. Пренасочване към начална страница.', variant: 'destructive', duration: 3000 });
-            if (router.pathname !== '/') {
-              router.push('/');
-            }
+            // console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
+            if (router) router.push('/');
           }
-        } else {
-          // User is signed out
-          console.warn('AdminLayout: User not authenticated. Redirecting to login.');
-          // toast({ title: 'AdminLayout: Не сте удостоверени.', description: 'Пренасочване към страница за вход.', duration: 3000 });
-          if (router.pathname !== '/login') {
-            router.push('/login');
-          }
+        } catch (error: any) {
+          // console.error('AdminLayout: Error fetching profile:', error.message || error);
+          if (router) router.push('/');
         }
-      } catch (error: any) {
-        console.error('AdminLayout: Error during auth check:', error.message || error);
-        // toast({ // Temporarily commenting out toast in catch to reduce complexity
-        //   title: 'AdminLayout: Грешка при проверка на правата.',
-        //   description: `Възникна грешка при удостоверяване. Моля, опитайте отново. (${error.message || 'Неизвестна грешка'})`,
-        //   variant: 'destructive',
-        //   duration: 5000,
-        // });
-        if (router.pathname !== '/') {
-          router.push('/');
-        }
-      } finally {
-        setIsAuthorized(newAuthorizedState);
-        setIsLoading(false);
+      } else {
+        // User is signed out
+        // console.warn('AdminLayout: User not authenticated. Redirecting to login.');
+        if (router) router.push('/login');
       }
+      
+      setIsAuthorized(authorized);
+      setIsLoading(false); // Set loading false after all checks and potential redirects
     });
 
     return () => unsubscribe();
-  }, [router]); // Removed toast from dependency array
+  }, [router]); // Dependency array only includes router
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
   }
 
   if (!isAuthorized) {
-    // This state implies a redirect should have already been initiated or is in progress.
-    // Or the user simply isn't authorized and an error message is displayed.
-    // This could be the "error on dashboard page check auth" message if interpreted by user.
+    // This message is shown if not authorized and a redirect is likely in progress or has occurred.
     return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате...</div>;
   }
 
