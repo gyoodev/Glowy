@@ -14,52 +14,50 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState(false); // Use a dedicated state for authorization
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true);
+    setIsLoading(true); // Explicitly set loading at the start of the effect
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      let authorized = false; // Local variable to determine authorization within this effect run
       try {
         if (user) {
-          toast({ title: 'Проверка на потребител (AdminLayout)', description: 'Потребителят е удостоверен, проверка на ролята...' });
+          toast({ title: 'AdminLayout: Потребителят е удостоверен.', description: 'Проверка на ролята...', duration: 2000 });
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
-            toast({ title: 'Достъп разрешен (AdminLayout)', description: 'Потребителят е администратор.', variant: 'default' });
-            setIsAdmin(true);
-          } else if (profile) {
-            toast({
-              title: 'Достъп отказан (AdminLayout)',
-              description: `Ролята на потребителя е '${profile.role || 'недефинирана'}'. Необходима е роля 'admin'. Пренасочване към началната страница.`,
-              variant: 'destructive',
-            });
-            router.push('/');
+            toast({ title: 'AdminLayout: Достъп разрешен.', description: 'Потребителят е администратор.', variant: 'default', duration: 2000 });
+            authorized = true;
           } else {
             toast({
-              title: 'Грешка при извличане на профил (AdminLayout)',
-              description: 'Не може да се зареди потребителският профил. Пренасочване към началната страница.',
+              title: 'AdminLayout: Достъп отказан.',
+              description: `Ролята на потребителя е '${profile?.role || 'недефинирана'}'. Необходима е роля 'admin'. Пренасочване към началната страница.`,
               variant: 'destructive',
+              duration: 5000,
             });
             router.push('/');
           }
         } else {
           toast({
-            title: 'Необходимо е удостоверяване (AdminLayout)',
+            title: 'AdminLayout: Необходимо е удостоверяване.',
             description: 'Потребителят не е удостоверен. Пренасочване към страницата за вход.',
             variant: 'default',
+            duration: 3000,
           });
           router.push('/login');
         }
       } catch (error) {
-        console.error('Грешка при проверка на админ права в AdminLayout:', error);
+        console.error('AdminLayout: Грешка при проверка на админ права:', error);
         toast({
-          title: 'Грешка при проверка на правата (AdminLayout)',
-          description: 'Възникна грешка при опит за валидиране на вашите права. Пренасочване към началната страница.',
+          title: 'AdminLayout: Грешка при проверка на правата.',
+          description: `Възникна грешка: ${(error as Error).message}. Пренасочване към началната страница.`,
           variant: 'destructive',
+          duration: 5000,
         });
         router.push('/');
       } finally {
-        setIsLoading(false);
+        setIsAuthorized(authorized); // Update the authorization state
+        setIsLoading(false); // Stop loading after all checks and potential redirects
       }
     });
 
@@ -70,14 +68,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
   }
 
-  if (!isAdmin) {
-    // The useEffect should have handled the redirect.
-    // Returning null here to prevent rendering the admin layout further if not authorized.
-    // The user should see a redirect or the destination page from the redirect.
-    // The toasts from useEffect should provide clues.
-    return null;
+  if (!isAuthorized) {
+    // If not authorized (and not loading), it means a redirect should have occurred or is in progress.
+    // This message is a fallback or will be shown briefly during client-side redirect.
+    return <div className="flex justify-center items-center h-screen">Пренасочване... (Проверка на правата)</div>;
   }
 
+  // If loading is false and isAuthorized is true, render the layout
   return (
     <div className="flex h-screen bg-gray-100">
       <aside className="w-64 bg-gray-800 text-white p-4">
