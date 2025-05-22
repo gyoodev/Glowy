@@ -1,4 +1,11 @@
 
+export interface DayWorkingHours {
+  open: string;
+  close: string;
+  isOff: boolean;
+}
+export type WorkingHoursStructure = Record<string, DayWorkingHours>;
+
 export interface Service {
   id: string;
   name: string; // Ще бъде преведено в mock-data
@@ -30,7 +37,7 @@ export interface Salon {
   photos?: string[]; // URLs to photos - Should always be an array, even if empty
   services: Service[]; // In a real app, these might be IDs referencing a separate services collection
   reviews: Review[]; // In a real app, these might be IDs referencing a separate reviews collection
-  heroImage?: string; // URL to a hero image - Made optional
+  heroImage?: string; // URL to a hero image
   availability?: Record<string, string[]>; // Date string -> array of time slots e.g., "HH:mm"
   ownerId?: string; // UID of the business owner
   // Fields for AI generation, might not be stored directly if only used for generating the main description
@@ -39,10 +46,10 @@ export interface Salon {
   targetCustomerForAi?: string;
   uniqueSellingPointsForAi?: string;
   createdAt?: any; // For Firestore Timestamp
-  phone?: string; // Optional phone number
-  email?: string; // Optional email
-  website?: string; // Optional website
-  workingHours?: string; // Optional working hours
+  phone?: string;
+  email?: string;
+  website?: string;
+  workingHours?: WorkingHoursStructure; // Updated type
 }
 
 export interface UserProfile {
@@ -56,7 +63,7 @@ export interface UserProfile {
     priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
     preferredLocations?: string[];
   };
-  userId?: string; // Firebase Auth UID
+  userId: string; // Firebase Auth UID
   displayName?: string; // From Firebase Auth or user input
 }
 
@@ -71,7 +78,7 @@ export interface Booking {
   time: string; // "HH:mm"
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   createdAt?: any; // For Firestore Timestamp
-  clientName?: string; // Optional: For displaying in business owner's view
-  clientEmail?: string; // Optional: For displaying in business owner's view
+  clientName: string;
+  clientEmail: string;
 }
 

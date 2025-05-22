@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import type { Salon } from '@/types';
+import type { Salon, WorkingHoursStructure, DayWorkingHours } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,6 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { allBulgarianCities } from '@/lib/mock-data';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
 
 
 const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
@@ -32,6 +33,41 @@ const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00
   const minute = (i % 2) * 30;
   return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 });
+
+const generateFullDayTimeOptions = () => {
+  const options = [];
+  for (let i = 0; i < 48; i++) { // 24 hours * 2 slots per hour
+    const hour = Math.floor(i / 2);
+    const minute = (i % 2) * 30;
+    options.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+  }
+  return options;
+};
+const fullDayTimeOptions = generateFullDayTimeOptions();
+
+const daysOfWeek = [
+  { key: 'monday', label: 'Понеделник' },
+  { key: 'tuesday', label: 'Вторник' },
+  { key: 'wednesday', label: 'Сряда' },
+  { key: 'thursday', label: 'Четвъртък' },
+  { key: 'friday', label: 'Петък' },
+  { key: 'saturday', label: 'Събота' },
+  { key: 'sunday', label: 'Неделя' },
+];
+
+// Default working hours structure
+const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) => {
+  acc[day.key] = {
+    open: day.key === 'sunday' ? '' : '09:00',
+    close: day.key === 'sunday' ? '' : '18:00',
+    isOff: day.key === 'sunday',
+  };
+  if (day.key === 'saturday') {
+    acc[day.key] = { open: '10:00', close: '14:00', isOff: false };
+  }
+  return acc;
+}, {} as WorkingHoursStructure);
+
 
 export default function EditBusinessPage() {
   const router = useRouter();
@@ -45,7 +81,7 @@ export default function EditBusinessPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  const [formData, setFormData] = useState<Partial<Salon> & { newHeroImageUrl?: string, newGalleryPhotoUrl?: string }>({
+  const [formData, setFormData] = useState<Partial<Salon> & { newHeroImageUrl?: string, newGalleryPhotoUrl?: string, workingHours?: WorkingHoursStructure }>({
     name: '',
     description: '',
     address: '',
@@ -54,7 +90,7 @@ export default function EditBusinessPage() {
     phone: '',
     email: '',
     website: '',
-    workingHours: '', // Will be replaced by structured workingHours
+    workingHours: defaultWorkingHours,
     heroImage: '',
     photos: [],
     newHeroImageUrl: '',
@@ -98,6 +134,17 @@ export default function EditBusinessPage() {
           return;
         }
         setBusiness(businessData);
+
+        let initialWorkingHours = { ...defaultWorkingHours };
+        if (typeof businessData.workingHours === 'object' && businessData.workingHours !== null) {
+          // Merge fetched working hours with default structure to ensure all days are present
+          for (const dayKey of daysOfWeek.map(d => d.key)) {
+            if (businessData.workingHours[dayKey]) {
+              initialWorkingHours[dayKey] = { ...defaultWorkingHours[dayKey], ...businessData.workingHours[dayKey] };
+            }
+          }
+        }
+        
         setFormData({
             name: businessData.name,
             description: businessData.description,
@@ -107,7 +154,7 @@ export default function EditBusinessPage() {
             phone: businessData.phone || '',
             email: businessData.email || '',
             website: businessData.website || '',
-            workingHours: businessData.workingHours || '', // This might need conversion if old format
+            workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
             newHeroImageUrl: businessData.heroImage || '', 
@@ -230,6 +277,35 @@ export default function EditBusinessPage() {
     toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
   };
 
+  const handleDayWorkingHourChange = (dayKey: string, field: 'open' | 'close', value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      workingHours: {
+        ...(prev.workingHours || defaultWorkingHours),
+        [dayKey]: {
+          ...(prev.workingHours?.[dayKey] || defaultWorkingHours[dayKey]),
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const handleDayIsOffChange = (dayKey: string, checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      workingHours: {
+        ...(prev.workingHours || defaultWorkingHours),
+        [dayKey]: {
+          ...(prev.workingHours?.[dayKey] || defaultWorkingHours[dayKey]),
+          isOff: checked,
+          // Clear times if marked as off, retain if marked as not off and times were previously set
+          open: checked ? '' : (prev.workingHours?.[dayKey]?.open || defaultWorkingHours[dayKey].open),
+          close: checked ? '' : (prev.workingHours?.[dayKey]?.close || defaultWorkingHours[dayKey].close),
+        },
+      },
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!businessId || !business) return;
@@ -244,7 +320,7 @@ export default function EditBusinessPage() {
         phone: formData.phone,
         email: formData.email,
         website: formData.website,
-        workingHours: formData.workingHours, // This will be the structured object
+        workingHours: formData.workingHours,
         heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '',
         photos: formData.photos || [],
         availability: formData.availability || {},
@@ -305,8 +381,9 @@ export default function EditBusinessPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsList className="grid w-full grid-cols-3 mb-6">
                 <TabsTrigger value="details">Детайли на Салона</TabsTrigger>
+                <TabsTrigger value="workingHours">Работно Време</TabsTrigger>
                 <TabsTrigger value="availability">Управление на Наличността</TabsTrigger>
               </TabsList>
 
@@ -400,11 +477,7 @@ export default function EditBusinessPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="workingHours">Работно време (текст)</Label>
-                      <Input id="workingHours" value={formData.workingHours as string || ''} onChange={handleInputChange} placeholder="напр. Пон - Пет: 09:00 - 18:00"/>
-                       {/* TODO: Implement structured working hours editor here */}
-                    </div>
+                    
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="description">Описание</Label>
                       <Textarea id="description" value={formData.description || ''} onChange={handleInputChange} required rows={5} />
@@ -478,6 +551,62 @@ export default function EditBusinessPage() {
                   </div>
                 </section>
               </TabsContent>
+
+              <TabsContent value="workingHours" className="space-y-6">
+                <h3 className="text-xl font-semibold mb-4 border-b pb-2">Работно Време по Дни</h3>
+                {daysOfWeek.map(day => (
+                  <div key={day.key} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-4 border rounded-md">
+                    <Label className="font-medium md:col-span-1">{day.label}</Label>
+                    <div className="flex items-center space-x-2 md:col-span-3">
+                       <Checkbox
+                        id={`isOff-${day.key}`}
+                        checked={formData.workingHours?.[day.key]?.isOff || false}
+                        onCheckedChange={(checked) => handleDayIsOffChange(day.key, !!checked)}
+                      />
+                      <Label htmlFor={`isOff-${day.key}`} className="text-sm">Почивен ден</Label>
+                    </div>
+                    
+                    {!formData.workingHours?.[day.key]?.isOff && (
+                      <>
+                        <div className="md:col-start-2 md:col-span-1">
+                          <Label htmlFor={`open-${day.key}`} className="text-xs">Отваря в</Label>
+                          <Select
+                            value={formData.workingHours?.[day.key]?.open || ''}
+                            onValueChange={(value) => handleDayWorkingHourChange(day.key, 'open', value)}
+                          >
+                            <SelectTrigger id={`open-${day.key}`}>
+                              <SelectValue placeholder="--:--" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {fullDayTimeOptions.map(time => (
+                                <SelectItem key={`open-${day.key}-${time}`} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="md:col-span-1">
+                          <Label htmlFor={`close-${day.key}`} className="text-xs">Затваря в</Label>
+                          <Select
+                            value={formData.workingHours?.[day.key]?.close || ''}
+                            onValueChange={(value) => handleDayWorkingHourChange(day.key, 'close', value)}
+                          >
+                            <SelectTrigger id={`close-${day.key}`}>
+                              <SelectValue placeholder="--:--" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {fullDayTimeOptions.map(time => (
+                                <SelectItem key={`close-${day.key}-${time}`} value={time}>{time}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+                     {formData.workingHours?.[day.key]?.isOff && <div className="md:col-start-2 md:col-span-2"></div>} {/* Placeholder for alignment */}
+                  </div>
+                ))}
+              </TabsContent>
+
 
               <TabsContent value="availability" className="space-y-8">
                  <section>
@@ -611,5 +740,3 @@ export default function EditBusinessPage() {
     </div>
   );
 }
-
-    
