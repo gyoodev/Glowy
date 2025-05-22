@@ -65,6 +65,18 @@ const initialHeroImages: HeroImage[] = [
     alt: 'Боядисване на коса във фризьорски салон',
     hint: 'hair coloring',
   },
+  {
+    id: 'hero7',
+    src: 'https://images.unsplash.com/photo-1605497788044-5a32c6ba005c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxNYXNzYWdlJTIwdGhlcmFweXxlbnwwfHx8fDE3NTUwNzY3ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Масажна терапия в спа център',
+    hint: 'massage therapy',
+  },
+  {
+    id: 'hero8',
+    src: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxTYWxvbiUyMGludGVyaW9yJTIwZGVzaWdufGVufDB8fHx8MTc1NTA3NjgxOHww&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Стилен интериор на козметичен салон',
+    hint: 'salon interior design',
+  },
 ];
 
 // Fisher-Yates shuffle algorithm
@@ -89,8 +101,9 @@ export default function SalonDirectoryPage() {
     maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
-  // Initialize with a static set of images for SSR/initial client render
+  // Initialize with a static set for SSR, shuffle on client
   const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(initialHeroImages.slice(0, 3));
+
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -118,7 +131,7 @@ export default function SalonDirectoryPage() {
 
     const interval = setInterval(() => {
       setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
-    }, 3000); // Change images every 3 seconds
+    }, 5000); // Change images every 5 seconds
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
@@ -132,12 +145,15 @@ export default function SalonDirectoryPage() {
   useEffect(() => {
     let result = [...salons];
 
+    // Sort by promotion status first
     result.sort((a, b) => {
       const isAPromoted = a.promotion && a.promotion.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
       const isBPromoted = b.promotion && b.promotion.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
 
       if (isAPromoted && !isBPromoted) return -1;
       if (!isAPromoted && isBPromoted) return 1;
+      // If both have same promotion status, you might want a secondary sort, e.g., by rating or name
+      // For now, maintain original relative order or add another sort criterion.
       return 0;
     });
 
@@ -163,8 +179,8 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) {
-          const salonHasMatchingService = (salon.services || []).some(service =>
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice < DEFAULT_MAX_PRICE) {
+           const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
           );
           if (!salonHasMatchingService) {
@@ -264,6 +280,8 @@ export default function SalonDirectoryPage() {
             onFilterChange={handleFilterChange}
             cities={allBulgarianCities}
             serviceTypes={uniqueServiceTypes}
+            initialMaxPrice={DEFAULT_MAX_PRICE}
+            initialMinRating={DEFAULT_MIN_RATING}
           />
         </aside>
 
