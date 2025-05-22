@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import type { Salon, WorkingHoursStructure, DayWorkingHours } from '@/types';
+import type { Salon, WorkingHoursStructure, DayWorkingHours, Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
@@ -22,10 +22,13 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { allBulgarianCities } from '@/lib/mock-data';
+import { allBulgarianCities, mockServices } from '@/lib/mock-data';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 
 
 const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
@@ -55,7 +58,6 @@ const daysOfWeek = [
   { key: 'sunday', label: 'Неделя' },
 ];
 
-// Default working hours structure
 const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) => {
   acc[day.key] = {
     open: day.key === 'sunday' ? '' : '09:00',
@@ -67,6 +69,38 @@ const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) 
   }
   return acc;
 }, {} as WorkingHoursStructure);
+
+const serviceSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Името на услугата е задължително."),
+  description: z.string().optional(),
+  price: z.coerce.number({ invalid_type_error: "Цената трябва да е число." }).min(0, "Цената трябва да е положително число."),
+  duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число." }).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
+});
+
+const editBusinessSchema = z.object({
+  name: z.string().min(1, 'Името на салона е задължително.'),
+  description: z.string().min(1, 'Описанието е задължително.'),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
+  phone: z.string().optional(),
+  email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
+  website: z.string().url({ message: "Невалиден URL адрес на уебсайт." }).optional().or(z.literal('')),
+  workingHours: z.record(z.string(), z.object({
+    open: z.string(),
+    close: z.string(),
+    isOff: z.boolean(),
+  })).optional(),
+  heroImage: z.string().optional(),
+  photos: z.array(z.string()).optional(),
+  newHeroImageUrl: z.string().optional(),
+  newGalleryPhotoUrl: z.string().optional(),
+  availability: z.record(z.string(), z.array(z.string())).optional(),
+  services: z.array(serviceSchema).optional(),
+});
+
+type EditBusinessFormValues = z.infer<typeof editBusinessSchema>;
 
 
 export default function EditBusinessPage() {
@@ -81,28 +115,37 @@ export default function EditBusinessPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
-  const [formData, setFormData] = useState<Partial<Salon> & { newHeroImageUrl?: string, newGalleryPhotoUrl?: string, workingHours?: WorkingHoursStructure }>({
-    name: '',
-    description: '',
-    address: '',
-    city: '',
-    priceRange: 'moderate',
-    phone: '',
-    email: '',
-    website: '',
-    workingHours: defaultWorkingHours,
-    heroImage: '',
-    photos: [],
-    newHeroImageUrl: '',
-    newGalleryPhotoUrl: '',
-    availability: {},
-  });
-
   const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const sortedBulgarianCities = useMemo(() => [...allBulgarianCities].sort((a, b) => a.localeCompare(b, 'bg')), []);
+
+  const form = useForm<EditBusinessFormValues>({
+    resolver: zodResolver(editBusinessSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      address: '',
+      city: '',
+      priceRange: 'moderate',
+      phone: '',
+      email: '',
+      website: '',
+      workingHours: defaultWorkingHours,
+      heroImage: '',
+      photos: [],
+      newHeroImageUrl: '',
+      newGalleryPhotoUrl: '',
+      availability: {},
+      services: [],
+    },
+  });
+
+  const { fields: serviceFields, append: appendService, remove: removeService } = useFieldArray({
+    control: form.control,
+    name: "services"
+  });
 
 
   useEffect(() => {
@@ -137,7 +180,6 @@ export default function EditBusinessPage() {
 
         let initialWorkingHours = { ...defaultWorkingHours };
         if (typeof businessData.workingHours === 'object' && businessData.workingHours !== null) {
-          // Merge fetched working hours with default structure to ensure all days are present
           for (const dayKey of daysOfWeek.map(d => d.key)) {
             if (businessData.workingHours[dayKey]) {
               initialWorkingHours[dayKey] = { ...defaultWorkingHours[dayKey], ...businessData.workingHours[dayKey] };
@@ -145,12 +187,12 @@ export default function EditBusinessPage() {
           }
         }
         
-        setFormData({
+        form.reset({
             name: businessData.name,
             description: businessData.description,
             address: businessData.address || '',
             city: businessData.city || '',
-            priceRange: businessData.priceRange,
+            priceRange: businessData.priceRange || 'moderate',
             phone: businessData.phone || '',
             email: businessData.email || '',
             website: businessData.website || '',
@@ -160,6 +202,7 @@ export default function EditBusinessPage() {
             newHeroImageUrl: businessData.heroImage || '', 
             newGalleryPhotoUrl: '',
             availability: businessData.availability || {},
+            services: businessData.services || [],
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
@@ -172,32 +215,17 @@ export default function EditBusinessPage() {
       setLoading(false);
     }
   };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { id, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [id]: value }));
-  };
-
-   const handleSelectChange = (id: keyof Salon, value: string) => {
-    setFormData((prevData) => ({ ...prevData, [id]: value }));
-  };
   
-  const handleHeroImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({...prev, newHeroImageUrl: e.target.value }));
-  };
-
   const handleAddGalleryPhotoUrl = () => {
-    if (formData.newGalleryPhotoUrl && formData.newGalleryPhotoUrl.trim() !== '') {
-      const newUrl = formData.newGalleryPhotoUrl.trim();
-      if (!(formData.photos || []).includes(newUrl)) {
-        setFormData(prev => ({
-          ...prev,
-          photos: [...(prev.photos || []), newUrl],
-          newGalleryPhotoUrl: '' 
-        }));
+    const newGalleryPhotoUrl = form.getValues('newGalleryPhotoUrl');
+    if (newGalleryPhotoUrl && newGalleryPhotoUrl.trim() !== '') {
+      const currentPhotos = form.getValues('photos') || [];
+      if (!currentPhotos.includes(newGalleryPhotoUrl.trim())) {
+        form.setValue('photos', [...currentPhotos, newGalleryPhotoUrl.trim()]);
+        form.setValue('newGalleryPhotoUrl', ''); // Clear input
       } else {
         toast({ title: 'Дублиран URL', description: 'Този URL вече е добавен в галерията.', variant: 'default' });
-        setFormData(prev => ({...prev, newGalleryPhotoUrl: ''}));
+        form.setValue('newGalleryPhotoUrl', '');
       }
     } else {
       toast({ title: 'Грешка', description: 'Моля, въведете валиден URL на снимка.', variant: 'destructive' });
@@ -205,10 +233,8 @@ export default function EditBusinessPage() {
   };
 
   const removeGalleryPhoto = (photoUrlToRemove: string) => {
-    setFormData(prev => ({
-      ...prev,
-      photos: (prev.photos || []).filter(url => url !== photoUrlToRemove)
-    }));
+    const currentPhotos = form.getValues('photos') || [];
+    form.setValue('photos', currentPhotos.filter(url => url !== photoUrlToRemove));
   };
 
   const handleAvailabilityDateSelect = (date: Date | undefined) => {
@@ -227,103 +253,64 @@ export default function EditBusinessPage() {
     }
 
     const dateKey = format(selectedAvailabilityDate, 'yyyy-MM-dd');
-    setFormData(prev => {
-      const currentTimes = prev.availability?.[dateKey] || [];
-      if (currentTimes.includes(newTimeForSelectedDate)) {
-        toast({ title: 'Дублиран час', description: 'Този час вече е добавен за избраната дата.', variant: 'default'});
-        return prev;
-      }
-      const updatedTimes = [...currentTimes, newTimeForSelectedDate].sort();
-      return {
-        ...prev,
-        availability: {
-          ...prev.availability,
-          [dateKey]: updatedTimes,
-        }
-      };
-    });
-    setNewTimeForSelectedDate(''); // Clear input after adding
+    const currentAvailability = form.getValues('availability') || {};
+    const currentTimes = currentAvailability[dateKey] || [];
+
+    if (currentTimes.includes(newTimeForSelectedDate)) {
+      toast({ title: 'Дублиран час', description: 'Този час вече е добавен за избраната дата.', variant: 'default'});
+      return;
+    }
+    const updatedTimes = [...currentTimes, newTimeForSelectedDate].sort();
+    form.setValue(`availability.${dateKey}`, updatedTimes);
+    setNewTimeForSelectedDate(''); 
   };
 
   const handleRemoveTimeSlot = (dateKey: string, timeToRemove: string) => {
-    setFormData(prev => {
-      const currentTimes = prev.availability?.[dateKey] || [];
-      const updatedTimes = currentTimes.filter(time => time !== timeToRemove);
-      const newAvailability = { ...prev.availability };
-      if (updatedTimes.length === 0) {
-        delete newAvailability[dateKey];
-      } else {
-        newAvailability[dateKey] = updatedTimes;
-      }
-      return {
-        ...prev,
-        availability: newAvailability,
-      };
-    });
+    const currentAvailability = form.getValues('availability') || {};
+    const currentTimes = currentAvailability[dateKey] || [];
+    const updatedTimes = currentTimes.filter(time => time !== timeToRemove);
+    
+    if (updatedTimes.length === 0) {
+      const newAvailability = { ...currentAvailability };
+      delete newAvailability[dateKey];
+      form.setValue('availability', newAvailability);
+    } else {
+      form.setValue(`availability.${dateKey}`, updatedTimes);
+    }
   };
   
   const handleRemoveAllTimesForDate = (dateKey: string) => {
-    setFormData(prev => {
-        const newAvailability = { ...prev.availability };
-        delete newAvailability[dateKey];
-        return {
-            ...prev,
-            availability: newAvailability,
-        };
-    });
-    if (selectedAvailabilityDate && format(selectedAvailabilityDate, 'yyyy-MM-dd') === dateKey) {
-        // If the currently selected date's availability was cleared, reflect this in UI potentially
-    }
+    const currentAvailability = form.getValues('availability') || {};
+    const newAvailability = { ...currentAvailability };
+    delete newAvailability[dateKey];
+    form.setValue('availability', newAvailability);
     toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
   };
 
-  const handleDayWorkingHourChange = (dayKey: string, field: 'open' | 'close', value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      workingHours: {
-        ...(prev.workingHours || defaultWorkingHours),
-        [dayKey]: {
-          ...(prev.workingHours?.[dayKey] || defaultWorkingHours[dayKey]),
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const handleDayIsOffChange = (dayKey: string, checked: boolean) => {
-    setFormData(prev => ({
-      ...prev,
-      workingHours: {
-        ...(prev.workingHours || defaultWorkingHours),
-        [dayKey]: {
-          ...(prev.workingHours?.[dayKey] || defaultWorkingHours[dayKey]),
-          isOff: checked,
-          // Clear times if marked as off, retain if marked as not off and times were previously set
-          open: checked ? '' : (prev.workingHours?.[dayKey]?.open || defaultWorkingHours[dayKey].open),
-          close: checked ? '' : (prev.workingHours?.[dayKey]?.close || defaultWorkingHours[dayKey].close),
-        },
-      },
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const onSubmit: SubmitHandler<EditBusinessFormValues> = async (data) => {
     if (!businessId || !business) return;
     setSaving(true);
 
     const dataToUpdate: Partial<Salon> = {
-        name: formData.name,
-        description: formData.description,
-        address: formData.address,
-        city: formData.city,
-        priceRange: formData.priceRange,
-        phone: formData.phone,
-        email: formData.email,
-        website: formData.website,
-        workingHours: formData.workingHours,
-        heroImage: formData.newHeroImageUrl?.trim() || formData.heroImage || '',
-        photos: formData.photos || [],
-        availability: formData.availability || {},
+        name: data.name,
+        description: data.description,
+        address: data.address,
+        city: data.city,
+        priceRange: data.priceRange,
+        phone: data.phone,
+        email: data.email,
+        website: data.website,
+        workingHours: data.workingHours,
+        heroImage: data.newHeroImageUrl?.trim() || data.heroImage || '',
+        photos: data.photos || [],
+        availability: data.availability || {},
+        services: data.services?.map(s => ({
+          id: s.id || `service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Ensure ID exists
+          name: s.name,
+          description: s.description || '',
+          price: Number(s.price),
+          duration: Number(s.duration)
+        })) || [],
     };
 
     try {
@@ -364,8 +351,9 @@ export default function EditBusinessPage() {
   const today = new Date();
   today.setHours(0,0,0,0);
 
+  const currentAvailability = form.watch('availability') || {};
   const availableDaysModifier = {
-    available: Object.keys(formData.availability || {}).filter(dateKey => (formData.availability?.[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
+    available: Object.keys(currentAvailability).filter(dateKey => (currentAvailability[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
   };
 
   return (
@@ -374,17 +362,18 @@ export default function EditBusinessPage() {
         <CardHeader>
           <CardTitle className="text-3xl font-bold flex items-center">
             <Edit className="mr-3 h-8 w-8 text-primary" />
-            Редактирай Салон: {business.name}
+            Редактирай Салон: {form.watch('name') || business.name}
           </CardTitle>
           <CardDescription>Актуализирайте информацията, снимките, услугите и наличността за Вашия салон.</CardDescription>
         </CardHeader>
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-6">
-                <TabsTrigger value="details">Детайли на Салона</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-4 mb-6"> {/* Updated for 4 tabs */}
+                <TabsTrigger value="details">Детайли</TabsTrigger>
+                <TabsTrigger value="servicesTab">Услуги</TabsTrigger> {/* New Tab for Services */}
                 <TabsTrigger value="workingHours">Работно Време</TabsTrigger>
-                <TabsTrigger value="availability">Управление на Наличността</TabsTrigger>
+                <TabsTrigger value="availability">Наличност</TabsTrigger>
               </TabsList>
 
               <TabsContent value="details" className="space-y-8">
@@ -393,11 +382,20 @@ export default function EditBusinessPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <Label htmlFor="name">Име на Салона</Label>
-                      <Input id="name" value={formData.name || ''} onChange={handleInputChange} required />
+                      <Controller
+                        name="name"
+                        control={form.control}
+                        render={({ field }) => <Input id="name" {...field} required />}
+                      />
+                      {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
                     </div>
-                    <div className="space-y-2">
+                     <div className="space-y-2">
                       <Label htmlFor="address">Адрес</Label>
-                      <Input id="address" value={formData.address || ''} onChange={handleInputChange} />
+                      <Controller
+                        name="address"
+                        control={form.control}
+                        render={({ field }) => <Input id="address" {...field} />}
+                      />
                     </div>
                     
                     <div className="space-y-2">
@@ -410,9 +408,9 @@ export default function EditBusinessPage() {
                             aria-expanded={cityPopoverOpen}
                             className="w-full justify-between font-normal"
                           >
-                            {formData.city
+                            {form.watch('city')
                               ? sortedBulgarianCities.find(
-                                  (city) => city === formData.city
+                                  (city) => city === form.watch('city')
                                 )
                               : "Изберете град..."}
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -429,14 +427,14 @@ export default function EditBusinessPage() {
                                     key={city}
                                     value={city}
                                     onSelect={(currentValue) => {
-                                      setFormData(prev => ({ ...prev, city: currentValue === formData.city ? "" : currentValue }));
+                                      form.setValue('city', currentValue === form.watch('city') ? "" : currentValue);
                                       setCityPopoverOpen(false);
                                     }}
                                   >
                                     <Check
                                       className={cn(
                                         "mr-2 h-4 w-4",
-                                        formData.city === city ? "opacity-100" : "opacity-0"
+                                        form.watch('city') === city ? "opacity-100" : "opacity-0"
                                       )}
                                     />
                                     {city}
@@ -451,36 +449,61 @@ export default function EditBusinessPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="phone">Телефон</Label>
-                      <Input id="phone" value={formData.phone || ''} onChange={handleInputChange} />
+                       <Controller
+                        name="phone"
+                        control={form.control}
+                        render={({ field }) => <Input id="phone" {...field} />}
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Имейл</Label>
-                      <Input id="email" type="email" value={formData.email || ''} onChange={handleInputChange} />
+                      <Controller
+                        name="email"
+                        control={form.control}
+                        render={({ field }) => <Input id="email" type="email" {...field} />}
+                      />
+                      {form.formState.errors.email && <p className="text-sm text-destructive">{form.formState.errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="website">Уебсайт</Label>
-                      <Input id="website" value={formData.website || ''} onChange={handleInputChange} />
+                      <Controller
+                        name="website"
+                        control={form.control}
+                        render={({ field }) => <Input id="website" {...field} />}
+                      />
+                       {form.formState.errors.website && <p className="text-sm text-destructive">{form.formState.errors.website.message}</p>}
                     </div>
                      <div className="space-y-2">
                         <Label htmlFor="priceRange">Ценови диапазон</Label>
-                        <Select
-                            value={formData.priceRange}
-                            onValueChange={(value) => handleSelectChange('priceRange', value as Salon['priceRange'])}
-                        >
-                            <SelectTrigger id="priceRange">
-                                <SelectValue placeholder="Изберете ценови диапазон" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="cheap">Евтино ($)</SelectItem>
-                                <SelectItem value="moderate">Умерено ($$)</SelectItem>
-                                <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <Controller
+                          name="priceRange"
+                          control={form.control}
+                          render={({ field }) => (
+                            <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                            >
+                                <SelectTrigger id="priceRange">
+                                    <SelectValue placeholder="Изберете ценови диапазон" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cheap">Евтино ($)</SelectItem>
+                                    <SelectItem value="moderate">Умерено ($$)</SelectItem>
+                                    <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                          )}
+                        />
                     </div>
                     
                     <div className="space-y-2 md:col-span-2">
                       <Label htmlFor="description">Описание</Label>
-                      <Textarea id="description" value={formData.description || ''} onChange={handleInputChange} required rows={5} />
+                       <Controller
+                        name="description"
+                        control={form.control}
+                        render={({ field }) => <Textarea id="description" {...field} required rows={5} />}
+                      />
+                      {form.formState.errors.description && <p className="text-sm text-destructive">{form.formState.errors.description.message}</p>}
                     </div>
                   </div>
                 </section>
@@ -489,16 +512,20 @@ export default function EditBusinessPage() {
                   <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
                   <div className="space-y-2">
                     <Label htmlFor="newHeroImageUrl">URL на главна снимка</Label>
-                    <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" value={formData.newHeroImageUrl || ''} onChange={handleHeroImageChange} />
-                    {formData.newHeroImageUrl && formData.newHeroImageUrl.trim() !== '' && (
+                    <Controller
+                      name="newHeroImageUrl"
+                      control={form.control}
+                      render={({ field }) => <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" {...field} />}
+                    />
+                    {form.watch('newHeroImageUrl') && form.watch('newHeroImageUrl')?.trim() !== '' && (
                       <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
-                        <Image src={formData.newHeroImageUrl} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
+                        <Image src={form.watch('newHeroImageUrl')!} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
                         <Button
                             type="button"
                             variant="destructive"
                             size="icon"
                             className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                            onClick={() => setFormData(prev => ({...prev, newHeroImageUrl: ''}))}
+                            onClick={() => form.setValue('newHeroImageUrl', '')}
                             title="Изчисти URL на главната снимка"
                           >
                             <Trash2 size={16} />
@@ -514,22 +541,20 @@ export default function EditBusinessPage() {
                     <div className="flex items-end gap-2">
                         <div className="flex-grow space-y-1">
                             <Label htmlFor="newGalleryPhotoUrl">URL на нова снимка за галерията</Label>
-                            <Input 
-                                id="newGalleryPhotoUrl" 
-                                type="text" 
-                                placeholder="https://example.com/gallery-image.jpg" 
-                                value={formData.newGalleryPhotoUrl || ''} 
-                                onChange={(e) => setFormData(prev => ({...prev, newGalleryPhotoUrl: e.target.value}))} 
-                            />
+                             <Controller
+                                name="newGalleryPhotoUrl"
+                                control={form.control}
+                                render={({ field }) => <Input id="newGalleryPhotoUrl" type="text" placeholder="https://example.com/gallery-image.jpg" {...field} />}
+                              />
                         </div>
                         <Button type="button" variant="outline" onClick={handleAddGalleryPhotoUrl} className="whitespace-nowrap">
                             <ImagePlus size={18} className="mr-2"/> Добави URL
                         </Button>
                     </div>
 
-                    {(formData.photos && formData.photos.length > 0) ? (
+                    {(form.watch('photos') && form.watch('photos')!.length > 0) ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {formData.photos.map((photoUrl, index) => (
+                        {form.watch('photos')!.map((photoUrl, index) => (
                           <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
                             <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail" />
                             <Button
@@ -552,57 +577,161 @@ export default function EditBusinessPage() {
                 </section>
               </TabsContent>
 
+              <TabsContent value="servicesTab" className="space-y-6">
+                <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
+                  <Briefcase className="mr-2 h-5 w-5 text-primary" />
+                  Управление на Услуги
+                </h3>
+                {serviceFields.map((item, index) => (
+                  <Card key={item.id} className="p-4 space-y-3 relative">
+                     {form.formState.errors.services?.[index]?.name && <p className="text-sm text-destructive -mt-2 mb-1">{form.formState.errors.services?.[index]?.name?.message}</p>}
+                    <div className="space-y-1">
+                      <Label htmlFor={`services.${index}.name`}>Име на услугата</Label>
+                      <Controller
+                        name={`services.${index}.name`}
+                        control={form.control}
+                        render={({ field }) => <Input id={`services.${index}.name`} {...field} />}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`services.${index}.description`}>Описание (по избор)</Label>
+                      <Controller
+                        name={`services.${index}.description`}
+                        control={form.control}
+                        render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} />}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label htmlFor={`services.${index}.price`}>Цена (лв.)</Label>
+                        <Controller
+                          name={`services.${index}.price`}
+                          control={form.control}
+                          render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} />}
+                        />
+                         {form.formState.errors.services?.[index]?.price && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.price?.message}</p>}
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor={`services.${index}.duration`}>Продължителност (мин.)</Label>
+                        <Controller
+                          name={`services.${index}.duration`}
+                          control={form.control}
+                          render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} />}
+                        />
+                        {form.formState.errors.services?.[index]?.duration && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.duration?.message}</p>}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      onClick={() => removeService(index)}
+                      className="absolute top-2 right-2 h-7 w-7"
+                      title="Премахни услугата"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </Card>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => appendService({ 
+                    id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Generate a temporary unique ID
+                    name: '', 
+                    description: '', 
+                    price: 0, 
+                    duration: 30 
+                  })}
+                  className="mt-4"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Добави Нова Услуга
+                </Button>
+                 {form.formState.errors.services && typeof form.formState.errors.services === 'object' && !Array.isArray(form.formState.errors.services) && form.formState.errors.services.root && (
+                  <p className="text-sm text-destructive mt-2">{form.formState.errors.services.root.message}</p>
+                )}
+              </TabsContent>
+
               <TabsContent value="workingHours" className="space-y-6">
                 <h3 className="text-xl font-semibold mb-4 border-b pb-2">Работно Време по Дни</h3>
                 {daysOfWeek.map(day => (
                   <div key={day.key} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-4 border rounded-md">
                     <Label className="font-medium md:col-span-1">{day.label}</Label>
                     <div className="flex items-center space-x-2 md:col-span-3">
-                       <Checkbox
-                        id={`isOff-${day.key}`}
-                        checked={formData.workingHours?.[day.key]?.isOff || false}
-                        onCheckedChange={(checked) => handleDayIsOffChange(day.key, !!checked)}
-                      />
+                       <Controller
+                          name={`workingHours.${day.key}.isOff`}
+                          control={form.control}
+                          render={({ field }) => (
+                            <Checkbox
+                              id={`isOff-${day.key}`}
+                              checked={field.value}
+                              onCheckedChange={(checked) => {
+                                field.onChange(checked);
+                                if (checked) {
+                                  form.setValue(`workingHours.${day.key}.open`, '');
+                                  form.setValue(`workingHours.${day.key}.close`, '');
+                                } else {
+                                  // Set default times if unchecked and previously off
+                                  form.setValue(`workingHours.${day.key}.open`, defaultWorkingHours[day.key].open);
+                                  form.setValue(`workingHours.${day.key}.close`, defaultWorkingHours[day.key].close);
+                                }
+                              }}
+                            />
+                          )}
+                        />
                       <Label htmlFor={`isOff-${day.key}`} className="text-sm">Почивен ден</Label>
                     </div>
                     
-                    {!formData.workingHours?.[day.key]?.isOff && (
+                    {!form.watch(`workingHours.${day.key}.isOff`) && (
                       <>
                         <div className="md:col-start-2 md:col-span-1">
                           <Label htmlFor={`open-${day.key}`} className="text-xs">Отваря в</Label>
-                          <Select
-                            value={formData.workingHours?.[day.key]?.open || ''}
-                            onValueChange={(value) => handleDayWorkingHourChange(day.key, 'open', value)}
-                          >
-                            <SelectTrigger id={`open-${day.key}`}>
-                              <SelectValue placeholder="--:--" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {fullDayTimeOptions.map(time => (
-                                <SelectItem key={`open-${day.key}-${time}`} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Controller
+                            name={`workingHours.${day.key}.open`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger id={`open-${day.key}`}>
+                                  <SelectValue placeholder="--:--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {fullDayTimeOptions.map(time => (
+                                    <SelectItem key={`open-${day.key}-${time}`} value={time}>{time}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
                         </div>
                         <div className="md:col-span-1">
                           <Label htmlFor={`close-${day.key}`} className="text-xs">Затваря в</Label>
-                          <Select
-                            value={formData.workingHours?.[day.key]?.close || ''}
-                            onValueChange={(value) => handleDayWorkingHourChange(day.key, 'close', value)}
-                          >
-                            <SelectTrigger id={`close-${day.key}`}>
-                              <SelectValue placeholder="--:--" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {fullDayTimeOptions.map(time => (
-                                <SelectItem key={`close-${day.key}-${time}`} value={time}>{time}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                           <Controller
+                            name={`workingHours.${day.key}.close`}
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger id={`close-${day.key}`}>
+                                  <SelectValue placeholder="--:--" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {fullDayTimeOptions.map(time => (
+                                    <SelectItem key={`close-${day.key}-${time}`} value={time}>{time}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
                         </div>
                       </>
                     )}
-                     {formData.workingHours?.[day.key]?.isOff && <div className="md:col-start-2 md:col-span-2"></div>} {/* Placeholder for alignment */}
+                     {form.watch(`workingHours.${day.key}.isOff`) && <div className="md:col-start-2 md:col-span-2"></div>}
                   </div>
                 ))}
               </TabsContent>
@@ -653,6 +782,7 @@ export default function EditBusinessPage() {
                                 onValueChange={(value) => {
                                   if (value) setNewTimeForSelectedDate(value);
                                 }}
+                                value={newTimeForSelectedDate}
                               >
                                 <SelectTrigger id="predefinedTimeSlot" className="mt-1">
                                   <SelectValue placeholder="Избери от списъка" />
@@ -685,12 +815,11 @@ export default function EditBusinessPage() {
                             </div>
                           </div>
                         </div>
-
-                        {(formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.length || 0) > 0 ? (
+                        {currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')] && currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')].length > 0 ? (
                           <div className="space-y-2 pt-3">
                             <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
                             <div className="flex flex-wrap gap-2">
-                              {formData.availability?.[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
+                              {currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
                                 <Badge key={time} variant="secondary" className="text-base py-1 px-2">
                                   {time}
                                   <Button 
@@ -731,8 +860,8 @@ export default function EditBusinessPage() {
             </Tabs>
           </CardContent>
           <CardFooter className="border-t pt-6">
-            <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading}>
-              {saving ? 'Запазване...' : 'Запази Промените'}
+            <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting}>
+              {saving || form.formState.isSubmitting ? 'Запазване...' : 'Запази Промените'}
             </Button>
           </CardFooter>
         </form>
