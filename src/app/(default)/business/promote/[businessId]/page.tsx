@@ -219,7 +219,7 @@ export default function PromoteBusinessPage() {
         <CardHeader>
           <CardTitle className="text-xl flex items-center">
             <CheckCircle className={`mr-2 h-5 w-5 ${isCurrentlyPromoted ? 'text-green-500' : 'text-muted-foreground'}`} />
-            Текущ Статус на Промоцията
+            Статус на обекта
           </CardTitle>
         </CardHeader>
         <CardContent>
