@@ -56,12 +56,6 @@ export function Header() {
     }
   };
 
-  // const myAccountLinkMobile = ( // This was the button to be removed
-  //    <Button variant="ghost" asChild className="justify-start">
-  //       <Link href="/account">Профил</Link>
-  //   </Button>
-  // );
-
  const businessManageLinkMobile = (
     <Button variant="ghost" asChild className="justify-start">
       <Link href="/business/manage">Управление на Бизнеса</Link>
@@ -114,7 +108,6 @@ export function Header() {
               <Link href={item.href}>{item.label}</Link>
             </Button>
           ))}
-          {/* Profile link removed from main nav as per previous request */}
           {userRole === 'admin' && adminPanelLinkDesktop}
           {userRole === 'business' && businessManageLinkDesktop}
         </nav>
@@ -131,9 +124,7 @@ export function Header() {
                   <User className="mr-2 h-4 w-4" /> Профил
                 </Link>
               </Button>
-              <Button variant="ghost" onClick={handleLogout}>
-                Изход
-              </Button>
+              {/* Logout button removed from desktop header */}
             </>
           ) : (
             <>
@@ -160,7 +151,6 @@ export function Header() {
                     <Link href={item.href}>{item.label}</Link>
                   </Button>
                 ))}
-                {/* {isLoggedIn && myAccountLinkMobile}  <- This line is removed */}
                 {userRole === 'business' && businessManageLinkMobile}
                 {userRole === 'admin' && adminPanelLinkMobile}
                 <hr className="my-2"/>
@@ -171,9 +161,7 @@ export function Header() {
                             <User className="mr-2 h-4 w-4" /> Профил
                         </Link>
                     </Button>
-                    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-red-500 hover:text-red-600">
-                        Изход
-                    </Button>
+                    {/* Logout button removed from mobile menu */}
                   </>
                 ) : (
                   <>
