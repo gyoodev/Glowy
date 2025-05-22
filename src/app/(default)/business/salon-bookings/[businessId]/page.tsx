@@ -80,13 +80,22 @@ export default function SalonBookingsPage() {
         );
         const bookingsSnapshot = await getDocs(bookingsQuery);
         const fetchedBookings = bookingsSnapshot.docs.map((bookingDoc) => {
-          const bookingData = bookingDoc.data() as Omit<Booking, 'id'>;
+          const data = bookingDoc.data(); // Raw data
           return {
             id: bookingDoc.id,
-            ...bookingData,
-            clientName: bookingData.clientName || 'Клиент', 
-            clientEmail: bookingData.clientEmail || 'Няма имейл',
-            clientPhoneNumber: bookingData.clientPhoneNumber || 'Няма номер',
+            salonId: data.salonId,
+            salonName: data.salonName,
+            serviceId: data.serviceId,
+            serviceName: data.serviceName,
+            userId: data.userId,
+            date: data.date,
+            time: data.time,
+            status: data.status as Booking['status'],
+            createdAt: data.createdAt,
+            // Ensure a meaningful fallback if clientName is empty or undefined from Firestore
+            clientName: data.clientName && String(data.clientName).trim() !== '' ? String(data.clientName) : 'Клиент',
+            clientEmail: data.clientEmail && String(data.clientEmail).trim() !== '' ? String(data.clientEmail) : 'Няма имейл',
+            clientPhoneNumber: data.clientPhoneNumber && String(data.clientPhoneNumber).trim() !== '' ? String(data.clientPhoneNumber) : 'Няма номер',
           } as Booking;
         });
 
@@ -238,8 +247,8 @@ export default function SalonBookingsPage() {
                     <TableCell className="font-medium">{booking.serviceName}</TableCell>
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
-                    <TableCell>{booking.clientName || 'N/A'}</TableCell>
-                    <TableCell>{booking.clientPhoneNumber || 'Няма номер'}</TableCell>
+                    <TableCell>{booking.clientName}</TableCell>
+                    <TableCell>{booking.clientPhoneNumber}</TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
