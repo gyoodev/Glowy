@@ -9,7 +9,7 @@ import type { UserProfile, Service, Booking } from '@/types'; // Ensure Service 
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
+  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M", // Reverted to hardcoded for now
   authDomain: "glowy-gyoodev.firebaseapp.com",
   projectId: "glowy-gyoodev",
   storageBucket: "glowy-gyoodev.firebasestorage.app",
@@ -47,11 +47,14 @@ export const createBooking = async (bookingDetails: {
   service: Service;
   date: string;
   time: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhoneNumber: string;
 }) => {
   try {
     const bookingDataForFirestore = {
       salonId: bookingDetails.salonId,
-      salonName: bookingDetails.salonName, // Storing salonName
+      salonName: bookingDetails.salonName,
       userId: bookingDetails.userId,
       serviceId: bookingDetails.service.id,
       serviceName: bookingDetails.service.name,
@@ -59,6 +62,9 @@ export const createBooking = async (bookingDetails: {
       time: bookingDetails.time,
       status: 'confirmed', // Default status
       createdAt: Timestamp.fromDate(new Date()),
+      clientName: bookingDetails.clientName,
+      clientEmail: bookingDetails.clientEmail,
+      clientPhoneNumber: bookingDetails.clientPhoneNumber,
     };
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
@@ -72,15 +78,13 @@ export const createBooking = async (bookingDetails: {
 // Function to get bookings for a specific user
 export const getUserBookings = async (userId: string): Promise<Booking[]> => {
   const bookings: Booking[] = [];
-  // Example: exclude cancelled, order by creation date descending
   const q = query(
     collection(firestore, 'bookings'),
-    where('userId', '==', userId)
-    // orderBy('createdAt', 'desc') // This would require a composite index if 'status' is also filtered with inequality
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc') 
   );
   const querySnapshot = await getDocs(q);
   querySnapshot.forEach((doc) => {
-    // Ensure the fetched data conforms to the Booking type
     const data = doc.data();
     const booking: Booking = {
       id: doc.id,
@@ -88,10 +92,14 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       salonName: data.salonName,
       serviceId: data.serviceId,
       serviceName: data.serviceName,
+      userId: data.userId,
       date: data.date,
       time: data.time,
-      status: data.status as Booking['status'], // Type assertion for status
-      // Optionally map other fields if they exist and are part of Booking type
+      status: data.status as Booking['status'], 
+      clientName: data.clientName,
+      clientEmail: data.clientEmail,
+      clientPhoneNumber: data.clientPhoneNumber,
+      createdAt: data.createdAt,
     };
     bookings.push(booking);
   });
@@ -109,20 +117,19 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     const userDocSnap = await getDoc(userDocRef);
     if (userDocSnap.exists()) {
       const data = userDocSnap.data();
-      // Ensure the data conforms to UserProfile, especially nested objects
       return {
         id: userDocSnap.id,
-        name: data.name || data.displayName || '', // Handle potential variations
+        name: data.name || data.displayName || '', 
         email: data.email || '',
         role: data.role,
-        userId: data.userId || userId, // Ensure userId field exists
+        userId: data.userId || userId, 
         profilePhotoUrl: data.profilePhotoUrl,
+        phoneNumber: data.phoneNumber,
         preferences: {
           favoriteServices: data.preferences?.favoriteServices || [],
           priceRange: data.preferences?.priceRange || '',
           preferredLocations: data.preferences?.preferredLocations || [],
         },
-        // Add any other fields from UserProfile type with defaults if necessary
       } as UserProfile;
     } else {
       console.log(`No profile found for UID: ${userId} in getUserProfile.`);
@@ -130,7 +137,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     }
   } catch (error) {
     console.error('Error fetching user profile by UID (getUserProfile):', error);
-    return null; // Return null on error instead of throwing
+    return null; 
   }
 };
 
@@ -154,6 +161,7 @@ export const getUserProfileByEmail = async (email: string): Promise<UserProfile 
         role: data.role,
         userId: data.userId || userDoc.id,
         profilePhotoUrl: data.profilePhotoUrl,
+        phoneNumber: data.phoneNumber,
         preferences: {
           favoriteServices: data.preferences?.favoriteServices || [],
           priceRange: data.preferences?.priceRange || '',
@@ -173,7 +181,6 @@ export const getUserProfileByEmail = async (email: string): Promise<UserProfile 
         "Check the Firebase console for a link to create it."
         );
     }
-    // throw error; // Consider returning null instead of throwing for robustness in calling components
     return null;
   }
 };
@@ -207,4 +214,4 @@ export const getBookingStatus = async (bookingId: string) => {
     throw error;
   }
 };
-export { app, auth, analytics }; // firestore is already initialized and exported by getFirestore(app)
+export { app, auth, analytics, firestore };

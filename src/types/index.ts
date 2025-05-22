@@ -32,6 +32,8 @@ export interface Promotion {
   packageId?: string; // e.g., '7days', '30days'
   purchasedAt?: string; // ISO string date
   packageName?: string; // e.g., "7 Дни Промоция"
+  paymentMethod?: 'paypal' | 'stripe' | 'revolut' | 'other'; // Added for tracking
+  transactionId?: string; // Added for tracking
 }
 
 export interface Salon {
@@ -73,6 +75,7 @@ export interface UserProfile {
   };
   userId: string; // Firebase Auth UID
   displayName?: string; // From Firebase Auth or user input
+  phoneNumber?: string;
 }
 
 export interface Booking {
@@ -88,4 +91,5 @@ export interface Booking {
   createdAt?: any; // For Firestore Timestamp
   clientName: string;
   clientEmail: string;
+  clientPhoneNumber: string;
 }

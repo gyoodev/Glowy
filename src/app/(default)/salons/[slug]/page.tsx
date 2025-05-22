@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking, auth } from '@/lib/firebase';
+import { createBooking, auth, getUserProfile } from '@/lib/firebase'; // Added getUserProfile
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,22 +40,21 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
     return 'Няма предоставено работно време';
   }
   if (typeof workingHours === 'string') {
-    // Attempt to parse if it's a JSON string (legacy or simple format)
     try {
       const parsed = JSON.parse(workingHours);
       if (typeof parsed === 'object' && parsed !== null) {
         workingHours = parsed as WorkingHoursStructure;
       } else {
-        return workingHours; // Return as is if not a parsable object
+        return workingHours; 
       }
     } catch (e) {
-      return workingHours; // Return as is if not JSON
+      return workingHours; 
     }
   }
 
   const parts: string[] = [];
   daysOrder.forEach(dayKey => {
-    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined; // Add definite assignment assertion
+    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined; 
     if (dayInfo) {
       if (dayInfo.isOff || !dayInfo.open || !dayInfo.close) {
         parts.push(`${dayTranslations[dayKey] || dayKey}: Почивен ден`);
@@ -63,7 +62,6 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
         parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
       }
     } else {
-      // If a day is missing from the structure, assume it's a day off or info not provided
       parts.push(`${dayTranslations[dayKey] || dayKey}: Няма информация`);
     }
   });
@@ -79,7 +77,7 @@ export default function SalonProfilePage() {
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [userReviews, setUserReviews] = useState<Review[]>([]); // User's own reviews for this salon
+  const [userReviews, setUserReviews] = useState<Review[]>([]); 
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -191,12 +189,9 @@ export default function SalonProfilePage() {
       }
 
       try {
-        const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data() as UserProfile;
-          setUserRole(userData.role || null);
+        const userProfileData = await getUserProfile(auth.currentUser.uid);
+        if (userProfileData) {
+          setUserRole(userProfileData.role || null);
           setIsSalonOwner(salon.ownerId === auth.currentUser.uid);
         } else {
           console.warn("[SalonProfilePage] User document not found for current user:", auth.currentUser.uid);
@@ -246,7 +241,7 @@ export default function SalonProfilePage() {
       fetchSalonReviews();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salon?.id, firestore]); // salon?.id will re-trigger if salon object identity changes
+  }, [salon?.id, firestore]); 
 
   const fetchUserReviews = async () => {
     if (!auth.currentUser || !salon?.id) {
@@ -334,6 +329,10 @@ export default function SalonProfilePage() {
       const userId = auth.currentUser.uid;
       const clientName = auth.currentUser.displayName || 'Клиент';
       const clientEmail = auth.currentUser.email || 'Няма имейл';
+      
+      const userProfileData = await getUserProfile(userId);
+      const clientPhoneNumber = userProfileData?.phoneNumber || 'Няма номер';
+
 
       await createBooking({
         salonId: salon.id,
@@ -350,6 +349,7 @@ export default function SalonProfilePage() {
         time: bookingTime,
         clientName: clientName,
         clientEmail: clientEmail,
+        clientPhoneNumber: clientPhoneNumber,
       });
 
       toast({
@@ -361,7 +361,7 @@ export default function SalonProfilePage() {
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour after booking
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); 
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -431,10 +431,8 @@ export default function SalonProfilePage() {
 
       if (!reviewerName) {
         try {
-          const userProfileDocRef = doc(firestore, 'users', userId);
-          const userProfileDocSnap = await getDoc(userProfileDocRef);
-          if (userProfileDocSnap.exists()) {
-            const userProfileData = userProfileDocSnap.data() as UserProfile;
+          const userProfileData = await getUserProfile(userId);
+          if (userProfileData) {
             reviewerName = userProfileData.displayName || userProfileData.name;
           }
         } catch (profileError) {
@@ -455,19 +453,15 @@ export default function SalonProfilePage() {
       };
 
       const docRef = await addDoc(collection(firestore, 'reviews'), newReviewData);
-      const newReviewWithId = { ...newReviewData, id: docRef.id };
+      const newReviewWithId = { ...newReviewData, id: docRef.id } as Review;
 
-      // Update local state for reviews immediately
       const updatedReviews = [...displayedReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setDisplayedReviews(updatedReviews);
       
-      // Re-fetch user-specific reviews if the new review is by the current user
       if(userId === auth.currentUser.uid) {
           setUserReviews(prevUserReviews => [...prevUserReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
 
-
-      // Update salon's average rating in Firestore and locally
       if (updatedReviews.length > 0) {
         const totalRating = updatedReviews.reduce((acc, rev) => acc + rev.rating, 0);
         const newAverageRating = totalRating / updatedReviews.length;
@@ -737,6 +731,3 @@ export default function SalonProfilePage() {
     </div>
   );
 }
-
-
-    

@@ -81,12 +81,12 @@ export default function SalonBookingsPage() {
         const bookingsSnapshot = await getDocs(bookingsQuery);
         const fetchedBookings = bookingsSnapshot.docs.map((bookingDoc) => {
           const bookingData = bookingDoc.data() as Omit<Booking, 'id'>;
-          // clientName and clientEmail are now part of the booking document
           return {
             id: bookingDoc.id,
             ...bookingData,
-            clientName: bookingData.clientName || 'Клиент', // Fallback if somehow still missing
-            clientEmail: bookingData.clientEmail || 'Няма имейл', // Fallback
+            clientName: bookingData.clientName || 'Клиент', 
+            clientEmail: bookingData.clientEmail || 'Няма имейл',
+            clientPhoneNumber: bookingData.clientPhoneNumber || 'Няма номер',
           } as Booking;
         });
 
@@ -146,7 +146,7 @@ export default function SalonBookingsPage() {
         <Skeleton className="h-8 w-1/3 mb-2" />
         <Skeleton className="h-6 w-1/2 mb-6" />
         <Card>
-          <CardContent className="pt-6"> {/* Added pt-6 for consistency if CardHeader is missing */}
+          <CardContent className="pt-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -228,7 +228,7 @@ export default function SalonBookingsPage() {
                   <TableHead>Дата</TableHead>
                   <TableHead>Час</TableHead>
                   <TableHead>Клиент</TableHead>
-                  <TableHead>Имейл на клиент</TableHead>
+                  <TableHead>Телефонен номер</TableHead>
                   <TableHead>Статус</TableHead>
                 </TableRow>
               </TableHeader>
@@ -239,7 +239,7 @@ export default function SalonBookingsPage() {
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
                     <TableCell>{booking.clientName || 'N/A'}</TableCell>
-                    <TableCell>{booking.clientEmail || 'N/A'}</TableCell>
+                    <TableCell>{booking.clientPhoneNumber || 'Няма номер'}</TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
