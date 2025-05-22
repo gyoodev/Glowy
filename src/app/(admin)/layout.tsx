@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -19,25 +18,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    setIsLoading(true); // Set loading to true at the start of the check
+    setIsLoading(true);
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
         if (user) {
-          toast({ title: 'Проверка на потребител', description: 'Потребителят е удостоверен, проверка на ролята...' });
+          toast({ title: 'Проверка на потребител (AdminLayout)', description: 'Потребителят е удостоверен, проверка на ролята...' });
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
-            toast({ title: 'Достъп разрешен', description: 'Потребителят е администратор.', variant: 'default' });
+            toast({ title: 'Достъп разрешен (AdminLayout)', description: 'Потребителят е администратор.', variant: 'default' });
             setIsAdmin(true);
           } else if (profile) {
             toast({
-              title: 'Достъп отказан',
+              title: 'Достъп отказан (AdminLayout)',
               description: `Ролята на потребителя е '${profile.role || 'недефинирана'}'. Необходима е роля 'admin'. Пренасочване към началната страница.`,
               variant: 'destructive',
             });
             router.push('/');
           } else {
             toast({
-              title: 'Грешка при извличане на профил',
+              title: 'Грешка при извличане на профил (AdminLayout)',
               description: 'Не може да се зареди потребителският профил. Пренасочване към началната страница.',
               variant: 'destructive',
             });
@@ -45,7 +44,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           }
         } else {
           toast({
-            title: 'Необходимо е удостоверяване',
+            title: 'Необходимо е удостоверяване (AdminLayout)',
             description: 'Потребителят не е удостоверен. Пренасочване към страницата за вход.',
             variant: 'default',
           });
@@ -54,27 +53,29 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       } catch (error) {
         console.error('Грешка при проверка на админ права в AdminLayout:', error);
         toast({
-          title: 'Грешка при проверка на правата',
+          title: 'Грешка при проверка на правата (AdminLayout)',
           description: 'Възникна грешка при опит за валидиране на вашите права. Пренасочване към началната страница.',
           variant: 'destructive',
         });
         router.push('/');
       } finally {
-        setIsLoading(false); // Ensure loading is set to false after all checks
+        setIsLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [router, toast]); // Added toast as dependency because it's used
+  }, [router, toast]);
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
   }
 
   if (!isAdmin) {
-    // This state should ideally be covered by the redirect in useEffect,
-    // but it's a good fallback. The toasts in useEffect should give more context.
-    return <div className="flex justify-center items-center h-screen text-red-500">Проверка на достъпа...</div>;
+    // The useEffect should have handled the redirect.
+    // Returning null here to prevent rendering the admin layout further if not authorized.
+    // The user should see a redirect or the destination page from the redirect.
+    // The toasts from useEffect should provide clues.
+    return null;
   }
 
   return (
