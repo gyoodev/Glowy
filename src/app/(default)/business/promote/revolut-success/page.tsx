@@ -22,11 +22,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 
 
 export default function RevolutSuccessPage() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const firestore = getFirestore();
-    const { toast } = useToast();
-
+    const [initialized, setInitialized] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState<'verifying' | 'success' | 'failed'>('verifying');
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -34,6 +30,13 @@ export default function RevolutSuccessPage() {
     useEffect(() => {
         const orderId = searchParams.get('order_id');
         const salonId = searchParams.get('salonId');
+
+        // Access hooks and client-side APIs only after the component has mounted
+        const searchParams = useSearchParams();
+        const router = useRouter();
+        const firestore = getFirestore();
+        const { toast } = useToast();
+
         const packageId = searchParams.get('packageId'); // Assuming you pass packageId back
 
         if (!orderId || !salonId || !packageId) {
@@ -149,7 +152,7 @@ export default function RevolutSuccessPage() {
         return () => unsubscribe();
 
 
-    }, [searchParams, firestore, toast]);
+    }, [searchParams]); // Depend on searchParams to re-run if they change
 
     return (
         <div className="container mx-auto py-10 px-6 text-center">
