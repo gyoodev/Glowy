@@ -21,6 +21,47 @@ const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MIN_PRICE = 0;
 const DEFAULT_MAX_PRICE = 500;
 
+interface HeroImage {
+  src: string;
+  alt: string;
+  hint: string;
+  priority?: boolean;
+}
+
+const initialHeroImages: HeroImage[] = [
+  {
+    src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Интериор на модерен бръснарски салон',
+    hint: 'barber salon',
+    priority: true, // Main image is initially prioritized
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Близък план на инструменти в студио за маникюр',
+    hint: 'nail salon',
+  },
+  {
+    src: 'https://images.unsplash.com/photo-1595475693741-b445b025aec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxIYWlyJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzUwM3ww&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Стилист работещ във фризьорски салон',
+    hint: 'hair studio',
+  },
+];
+
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  // Ensure the first image (intended for the large slot) always gets priority if it lands there
+  if (shuffled.length > 0) {
+    shuffled.forEach((img, index) => img.priority = index === 0);
+  }
+  return shuffled;
+}
+
+
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
@@ -32,6 +73,7 @@ export default function SalonDirectoryPage() {
     maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [heroImages, setHeroImages] = useState<HeroImage[]>(initialHeroImages);
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -51,6 +93,9 @@ export default function SalonDirectoryPage() {
       setIsLoading(false);
     };
     fetchSalons();
+
+    // Shuffle images on client mount
+    setHeroImages(shuffleArray(initialHeroImages));
   }, []);
 
 
@@ -93,7 +138,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) {
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { // Only apply price filter if it's not the default "any price"
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -132,41 +177,43 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          <div className="relative z-10 md:col-span-1 space-y-4">
-            <div>
-              <Image
-                src="https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080"
-                alt="Интериор на фризьорски или бръснарски салон"
-                width={560}
-                height={320}
-                className="w-full h-auto object-cover rounded-lg shadow-xl"
-                data-ai-hint="barber salon"
-                priority
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
+          {heroImages.length >= 3 && (
+            <div className="relative z-10 md:col-span-1 space-y-4">
+              <div> {/* Large image slot */}
                 <Image
-                  src="https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080"
-                  alt="Студио за маникюр"
-                  width={270}
-                  height={270}
+                  src={heroImages[0].src}
+                  alt={heroImages[0].alt}
+                  width={560}
+                  height={320}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="nail salon"
+                  data-ai-hint={heroImages[0].hint}
+                  priority={heroImages[0].priority}
                 />
               </div>
-              <div>
-                <Image
-                  src="https://images.unsplash.com/photo-1595475693741-b445b025aec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxIYWlyJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzUwM3ww&ixlib=rb-4.1.0&q=80&w=1080"
-                  alt="Фризьорски салон"
-                  width={270}
-                  height={270}
-                  className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="hair studio"
-                />
+              <div className="grid grid-cols-2 gap-4"> {/* Small image slots */}
+                <div>
+                  <Image
+                    src={heroImages[1].src}
+                    alt={heroImages[1].alt}
+                    width={270}
+                    height={270}
+                    className="w-full h-auto object-cover rounded-lg shadow-xl"
+                    data-ai-hint={heroImages[1].hint}
+                  />
+                </div>
+                <div>
+                  <Image
+                    src={heroImages[2].src}
+                    alt={heroImages[2].alt}
+                    width={270}
+                    height={270}
+                    className="w-full h-auto object-cover rounded-lg shadow-xl"
+                    data-ai-hint={heroImages[2].hint}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </header>
 
