@@ -44,7 +44,6 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
-    "dotenv": "^16.5.0",
     "firebase": "^11.7.3",
     "firebase-admin": "^13.4.0",
     "genkit": "^1.8.0",
@@ -55,8 +54,7 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
-    "recharts": "^2.15.1",
-    "revolut-sdk": "^0.4.4",
+    "react-paypal-js": "^0.0.1-security",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.24.2"
