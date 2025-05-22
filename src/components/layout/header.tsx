@@ -50,7 +50,7 @@ export function Header() {
       if (typeof window !== 'undefined') {
         localStorage.removeItem('isUserLoggedIn');
       }
-      setUserRole(null); // Explicitly set role to null on logout
+      setUserRole(null); 
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -99,7 +99,7 @@ export function Header() {
   if (isLoading) {
     return (
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center">
+            <div className="container flex h-16 items-center px-6">
                  <div className="mr-6 flex items-center space-x-2">
                     <AppIcon className="h-6 w-6 text-primary" />
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
@@ -112,7 +112,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 items-center">
+      <div className="container flex h-16 items-center px-6">
         <Link href="/" className="mr-6 flex items-center space-x-2">
           <AppIcon className="h-6 w-6 text-primary" />
           <span className="font-bold sm:inline-block text-lg">Glowy</span>
@@ -121,7 +121,7 @@ export function Header() {
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
           {navItems.map((item) => {
             if (item.href === '/recommendations' && !isLoggedIn) {
-              return null; // Hide AI Recommendations for guests
+              return null; 
             }
             return (
               <Button key={item.label} variant="ghost" asChild>
@@ -168,7 +168,7 @@ export function Header() {
               <nav className="flex flex-col space-y-2 mt-6">
                 {navItems.map((item) => {
                   if (item.href === '/recommendations' && !isLoggedIn) {
-                    return null; // Hide AI Recommendations for guests in mobile
+                    return null; 
                   }
                   return (
                     <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3">
@@ -204,4 +204,3 @@ export function Header() {
     </header>
   );
 }
-
