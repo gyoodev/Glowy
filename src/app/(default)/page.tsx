@@ -6,7 +6,8 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { Input } from '@/components/ui/input';
-import { Search, MapPin, VenetianMask } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react'; // Removed VenetianMask
+import Image from 'next/image'; // Added Image import
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -15,8 +16,8 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
-const DEFAULT_MIN_PRICE = 0; // Corresponds to FilterSidebar
-const DEFAULT_MAX_PRICE = 500; // Corresponds to FilterSidebar
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500;
 
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -26,7 +27,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    maxPrice: DEFAULT_MAX_PRICE, // Initialize with the default max, meaning "any price"
+    maxPrice: DEFAULT_MAX_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -81,7 +82,6 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's different from the default "any price" value
         if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE) {
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
@@ -102,14 +102,57 @@ export default function SalonDirectoryPage() {
 
   return (
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-12 text-center">
-        <h1 className="text-5xl font-bold tracking-tight text-foreground mb-4 flex items-center justify-center">
-          <VenetianMask className="w-12 h-12 mr-3 text-primary" />
-          Намерете Вашия Перфектен Салон
-        </h1>
-        <p className="text-xl text-muted-foreground">
-          Открийте най-добрите салони за красота и услуги близо до Вас.
-        </p>
+      <header className="mb-16 py-12 sm:py-16 md:py-20">
+        <div className="grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
+          {/* Text Content */}
+          <div className="text-center md:text-left">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
+              Намерете Вашия Перфектен Салон
+            </h1>
+            <p className="text-lg sm:text-xl text-muted-foreground mb-8">
+              Открийте най-добрите салони за красота и услуги близо до Вас.
+            </p>
+            {/* Optional: Call to action button if desired */}
+            {/* <Button size="lg" className="text-lg px-8 py-3">Разгледайте Салони</Button> */}
+          </div>
+
+          {/* Image Column */}
+          <div className="md:col-span-1 space-y-4">
+            <div>
+              <Image
+                src="https://placehold.co/560x320.png"
+                alt="Луксозен интериор на салон"
+                width={560}
+                height={320}
+                className="w-full h-auto object-cover rounded-lg shadow-xl"
+                data-ai-hint="salon interior"
+                priority
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Image
+                  src="https://placehold.co/270x270.png"
+                  alt="Модерна прическа"
+                  width={270}
+                  height={270}
+                  className="w-full h-auto object-cover rounded-lg shadow-xl"
+                  data-ai-hint="hair styling"
+                />
+              </div>
+              <div>
+                <Image
+                  src="https://placehold.co/270x270.png"
+                  alt="Красив маникюр"
+                  width={270}
+                  height={270}
+                  className="w-full h-auto object-cover rounded-lg shadow-xl"
+                  data-ai-hint="manicure nails"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </header>
 
       <div className="mb-8 max-w-2xl mx-auto">
