@@ -18,8 +18,8 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0; // Default min price (0 for any)
-const DEFAULT_MAX_PRICE = 500; // Default max price (e.g., 500 for any)
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500;
 
 
 interface HeroImage {
@@ -39,17 +39,17 @@ const staticHeroImages: HeroImage[] = [
     hint: 'barber salon',
     priority: true,
   },
-  {
-    id: 'hero2',
-    src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Близък план на инструменти в студио за маникюр',
-    hint: 'nail salon',
-  },
-  {
-    id: 'hero3',
+  { // This will now be the "hair studio" image
+    id: 'hero3', // Keep original ID with the image data
     src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Стилист работещ във фризьорски салон',
     hint: 'hair studio',
+  },
+  { // This will now be the "nail salon" image
+    id: 'hero2', // Keep original ID with the image data
+    src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Близък план на инструменти в студио за маникюр',
+    hint: 'nail salon',
   },
 ];
 
@@ -58,11 +58,11 @@ export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filters, setFilters] = useState<Record<string, any>>({
+   const [filters, setFilters] = useState<Record<string, any>>({
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE, // Initialize with DEFAULT_MIN_PRICE for "any"
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -128,7 +128,6 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's not the default "any price" (0)
         if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE ) {
            const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
