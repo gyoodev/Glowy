@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import type { Salon, WorkingHoursStructure, DayWorkingHours, Service } from '@/types';
+import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -71,7 +71,7 @@ const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) 
 }, {} as WorkingHoursStructure);
 
 const serviceSchema = z.object({
-  id: z.string(),
+  id: z.string().optional(), // ID can be optional if it's generated or comes from mockServices
   name: z.string().min(1, "Името на услугата е задължително."),
   description: z.string().optional(),
   price: z.coerce.number({ invalid_type_error: "Цената трябва да е число." }).min(0, "Цената трябва да е положително число."),
@@ -97,7 +97,7 @@ const editBusinessSchema = z.object({
   newHeroImageUrl: z.string().optional(),
   newGalleryPhotoUrl: z.string().optional(),
   availability: z.record(z.string(), z.array(z.string())).optional(),
-  services: z.array(serviceSchema).optional(),
+  services: z.array(serviceSchema).min(0, "Моля, добавете поне една услуга.").optional(), // Made optional at top level, min(0)
 });
 
 type EditBusinessFormValues = z.infer<typeof editBusinessSchema>;
@@ -142,7 +142,7 @@ export default function EditBusinessPage() {
     },
   });
 
-  const { fields: serviceFields, append: appendService, remove: removeService } = useFieldArray({
+  const { fields: serviceFields, append: appendService, remove: removeService, update } = useFieldArray({
     control: form.control,
     name: "services"
   });
@@ -202,7 +202,13 @@ export default function EditBusinessPage() {
             newHeroImageUrl: businessData.heroImage || '', 
             newGalleryPhotoUrl: '',
             availability: businessData.availability || {},
-            services: businessData.services || [],
+            services: businessData.services?.map(s => ({ // Ensure services are mapped with all fields
+                id: s.id || `service_existing_${Math.random().toString(36).substr(2, 9)}`, // Add temporary ID if missing
+                name: s.name,
+                description: s.description || '',
+                price: s.price,
+                duration: s.duration,
+            })) || [],
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
@@ -305,9 +311,9 @@ export default function EditBusinessPage() {
         photos: data.photos || [],
         availability: data.availability || {},
         services: data.services?.map(s => ({
-          id: s.id || `service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Ensure ID exists
+          id: s.id || mockServices.find(ms => ms.name === s.name)?.id || `service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Ensure ID exists
           name: s.name,
-          description: s.description || '',
+          description: s.description || mockServices.find(ms => ms.name === s.name)?.description || '',
           price: Number(s.price),
           duration: Number(s.duration)
         })) || [],
@@ -369,9 +375,9 @@ export default function EditBusinessPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6"> {/* Updated for 4 tabs */}
+              <TabsList className="grid w-full grid-cols-4 mb-6">
                 <TabsTrigger value="details">Детайли</TabsTrigger>
-                <TabsTrigger value="servicesTab">Услуги</TabsTrigger> {/* New Tab for Services */}
+                <TabsTrigger value="servicesTab">Услуги</TabsTrigger>
                 <TabsTrigger value="workingHours">Работно Време</TabsTrigger>
                 <TabsTrigger value="availability">Наличност</TabsTrigger>
               </TabsList>
@@ -577,21 +583,50 @@ export default function EditBusinessPage() {
                 </section>
               </TabsContent>
 
-              <TabsContent value="servicesTab" className="space-y-6">
+             <TabsContent value="servicesTab" className="space-y-6">
                 <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
                   <Briefcase className="mr-2 h-5 w-5 text-primary" />
                   Управление на Услуги
                 </h3>
                 {serviceFields.map((item, index) => (
                   <Card key={item.id} className="p-4 space-y-3 relative">
-                     {form.formState.errors.services?.[index]?.name && <p className="text-sm text-destructive -mt-2 mb-1">{form.formState.errors.services?.[index]?.name?.message}</p>}
                     <div className="space-y-1">
                       <Label htmlFor={`services.${index}.name`}>Име на услугата</Label>
-                      <Controller
+                       <Controller
                         name={`services.${index}.name`}
                         control={form.control}
-                        render={({ field }) => <Input id={`services.${index}.name`} {...field} />}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                                field.onChange(value);
+                                const selectedMockService = mockServices.find(ms => ms.name === value);
+                                if (selectedMockService) {
+                                    // Auto-fill other fields if a mock service is selected
+                                    form.setValue(`services.${index}.description`, selectedMockService.description, { shouldValidate: true });
+                                    form.setValue(`services.${index}.price`, selectedMockService.price, { shouldValidate: true });
+                                    form.setValue(`services.${index}.duration`, selectedMockService.duration, { shouldValidate: true });
+                                    form.setValue(`services.${index}.id`, selectedMockService.id, {shouldValidate: true}); // Set ID from mockService
+                                } else {
+                                    // If user types a custom name, clear ID or generate a new one
+                                    form.setValue(`services.${index}.id`, `custom_${Date.now()}_${index}`, {shouldValidate: true});
+                                }
+                            }}
+                          >
+                            <SelectTrigger id={`services.${index}.name`}>
+                              <SelectValue placeholder="Изберете или въведете име" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {mockServices.map(service => (
+                                <SelectItem key={service.id} value={service.name}>
+                                  {service.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
                       />
+                      {form.formState.errors.services?.[index]?.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.services?.[index]?.name?.message}</p>}
                     </div>
                     <div className="space-y-1">
                       <Label htmlFor={`services.${index}.description`}>Описание (по избор)</Label>
@@ -637,7 +672,7 @@ export default function EditBusinessPage() {
                   type="button"
                   variant="outline"
                   onClick={() => appendService({ 
-                    id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Generate a temporary unique ID
+                    id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                     name: '', 
                     description: '', 
                     price: 0, 
@@ -672,9 +707,8 @@ export default function EditBusinessPage() {
                                   form.setValue(`workingHours.${day.key}.open`, '');
                                   form.setValue(`workingHours.${day.key}.close`, '');
                                 } else {
-                                  // Set default times if unchecked and previously off
-                                  form.setValue(`workingHours.${day.key}.open`, defaultWorkingHours[day.key].open);
-                                  form.setValue(`workingHours.${day.key}.close`, defaultWorkingHours[day.key].close);
+                                  form.setValue(`workingHours.${day.key}.open`, defaultWorkingHours[day.key].open || '09:00');
+                                  form.setValue(`workingHours.${day.key}.close`, defaultWorkingHours[day.key].close || '18:00');
                                 }
                               }}
                             />
@@ -869,3 +903,4 @@ export default function EditBusinessPage() {
     </div>
   );
 }
+
