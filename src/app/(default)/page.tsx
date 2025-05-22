@@ -27,7 +27,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: 0,
-    maxPrice: DEFAULT_MIN_PRICE, // Default to 0, meaning "any price"
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -82,8 +82,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's not the default "any price" (0)
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) {
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice < DEFAULT_MAX_PRICE) {
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -103,22 +102,16 @@ export default function SalonDirectoryPage() {
 
   return (
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-16 py-12 sm:py-16 md:py-20 relative overflow-hidden"> {/* Added relative and overflow-hidden */}
-        {/* Background shapes container */}
-        <div className="absolute inset-0 -z-10 pointer-events-none opacity-70"> {/* -z-10 to put it behind content */}
-          {/* Shape 1: Angled Rectangle (Top Left) */}
+      <header className="mb-16 py-12 sm:py-16 md:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 pointer-events-none opacity-70">
           <div className="absolute top-[-80px] left-[-100px] w-80 h-80 bg-primary/5 rounded-full transform rotate-[-45deg] blur-2xl"></div>
-          {/* Shape 2: Larger Blob (Bottom Right) */}
           <div className="absolute bottom-[-100px] right-[-120px] w-96 h-96 bg-accent/5 rounded-full blur-3xl"></div>
-          {/* Shape 3: Smaller Dots/Circles (example) */}
           <div className="absolute top-[10%] left-[45%] w-16 h-16 bg-secondary/10 rounded-full blur-md"></div>
           <div className="absolute bottom-[15%] left-[5%] w-20 h-20 bg-primary/5 rounded-full blur-lg transform rotate-[15deg]"></div>
-           {/* Thin line example */}
           <div className="absolute top-[50%] left-[-5%] w-2/5 h-1 bg-border/20 transform -rotate-[25deg] blur-sm"></div>
         </div>
 
-        <div className="relative z-0 grid md:grid-cols-2 gap-8 lg:gap-12 items-center"> {/* Added relative z-0 to content */}
-          {/* Text Content */}
+        <div className="relative z-0 grid md:grid-cols-2 gap-8 lg:gap-12 items-center">
           <div className="text-center md:text-left">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
               Намерете Вашия Перфектен Салон
@@ -126,20 +119,17 @@ export default function SalonDirectoryPage() {
             <p className="text-lg sm:text-xl text-muted-foreground mb-8">
               Открийте най-добрите салони за красота и услуги близо до Вас.
             </p>
-            {/* Optional: Call to action button if desired */}
-            {/* <Button size="lg" className="text-lg px-8 py-3">Разгледайте Салони</Button> */}
           </div>
 
-          {/* Image Column */}
           <div className="md:col-span-1 space-y-4">
             <div>
               <Image
                 src="https://placehold.co/560x320.png"
-                alt="Луксозен интериор на салон"
+                alt="Интериор на фризьорски салон"
                 width={560}
                 height={320}
                 className="w-full h-auto object-cover rounded-lg shadow-xl"
-                data-ai-hint="salon interior"
+                data-ai-hint="hair salon"
                 priority
               />
             </div>
@@ -147,21 +137,21 @@ export default function SalonDirectoryPage() {
               <div>
                 <Image
                   src="https://placehold.co/270x270.png"
-                  alt="Модерна прическа"
+                  alt="Бръснарски салон"
                   width={270}
                   height={270}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="hair styling"
+                  data-ai-hint="barber shop"
                 />
               </div>
               <div>
                 <Image
                   src="https://placehold.co/270x270.png"
-                  alt="Красив маникюр"
+                  alt="Студио за маникюр"
                   width={270}
                   height={270}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint="manicure nails"
+                  data-ai-hint="nail studio"
                 />
               </div>
             </div>
