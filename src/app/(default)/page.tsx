@@ -28,7 +28,8 @@ interface HeroImage {
   id: string;
 }
 
-const initialHeroImages: HeroImage[] = [
+// Static list of the first three images
+const heroImages: HeroImage[] = [
   {
     id: 'hero1',
     src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080',
@@ -47,47 +48,7 @@ const initialHeroImages: HeroImage[] = [
     alt: 'Стилист работещ във фризьорски салон',
     hint: 'hair studio',
   },
-  {
-    id: 'hero4',
-    src: 'https://images.unsplash.com/photo-0k-RjZZ8PaQ?w=1080&q=80&fm=jpg&crop=entropy&cs=tinysrgb&fit=max', // Updated Pedicure Image
-    alt: 'Педикюр процедура отблизо', // Updated Alt Text
-    hint: 'pedicure spa',
-  },
-  {
-    id: 'hero5',
-    src: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxGYWNpYWwlMjBUcmVhdG1lbnR8ZW58MHx8fHwxNzU1MDc2MjMxfDA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Процедура за лице в козметичен салон',
-    hint: 'facial treatment',
-  },
-  {
-    id: 'hero6',
-    src: 'https://images.unsplash.com/photo-1512290746430-3ff1f14a1916?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxIYWlyJTIwQ29sb3Jpbmd8ZW58MHx8fHwxNzU1MDc2Mjg0fDA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Боядисване на коса във фризьорски салон',
-    hint: 'hair coloring',
-  },
-  {
-    id: 'hero7',
-    src: 'https://images.unsplash.com/photo-1605497788044-5a32c6ba005c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxNYXNzYWdlJTIwdGhlcmFweXxlbnwwfHx8fDE3NTUwNzY3ODJ8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Масажна терапия в спа център',
-    hint: 'massage therapy',
-  },
-  {
-    id: 'hero8',
-    src: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxTYWxvbiUyMGludGVyaW9yJTIwZGVzaWdufGVufDB8fHx8MTc1NTA3NjgxOHww&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Стилен интериор на козметичен салон',
-    hint: 'salon interior design',
-  },
 ];
-
-// Fisher-Yates shuffle algorithm
-function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-}
 
 
 export default function SalonDirectoryPage() {
@@ -98,13 +59,9 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MAX_PRICE, // Initialize with default max price (means no price filter initially)
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
-  // Initialize with a static set for SSR, shuffle on client
-  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(
-    initialHeroImages.slice(0, 3) // Initial static display
-  );
 
 
   useEffect(() => {
@@ -125,18 +82,6 @@ export default function SalonDirectoryPage() {
       setIsLoading(false);
     };
     fetchSalons();
-  }, []);
-
-  useEffect(() => {
-    // Perform initial shuffle on client mount and set interval for slideshow
-    const getNextImages = () => shuffleArray(initialHeroImages).slice(0, 3);
-    setDisplayedHeroImages(getNextImages()); // Initial client-side shuffle
-
-    const interval = setInterval(() => {
-      setDisplayedHeroImages(getNextImages());
-    }, 10000); // Change images every 10 seconds
-
-    return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
 
 
@@ -180,9 +125,7 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's set to something other than the default max (which signifies "any price")
-        // And it's not the default min (which also signifies "any price" in the new slider logic)
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE && maxPrice > DEFAULT_MIN_PRICE) {
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE ) { // Apply if maxPrice is not the default "any"
            const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
           );
@@ -221,41 +164,41 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          {displayedHeroImages.length >= 3 && (
+          {heroImages.length >= 3 && (
             <div className="relative z-10 md:col-span-1 space-y-4">
               <div> 
                 <Image
-                  key={displayedHeroImages[0].id + '-large'} 
-                  src={displayedHeroImages[0].src}
-                  alt={displayedHeroImages[0].alt}
+                  key={heroImages[0].id + '-large'} 
+                  src={heroImages[0].src}
+                  alt={heroImages[0].alt}
                   width={560}
                   height={320}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint={displayedHeroImages[0].hint}
+                  data-ai-hint={heroImages[0].hint}
                   priority={true}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Image
-                    key={displayedHeroImages[1].id + '-small1'} 
-                    src={displayedHeroImages[1].src}
-                    alt={displayedHeroImages[1].alt}
+                    key={heroImages[1].id + '-small1'} 
+                    src={heroImages[1].src}
+                    alt={heroImages[1].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={displayedHeroImages[1].hint}
+                    data-ai-hint={heroImages[1].hint}
                   />
                 </div>
                 <div>
                   <Image
-                    key={displayedHeroImages[2].id + '-small2'} 
-                    src={displayedHeroImages[2].src}
-                    alt={displayedHeroImages[2].alt}
+                    key={heroImages[2].id + '-small2'} 
+                    src={heroImages[2].src}
+                    alt={heroImages[2].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={displayedHeroImages[2].hint}
+                    data-ai-hint={heroImages[2].hint}
                   />
                 </div>
               </div>
