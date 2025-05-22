@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation'; // Correct import for App Router
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-// import { useToast } from '@/hooks/use-toast'; // Temporarily removed for simplification
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,7 +13,6 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  // const { toast } = useToast(); // Temporarily removed
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -27,12 +25,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           if (profile && profile.role === 'admin') {
             authorized = true;
           } else {
-            // console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
-            if (router) router.push('/');
+            // Not an admin or profile fetch failed
+            // console.warn(`AdminLayout: Access denied or profile error. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
+            if (router) router.push('/'); 
           }
         } catch (error: any) {
-          // console.error('AdminLayout: Error fetching profile:', error.message || error);
-          if (router) router.push('/');
+          console.error('AdminLayout: Error fetching profile:', error.message || error);
+          if (router) router.push('/'); 
         }
       } else {
         // User is signed out
@@ -41,11 +40,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       }
       
       setIsAuthorized(authorized);
-      setIsLoading(false); // Set loading false after all checks and potential redirects
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]); // Dependency array only includes router
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Router removed from dependency array as a test
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
