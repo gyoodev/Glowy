@@ -120,7 +120,10 @@ export default function AccountPage() {
       } else if (user && !user.uid) {
         console.warn("User is authenticated but UID is null. This should not happen.");
         setFetchError({ customMessage: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката." });
-        setIsLoading(false);
+ setFetchError({
+ name: "CustomAccountError",
+ message: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката."
+ });
       } else {
         setCurrentUser(null);
         setUserProfile(null);
