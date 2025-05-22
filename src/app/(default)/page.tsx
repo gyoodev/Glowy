@@ -18,8 +18,8 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500;
+const DEFAULT_MIN_PRICE = 0; 
+const DEFAULT_MAX_PRICE = 500; 
 
 interface HeroImage {
   src: string;
@@ -49,21 +49,21 @@ const initialHeroImages: HeroImage[] = [
   },
   {
     id: 'hero4',
-    src: 'https://images.unsplash.com/photo-1605497788044-5a32c6ba008b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxNYXNzYWdlJTIwVGhlcmFweXxlbnwwfHx8fDE3NTUwNzU0ODV8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Масажна терапия в спа център',
-    hint: 'massage therapy',
+    src: 'https://images.unsplash.com/photo-1604605140903-0190f98c758d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxQZWRpY3VyZXxlbnwwfHx8fDE3NTUwNzYxODV8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Педикюр в спа център',
+    hint: 'pedicure spa',
   },
   {
     id: 'hero5',
-    src: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxJbnRlcmlvciUyMERlc2lnbnxlbnwwfHx8fDE3NTUwNzU1MTd8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Стилен интериор на козметичен салон',
-    hint: 'salon interior design',
+    src: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxGYWNpYWwlMjBUcmVhdG1lbnR8ZW58MHx8fHwxNzU1MDc2MjMxfDA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Процедура за лице в козметичен салон',
+    hint: 'facial treatment',
   },
   {
     id: 'hero6',
-    src: 'https://images.unsplash.com/photo-1632395627727-329699965057?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxBeXVydmVkYXxlbnwwfHx8fDE3NTUwNzU1NDl8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Аюрведа процедура с билки',
-    hint: 'ayurveda spa',
+    src: 'https://images.unsplash.com/photo-1512290746430-3ff1f14a1916?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxIYWlyJTIwQ29sb3Jpbmd8ZW58MHx8fHwxNzU1MDc2Mjg0fDA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Боядисване на коса във фризьорски салон',
+    hint: 'hair coloring',
   },
 ];
 
@@ -86,7 +86,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE,
+    maxPrice: DEFAULT_MIN_PRICE, 
   });
   const [isLoading, setIsLoading] = useState(true);
   // Initialize with a static set of images for SSR/initial client render
@@ -204,9 +204,9 @@ export default function SalonDirectoryPage() {
 
           {displayedHeroImages.length >= 3 && (
             <div className="relative z-10 md:col-span-1 space-y-4">
-              <div>
+              <div> 
                 <Image
-                  key={displayedHeroImages[0].id + '-large'}
+                  key={displayedHeroImages[0].id + '-large'} // Add key for re-renders
                   src={displayedHeroImages[0].src}
                   alt={displayedHeroImages[0].alt}
                   width={560}
@@ -219,7 +219,7 @@ export default function SalonDirectoryPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Image
-                    key={displayedHeroImages[1].id + '-small1'}
+                    key={displayedHeroImages[1].id + '-small1'} // Add key for re-renders
                     src={displayedHeroImages[1].src}
                     alt={displayedHeroImages[1].alt}
                     width={270}
@@ -230,7 +230,7 @@ export default function SalonDirectoryPage() {
                 </div>
                 <div>
                   <Image
-                    key={displayedHeroImages[2].id + '-small2'}
+                    key={displayedHeroImages[2].id + '-small2'} // Add key for re-renders
                     src={displayedHeroImages[2].src}
                     alt={displayedHeroImages[2].alt}
                     width={270}
