@@ -235,7 +235,8 @@ export default function PromoteBusinessPage() {
                     className="w-full"
                     disabled={isProcessing || !isOwner}
                   >
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Tag className="mr-2 h-4 w-4" />}\n                    Купи Сега
+                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Tag className="mr-2 h-4 w-4" />}
+                    Купи сега
                   </Button>
                 </CardFooter>
               </Card>
