@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,10 @@ import { bg } from 'date-fns/locale';
 import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+interface ExtendedBooking extends Booking {
+  clientProfile?: UserProfile | null;
+}
+
 export default function SalonBookingsPage() {
   const params = useParams();
   const router = useRouter();
@@ -25,7 +29,7 @@ export default function SalonBookingsPage() {
   const { toast } = useToast();
 
   const [salon, setSalon] = useState<Salon | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [bookings, setBookings] = useState<ExtendedBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
@@ -79,8 +83,13 @@ export default function SalonBookingsPage() {
           orderBy('createdAt', 'desc')
         );
         const bookingsSnapshot = await getDocs(bookingsQuery);
-        const fetchedBookings = bookingsSnapshot.docs.map((bookingDoc) => {
-          const data = bookingDoc.data(); // Raw data
+        
+        const fetchedBookingsPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
+          const data = bookingDoc.data();
+          let clientProfile: UserProfile | null = null;
+          if (data.userId) {
+            clientProfile = await getUserProfile(data.userId);
+          }
           return {
             id: bookingDoc.id,
             salonId: data.salonId,
@@ -92,14 +101,15 @@ export default function SalonBookingsPage() {
             time: data.time,
             status: data.status as Booking['status'],
             createdAt: data.createdAt,
-            // Ensure a meaningful fallback if clientName is empty or undefined from Firestore
             clientName: data.clientName && String(data.clientName).trim() !== '' ? String(data.clientName) : 'Клиент',
             clientEmail: data.clientEmail && String(data.clientEmail).trim() !== '' ? String(data.clientEmail) : 'Няма имейл',
             clientPhoneNumber: data.clientPhoneNumber && String(data.clientPhoneNumber).trim() !== '' ? String(data.clientPhoneNumber) : 'Няма номер',
-          } as Booking;
+            clientProfile: clientProfile,
+          } as ExtendedBooking;
         });
 
-        setBookings(fetchedBookings);
+        const resolvedBookings = await Promise.all(fetchedBookingsPromises);
+        setBookings(resolvedBookings);
 
       } catch (err: any) {
         console.error("Error fetching salon bookings:", err);
@@ -247,8 +257,12 @@ export default function SalonBookingsPage() {
                     <TableCell className="font-medium">{booking.serviceName}</TableCell>
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
-                    <TableCell>{booking.clientName}</TableCell>
-                    <TableCell>{booking.clientPhoneNumber}</TableCell>
+                    <TableCell>
+                      {booking.clientProfile?.name || booking.clientProfile?.displayName || booking.clientName || 'Клиент'}
+                    </TableCell>
+                    <TableCell>
+                      {booking.clientProfile?.phoneNumber || booking.clientPhoneNumber || 'Няма номер'}
+                    </TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
