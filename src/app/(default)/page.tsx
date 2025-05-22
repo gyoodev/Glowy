@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react'; // Added useCallback
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
@@ -18,14 +18,14 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0; 
-const DEFAULT_MAX_PRICE = 500; 
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500;
 
 interface HeroImage {
   src: string;
   alt: string;
   hint: string;
-  id: string; // Added id for unique key prop
+  id: string;
 }
 
 const initialHeroImages: HeroImage[] = [
@@ -86,10 +86,11 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE, // Default to 0 meaning "Any price"
+    maxPrice: DEFAULT_MIN_PRICE,
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(() => shuffleArray(initialHeroImages).slice(0, 3));
+  // Initialize with a static set of images for SSR/initial client render
+  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(initialHeroImages.slice(0, 3));
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -112,6 +113,9 @@ export default function SalonDirectoryPage() {
   }, []);
 
   useEffect(() => {
+    // Perform initial shuffle on client mount
+    setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
+
     const interval = setInterval(() => {
       setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
     }, 7000); // Change images every 7 seconds
@@ -134,8 +138,6 @@ export default function SalonDirectoryPage() {
 
       if (isAPromoted && !isBPromoted) return -1;
       if (!isAPromoted && isBPromoted) return 1;
-      // Optional: Add secondary sort for promoted items, then for non-promoted items
-      // e.g., by rating or name
       return 0;
     });
 
@@ -161,9 +163,8 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        // Apply maxPrice filter only if it's not the "Any price" default (0)
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { 
-          const salonHasMatchingService = (salon.services || []).some(service => 
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) {
+          const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
           );
           if (!salonHasMatchingService) {
@@ -203,22 +204,22 @@ export default function SalonDirectoryPage() {
 
           {displayedHeroImages.length >= 3 && (
             <div className="relative z-10 md:col-span-1 space-y-4">
-              <div> 
+              <div>
                 <Image
-                  key={displayedHeroImages[0].id + '-large'} // Add key for re-renders
+                  key={displayedHeroImages[0].id + '-large'}
                   src={displayedHeroImages[0].src}
                   alt={displayedHeroImages[0].alt}
                   width={560}
                   height={320}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
                   data-ai-hint={displayedHeroImages[0].hint}
-                  priority={true} // The large image always gets priority
+                  priority={true}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4"> 
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Image
-                    key={displayedHeroImages[1].id + '-small1'} // Add key
+                    key={displayedHeroImages[1].id + '-small1'}
                     src={displayedHeroImages[1].src}
                     alt={displayedHeroImages[1].alt}
                     width={270}
@@ -229,7 +230,7 @@ export default function SalonDirectoryPage() {
                 </div>
                 <div>
                   <Image
-                    key={displayedHeroImages[2].id + '-small2'} // Add key
+                    key={displayedHeroImages[2].id + '-small2'}
                     src={displayedHeroImages[2].src}
                     alt={displayedHeroImages[2].alt}
                     width={270}
@@ -256,12 +257,12 @@ export default function SalonDirectoryPage() {
           />
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-4">
         <aside className="lg:col-span-1">
-          <FilterSidebar 
-            onFilterChange={handleFilterChange} 
-            cities={allBulgarianCities} 
+          <FilterSidebar
+            onFilterChange={handleFilterChange}
+            cities={allBulgarianCities}
             serviceTypes={uniqueServiceTypes}
           />
         </aside>
