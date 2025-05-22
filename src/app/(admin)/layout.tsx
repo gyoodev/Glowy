@@ -20,12 +20,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
+      // Set loading to true at the beginning of each auth state change check
+      // This might be redundant if initial state is true, but ensures it's true for re-checks
+      // setIsLoading(true); // Re-consider if this is needed or causes flicker
+
+      try {
+        if (user) {
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
             setIsAdmin(true);
-            setIsLoading(false); // Set loading to false only after confirming admin status
           } else {
             toast({
               title: 'Достъп отказан',
@@ -33,38 +36,38 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               variant: 'destructive',
             });
             router.push('/');
-            setIsLoading(false); // Also set loading to false before redirecting
           }
-        } catch (error) {
-          console.error('Грешка при извличане на потребителски профил за админ проверка:', error);
+        } else {
           toast({
-            title: 'Грешка при проверка на правата',
-            description: 'Възникна грешка при опит за валидиране на вашите права.',
-            variant: 'destructive',
+            title: 'Необходимо е удостоверяване',
+            description: 'Моля, влезте, за да получите достъп до административния панел.',
+            variant: 'default',
           });
-          router.push('/');
-          setIsLoading(false); // Also set loading to false on error
+          router.push('/login');
         }
-      } else {
+      } catch (error) {
+        console.error('Грешка при проверка на админ права в AdminLayout:', error);
         toast({
-          title: 'Необходимо е удостоверяване',
-          description: 'Моля, влезте, за да получите достъп до административния панел.',
-          variant: 'default',
+          title: 'Грешка при проверка на правата',
+          description: 'Възникна грешка при опит за валидиране на вашите права.',
+          variant: 'destructive',
         });
-        router.push('/login');
-        setIsLoading(false); // Set loading to false if no user
+        router.push('/'); // Fallback redirect on any error during auth/profile check
+      } finally {
+        setIsLoading(false); // Ensure loading is set to false after all checks and potential redirects
       }
     });
 
     return () => unsubscribe();
-  }, [router, toast]);
+  }, [router, toast]); // toast is a dependency of this effect
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
   }
 
   if (!isAdmin) {
-    // This state should ideally be covered by the redirect in useEffect.
+    // This state should ideally be covered by the redirect in useEffect,
+    // but it's a good fallback if the redirect hasn't completed yet.
     return <div className="flex justify-center items-center h-screen text-red-500">Достъп отказан. Пренасочване...</div>;
   }
 
@@ -86,6 +89,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <main className="flex-1 overflow-y-auto p-6">
         <header className="flex justify-between items-center pb-4 border-b border-gray-300 mb-6">
           <h1 className="text-3xl font-semibold">Административно съдържание</h1>
+          {/* You can add dynamic header content here if needed */}
         </header>
         {children}
       </main>
