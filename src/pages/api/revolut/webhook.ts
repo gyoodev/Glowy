@@ -9,28 +9,14 @@ const revolutWebhookSecret = 'YOUR_REVOLUT_WEBHOOK_SECRET';
 // TODO: Implement the serverless function or API endpoint logic here to handle webhook events.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import RevolutClient from 'revolut-sdk';
-import { getFirestore, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin if not already initialized
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\\n'),
-    }),
-  });
-}
-
-const adminFirestore = getAdminFirestore();
 
 // You'll need to configure your Revolut webhook endpoint to point to this file's URL.
 // The exact implementation will depend on how you deploy your serverless functions/API routes.
 
 export default async (req: VercelRequest, res: VercelResponse) => {
+  const { initializeApp, getApps, cert } = await import('firebase-admin/app');
+  const { getFirestore: getAdminFirestore } = await import('firebase-admin/firestore');
+
   if (req.method !== 'POST') {
     return res.status(405).send('Method Not Allowed');
   }
@@ -40,6 +26,18 @@ export default async (req: VercelRequest, res: VercelResponse) => {
   // If verification fails, return a 401 Unauthorized response.
 
   const event = req.body;
+
+  // Initialize Firebase Admin if not already initialized
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\\n'),
+      }),
+    });
+  }
+  const adminFirestore = getAdminFirestore();
 
   try {
     switch (event.type) {

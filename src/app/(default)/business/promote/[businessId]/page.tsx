@@ -13,9 +13,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
-import { RevolutCheckout } from '@revolut/checkout';
+import RevolutCheckout from '@revolut/checkout';
 import type { RevolutCheckoutInstance } from '@revolut/checkout';
-import { bg } from 'date-fns/locale';
+import { bg } from 'date-fns/locale/bg'; // Ensure this is the correct import path
 
 
 const promotionPackages = [
