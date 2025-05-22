@@ -5,13 +5,12 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-// import { useToast } from '@/hooks/use-toast'; // toast is not used here
+// Removed unused useToast import
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  // const { toast } = useToast(); // toast is not used here
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -22,6 +21,7 @@ export default function AdminDashboardPage() {
             setIsAdmin(true);
           } else {
             // This is a secondary check; AdminLayout should primarily handle this.
+            // Consider removing toast here if AdminLayout handles it comprehensively
             // toast({
             //   title: 'Достъп отказан',
             //   description: 'Нямате права за достъп до таблото.',
@@ -53,7 +53,7 @@ export default function AdminDashboardPage() {
     });
 
     return () => unsubscribe();
-  }, [router]); // Removed toast from dependency array
+  }, [router]);
 
   if (loading) {
     return <div className="container mx-auto py-10 text-center">Зареждане на административното табло...</div>;
@@ -61,7 +61,6 @@ export default function AdminDashboardPage() {
 
   if (!isAdmin) {
     // This should ideally not be reached if AdminLayout is working correctly.
-    // It serves as a fallback.
     return <div className="container mx-auto py-10 text-center text-red-500">Достъп отказан. Пренасочване...</div>;
   }
 

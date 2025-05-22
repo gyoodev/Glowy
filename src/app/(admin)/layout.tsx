@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -15,7 +16,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { toast } = useToast(); // Initialize toast
+  const { toast } = useToast();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -24,13 +25,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
             setIsAdmin(true);
+            setIsLoading(false); // Set loading to false only after confirming admin status
           } else {
             toast({
               title: 'Достъп отказан',
               description: 'Нямате необходимите права за достъп до административния панел.',
               variant: 'destructive',
             });
-            router.push('/'); // Redirect non-admins to home
+            router.push('/');
+            setIsLoading(false); // Also set loading to false before redirecting
           }
         } catch (error) {
           console.error('Грешка при извличане на потребителски профил за админ проверка:', error);
@@ -39,18 +42,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             description: 'Възникна грешка при опит за валидиране на вашите права.',
             variant: 'destructive',
           });
-          router.push('/'); // Redirect on error to home
-        } finally {
-          setIsLoading(false);
+          router.push('/');
+          setIsLoading(false); // Also set loading to false on error
         }
       } else {
         toast({
           title: 'Необходимо е удостоверяване',
           description: 'Моля, влезте, за да получите достъп до административния панел.',
-          variant: 'default', // Changed to default for less alarming tone
+          variant: 'default',
         });
-        router.push('/login'); // Redirect to login if not authenticated
-        setIsLoading(false);
+        router.push('/login');
+        setIsLoading(false); // Set loading to false if no user
       }
     });
 
@@ -63,7 +65,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (!isAdmin) {
     // This state should ideally be covered by the redirect in useEffect.
-    // If reached, it means the redirect hasn't completed or there was a direct navigation attempt.
     return <div className="flex justify-center items-center h-screen text-red-500">Достъп отказан. Пренасочване...</div>;
   }
 
