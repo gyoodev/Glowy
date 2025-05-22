@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react'; // Added useCallback
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
@@ -18,32 +18,52 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500;
+const DEFAULT_MIN_PRICE = 0; 
+const DEFAULT_MAX_PRICE = 500; 
 
 interface HeroImage {
   src: string;
   alt: string;
   hint: string;
-  priority?: boolean;
+  id: string; // Added id for unique key prop
 }
 
 const initialHeroImages: HeroImage[] = [
   {
+    id: 'hero1',
     src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Интериор на модерен бръснарски салон',
     hint: 'barber salon',
-    priority: true, // Main image is initially prioritized
   },
   {
+    id: 'hero2',
     src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Близък план на инструменти в студио за маникюр',
     hint: 'nail salon',
   },
   {
+    id: 'hero3',
     src: 'https://images.unsplash.com/photo-1595475693741-b445b025aec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxIYWlyJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzUwM3ww&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Стилист работещ във фризьорски салон',
     hint: 'hair studio',
+  },
+  {
+    id: 'hero4',
+    src: 'https://images.unsplash.com/photo-1605497788044-5a32c6ba008b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxNYXNzYWdlJTIwVGhlcmFweXxlbnwwfHx8fDE3NTUwNzU0ODV8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Масажна терапия в спа център',
+    hint: 'massage therapy',
+  },
+  {
+    id: 'hero5',
+    src: 'https://images.unsplash.com/photo-1519710164239-da123dc03ef4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxJbnRlcmlvciUyMERlc2lnbnxlbnwwfHx8fDE3NTUwNzU1MTd8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Стилен интериор на козметичен салон',
+    hint: 'salon interior design',
+  },
+  {
+    id: 'hero6',
+    src: 'https://images.unsplash.com/photo-1632395627727-329699965057?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxBeXVydmVkYXxlbnwwfHx8fDE3NTUwNzU1NDl8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    alt: 'Аюрведа процедура с билки',
+    hint: 'ayurveda spa',
   },
 ];
 
@@ -53,10 +73,6 @@ function shuffleArray<T>(array: T[]): T[] {
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  // Ensure the first image (intended for the large slot) always gets priority if it lands there
-  if (shuffled.length > 0) {
-    shuffled.forEach((img, index) => img.priority = index === 0);
   }
   return shuffled;
 }
@@ -70,10 +86,10 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE,
+    maxPrice: DEFAULT_MIN_PRICE, // Default to 0 meaning "Any price"
   });
   const [isLoading, setIsLoading] = useState(true);
-  const [heroImages, setHeroImages] = useState<HeroImage[]>(initialHeroImages);
+  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(() => shuffleArray(initialHeroImages).slice(0, 3));
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -93,9 +109,14 @@ export default function SalonDirectoryPage() {
       setIsLoading(false);
     };
     fetchSalons();
+  }, []);
 
-    // Shuffle images on client mount
-    setHeroImages(shuffleArray(initialHeroImages));
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
+    }, 7000); // Change images every 7 seconds
+
+    return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
 
 
@@ -113,6 +134,8 @@ export default function SalonDirectoryPage() {
 
       if (isAPromoted && !isBPromoted) return -1;
       if (!isAPromoted && isBPromoted) return 1;
+      // Optional: Add secondary sort for promoted items, then for non-promoted items
+      // e.g., by rating or name
       return 0;
     });
 
@@ -138,7 +161,8 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { // Only apply price filter if it's not the default "any price"
+        // Apply maxPrice filter only if it's not the "Any price" default (0)
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE) { 
           const salonHasMatchingService = (salon.services || []).some(service => 
             service.price <= maxPrice
           );
@@ -177,38 +201,41 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          {heroImages.length >= 3 && (
+          {displayedHeroImages.length >= 3 && (
             <div className="relative z-10 md:col-span-1 space-y-4">
-              <div> {/* Large image slot */}
+              <div> 
                 <Image
-                  src={heroImages[0].src}
-                  alt={heroImages[0].alt}
+                  key={displayedHeroImages[0].id + '-large'} // Add key for re-renders
+                  src={displayedHeroImages[0].src}
+                  alt={displayedHeroImages[0].alt}
                   width={560}
                   height={320}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint={heroImages[0].hint}
-                  priority={heroImages[0].priority}
+                  data-ai-hint={displayedHeroImages[0].hint}
+                  priority={true} // The large image always gets priority
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4"> {/* Small image slots */}
+              <div className="grid grid-cols-2 gap-4"> 
                 <div>
                   <Image
-                    src={heroImages[1].src}
-                    alt={heroImages[1].alt}
+                    key={displayedHeroImages[1].id + '-small1'} // Add key
+                    src={displayedHeroImages[1].src}
+                    alt={displayedHeroImages[1].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={heroImages[1].hint}
+                    data-ai-hint={displayedHeroImages[1].hint}
                   />
                 </div>
                 <div>
                   <Image
-                    src={heroImages[2].src}
-                    alt={heroImages[2].alt}
+                    key={displayedHeroImages[2].id + '-small2'} // Add key
+                    src={displayedHeroImages[2].src}
+                    alt={displayedHeroImages[2].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={heroImages[2].hint}
+                    data-ai-hint={displayedHeroImages[2].hint}
                   />
                 </div>
               </div>
