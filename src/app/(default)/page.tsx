@@ -49,8 +49,8 @@ const initialHeroImages: HeroImage[] = [
   },
   {
     id: 'hero4',
-    src: 'https://images.unsplash.com/photo-1604605140903-0190f98c758d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxQZWRpY3VyZXxlbnwwfHx8fDE3NTUwNzYxODV8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    alt: 'Педикюр в спа център',
+    src: 'https://images.unsplash.com/photo-0k-RjZZ8PaQ?w=1080&q=80&fm=jpg&crop=entropy&cs=tinysrgb&fit=max', // Updated Pedicure Image
+    alt: 'Педикюр процедура отблизо', // Updated Alt Text
     hint: 'pedicure spa',
   },
   {
@@ -98,11 +98,13 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE,
+    maxPrice: DEFAULT_MAX_PRICE, // Initialize with default max price (means no price filter initially)
   });
   const [isLoading, setIsLoading] = useState(true);
   // Initialize with a static set for SSR, shuffle on client
-  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(initialHeroImages.slice(0, 3));
+  const [displayedHeroImages, setDisplayedHeroImages] = useState<HeroImage[]>(
+    initialHeroImages.slice(0, 3) // Initial static display
+  );
 
 
   useEffect(() => {
@@ -126,12 +128,13 @@ export default function SalonDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    // Perform initial shuffle on client mount
-    setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
+    // Perform initial shuffle on client mount and set interval for slideshow
+    const getNextImages = () => shuffleArray(initialHeroImages).slice(0, 3);
+    setDisplayedHeroImages(getNextImages()); // Initial client-side shuffle
 
     const interval = setInterval(() => {
-      setDisplayedHeroImages(shuffleArray(initialHeroImages).slice(0, 3));
-    }, 5000); // Change images every 5 seconds
+      setDisplayedHeroImages(getNextImages());
+    }, 10000); // Change images every 10 seconds
 
     return () => clearInterval(interval); // Cleanup interval on component unmount
   }, []);
@@ -152,8 +155,6 @@ export default function SalonDirectoryPage() {
 
       if (isAPromoted && !isBPromoted) return -1;
       if (!isAPromoted && isBPromoted) return 1;
-      // If both have same promotion status, you might want a secondary sort, e.g., by rating or name
-      // For now, maintain original relative order or add another sort criterion.
       return 0;
     });
 
@@ -179,7 +180,9 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE && maxPrice < DEFAULT_MAX_PRICE) {
+        // Apply maxPrice filter only if it's set to something other than the default max (which signifies "any price")
+        // And it's not the default min (which also signifies "any price" in the new slider logic)
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice < DEFAULT_MAX_PRICE && maxPrice > DEFAULT_MIN_PRICE) {
            const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
           );
@@ -222,7 +225,7 @@ export default function SalonDirectoryPage() {
             <div className="relative z-10 md:col-span-1 space-y-4">
               <div> 
                 <Image
-                  key={displayedHeroImages[0].id + '-large'} // Add key for re-renders
+                  key={displayedHeroImages[0].id + '-large'} 
                   src={displayedHeroImages[0].src}
                   alt={displayedHeroImages[0].alt}
                   width={560}
@@ -235,7 +238,7 @@ export default function SalonDirectoryPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Image
-                    key={displayedHeroImages[1].id + '-small1'} // Add key for re-renders
+                    key={displayedHeroImages[1].id + '-small1'} 
                     src={displayedHeroImages[1].src}
                     alt={displayedHeroImages[1].alt}
                     width={270}
@@ -246,7 +249,7 @@ export default function SalonDirectoryPage() {
                 </div>
                 <div>
                   <Image
-                    key={displayedHeroImages[2].id + '-small2'} // Add key for re-renders
+                    key={displayedHeroImages[2].id + '-small2'} 
                     src={displayedHeroImages[2].src}
                     alt={displayedHeroImages[2].alt}
                     width={270}
@@ -280,8 +283,6 @@ export default function SalonDirectoryPage() {
             onFilterChange={handleFilterChange}
             cities={allBulgarianCities}
             serviceTypes={uniqueServiceTypes}
-            initialMaxPrice={DEFAULT_MAX_PRICE}
-            initialMinRating={DEFAULT_MIN_RATING}
           />
         </aside>
 
