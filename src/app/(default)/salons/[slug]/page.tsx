@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking, auth, getUserProfile } from '@/lib/firebase'; // Added getUserProfile
+import { createBooking, auth, getUserProfile } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,20 +41,26 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
   }
   if (typeof workingHours === 'string') {
     try {
+      // Attempt to parse if it's a JSON string (legacy format)
       const parsed = JSON.parse(workingHours);
-      if (typeof parsed === 'object' && parsed !== null) {
+      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) { // Ensure it's an object, not array or null
         workingHours = parsed as WorkingHoursStructure;
       } else {
-        return workingHours; 
+        // If parsing fails or it's not a valid structure, return the original string or a default message
+        console.warn("WorkingHours is a string but not a valid JSON object:", workingHours);
+        return 'Информацията за работно време е непълна.';
       }
     } catch (e) {
-      return workingHours; 
+      // If it's not a JSON string, return the string itself or a default message
+      console.warn("WorkingHours string could not be parsed:", workingHours, e);
+      return 'Информацията за работно време е непълна.';
     }
   }
 
+
   const parts: string[] = [];
   daysOrder.forEach(dayKey => {
-    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined; 
+    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined;
     if (dayInfo) {
       if (dayInfo.isOff || !dayInfo.open || !dayInfo.close) {
         parts.push(`${dayTranslations[dayKey] || dayKey}: Почивен ден`);
@@ -62,6 +68,8 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
         parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
       }
     } else {
+      // If a day is missing from the structure, assume it's not set.
+      // This case should ideally not happen if data is saved correctly.
       parts.push(`${dayTranslations[dayKey] || dayKey}: Няма информация`);
     }
   });
@@ -77,7 +85,7 @@ export default function SalonProfilePage() {
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [userReviews, setUserReviews] = useState<Review[]>([]); 
+  const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -100,7 +108,7 @@ export default function SalonProfilePage() {
     }
 
     const salonNameFromSlug = currentSlug ? currentSlug.replace(/_/g, ' ') : undefined;
-    console.log("[SalonProfilePage] Derived salonNameFromSlug:", salonNameFromSlug);
+    console.log("[SalonProfilePage] Derived salonNameFromSlug for Firestore query:", salonNameFromSlug);
 
 
     const fetchSalonBySlug = async (name: string) => {
@@ -108,6 +116,7 @@ export default function SalonProfilePage() {
       setSalon(null);
       setDisplayedReviews([]);
       console.log("[SalonProfilePage] Fetching salon from Firestore for name:", name);
+      toast({ title: "Зареждане на салон...", description: `Търсене на "${name}"...` });
 
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
@@ -118,10 +127,12 @@ export default function SalonProfilePage() {
           const salonDoc = querySnapshot.docs[0];
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
 
+          // Ensure nested arrays are initialized if undefined
           salonData.services = salonData.services || [];
           salonData.photos = salonData.photos || [];
+          salonData.reviews = salonData.reviews || []; // Though we fetch reviews separately now
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
-          
+
           if (!salonData.workingHours || typeof salonData.workingHours === 'string') {
               const defaultHours: WorkingHoursStructure = {};
               daysOrder.forEach(day => {
@@ -134,6 +145,7 @@ export default function SalonProfilePage() {
 
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found in Firestore:", salonData);
+          toast({ title: "Салонът е зареден", description: `Данните за "${salonData.name}" са показани.` });
         } else {
           console.error("[SalonProfilePage] Salon not found in Firestore for name:", name);
           setSalon(null);
@@ -171,6 +183,7 @@ export default function SalonProfilePage() {
       console.log("[SalonProfilePage] No valid salon name from slug, cannot fetch salon.");
       setSalon(null);
       setIsLoading(false);
+      toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
     }
 
     return () => {
@@ -222,9 +235,10 @@ export default function SalonProfilePage() {
         if (reviewsData.length > 0) {
             const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
             const newAverageRating = totalRating / reviewsData.length;
+            // Update salon state locally, Firestore update happens on new review
             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
         } else {
-             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null);
+             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null); // Default to 0 if no reviews
         }
 
       } catch (error) {
@@ -241,7 +255,7 @@ export default function SalonProfilePage() {
       fetchSalonReviews();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salon?.id, firestore]); 
+  }, [salon?.id, firestore]);
 
   const fetchUserReviews = async () => {
     if (!auth.currentUser || !salon?.id) {
@@ -327,11 +341,17 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
-      const clientName = auth.currentUser.displayName || 'Клиент';
+      let clientName = auth.currentUser.displayName; // Default to Firebase Auth displayName
       const clientEmail = auth.currentUser.email || 'Няма имейл';
-      
+      let clientPhoneNumber = 'Няма номер';
+
       const userProfileData = await getUserProfile(userId);
-      const clientPhoneNumber = userProfileData?.phoneNumber || 'Няма номер';
+      if (userProfileData) {
+        clientName = userProfileData.name || userProfileData.displayName || clientName || 'Клиент'; // Prioritize profile name
+        clientPhoneNumber = userProfileData.phoneNumber || clientPhoneNumber;
+      } else {
+        clientName = clientName || 'Клиент'; // Fallback if profile fetch fails
+      }
 
 
       await createBooking({
@@ -361,7 +381,7 @@ export default function SalonProfilePage() {
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); 
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -433,13 +453,13 @@ export default function SalonProfilePage() {
         try {
           const userProfileData = await getUserProfile(userId);
           if (userProfileData) {
-            reviewerName = userProfileData.displayName || userProfileData.name;
+            reviewerName = userProfileData.name || userProfileData.displayName; // Prefer name from profile
           }
         } catch (profileError) {
           console.error("Error fetching user profile for review name:", profileError);
         }
       }
-      reviewerName = reviewerName || 'Анонимен потребител';
+      reviewerName = reviewerName || 'Анонимен потребител'; // Fallback
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
       const newReviewData = {
@@ -457,7 +477,7 @@ export default function SalonProfilePage() {
 
       const updatedReviews = [...displayedReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setDisplayedReviews(updatedReviews);
-      
+
       if(userId === auth.currentUser.uid) {
           setUserReviews(prevUserReviews => [...prevUserReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
@@ -465,13 +485,13 @@ export default function SalonProfilePage() {
       if (updatedReviews.length > 0) {
         const totalRating = updatedReviews.reduce((acc, rev) => acc + rev.rating, 0);
         const newAverageRating = totalRating / updatedReviews.length;
-        
+
         const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
         await updateDoc(salonDocRefToUpdate, { rating: newAverageRating });
-        
+
         setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
       }
-      
+
       setShowReviewForm(false);
       toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив." });
     } catch (error) {
@@ -576,7 +596,7 @@ export default function SalonProfilePage() {
                   <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
                 </h2>
                 <div className="space-y-1">
-                  {salon.services && salon.services.length > 0 ? salon.services.map(service => (
+                  {(salon.services && salon.services.length > 0) ? salon.services.map(service => (
                     <ServiceListItem key={service.id} service={service} onBook={handleBookService} />
                   )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                 </div>
@@ -647,7 +667,7 @@ export default function SalonProfilePage() {
                   <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {salon.photos && salon.photos.length > 0 ? salon.photos.map((photo, index) => (
+                    {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
                         <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
                             <Image src={photo} alt={`${salon.name} снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
                         </div>
@@ -731,3 +751,4 @@ export default function SalonProfilePage() {
     </div>
   );
 }
+    
