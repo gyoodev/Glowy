@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast'; // Keep useToast for potential future use or other parts of layout
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -16,7 +16,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const { toast } = useToast(); // Toast can still be used for other general layout messages if needed
+  const { toast } = useToast();
 
   useEffect(() => {
     setIsLoading(true);
@@ -24,13 +24,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       let newAuthorizedState = false;
       try {
         if (user) {
-          // User is signed in
+          // toast({ title: 'AdminLayout: User authenticated.', description: `UID: ${user.uid}`, duration: 1500 });
           const profile = await getUserProfile(user.uid);
           if (profile && profile.role === 'admin') {
             // toast({ title: 'AdminLayout: Достъп разрешен.', description: 'Потребителят е администратор.', duration: 1500 });
             newAuthorizedState = true;
           } else {
             console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
+            // toast({ title: 'AdminLayout: Достъп отказан.', description: 'Не сте администратор. Пренасочване към начална страница.', variant: 'destructive', duration: 3000 });
             if (router.pathname !== '/') {
               router.push('/');
             }
@@ -38,18 +39,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         } else {
           // User is signed out
           console.warn('AdminLayout: User not authenticated. Redirecting to login.');
+          // toast({ title: 'AdminLayout: Не сте удостоверени.', description: 'Пренасочване към страница за вход.', duration: 3000 });
           if (router.pathname !== '/login') {
             router.push('/login');
           }
         }
       } catch (error: any) {
         console.error('AdminLayout: Error during auth check:', error.message || error);
-        toast({ // Toast for unexpected errors is fine here
-          title: 'AdminLayout: Грешка при проверка на правата.',
-          description: `Възникна грешка при удостоверяване. Моля, опитайте отново. (${error.message || 'Неизвестна грешка'})`,
-          variant: 'destructive',
-          duration: 5000,
-        });
+        // toast({ // Temporarily commenting out toast in catch to reduce complexity
+        //   title: 'AdminLayout: Грешка при проверка на правата.',
+        //   description: `Възникна грешка при удостоверяване. Моля, опитайте отново. (${error.message || 'Неизвестна грешка'})`,
+        //   variant: 'destructive',
+        //   duration: 5000,
+        // });
         if (router.pathname !== '/') {
           router.push('/');
         }
@@ -60,7 +62,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     });
 
     return () => unsubscribe();
-  }, [router]); // Removed toast from main effect dependencies
+  }, [router]); // Removed toast from dependency array
 
   if (isLoading) {
     return <div className="flex justify-center items-center h-screen">Зареждане на административния панел...</div>;
@@ -69,6 +71,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (!isAuthorized) {
     // This state implies a redirect should have already been initiated or is in progress.
     // Or the user simply isn't authorized and an error message is displayed.
+    // This could be the "error on dashboard page check auth" message if interpreted by user.
     return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате...</div>;
   }
 
