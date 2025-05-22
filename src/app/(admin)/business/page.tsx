@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -18,7 +19,8 @@ export default function AdminBusinessPage() {
     const fetchBusinesses = async () => {
       try {
         const db = getFirestore(auth.app); // Use the Firebase app from auth
-        const businessesCollection = collection(db, 'businesses');
+        // Changed 'businesses' to 'salons' to match Firestore rules and data structure
+        const businessesCollection = collection(db, 'salons');
         const businessesSnapshot = await getDocs(businessesCollection);
         const businessesList = businessesSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -27,8 +29,8 @@ export default function AdminBusinessPage() {
         })) as Business[];
         setBusinesses(businessesList);
       } catch (err: any) {
-        console.error('Error fetching businesses:', err);
-        setError('Failed to load businesses.');
+        console.error('Error fetching businesses (salons):', err);
+        setError('Failed to load businesses (salons).');
       } finally {
         setIsLoading(false);
       }
@@ -39,19 +41,19 @@ export default function AdminBusinessPage() {
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Управление на бизнеси</h1> {/* Title */}
+      <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1> {/* Updated Title */}
 
-      {isLoading && <p>Зареждане на бизнеси...</p>}
+      {isLoading && <p>Зареждане на бизнеси (салони)...</p>}
       {error && <p className="text-red-500">Грешка: {error}</p>}
 
       {!isLoading && !error && businesses.length === 0 && (
-        <p>Няма намерени бизнеси.</p>
+        <p>Няма намерени бизнеси (салони).</p>
       )}
 
       {!isLoading && !error && businesses.length > 0 && (
         <div>
           {/* Placeholder for displaying business data */}
-          <h2 className="text-2xl font-semibold mb-4">Списък с бизнеси</h2>
+          <h2 className="text-2xl font-semibold mb-4">Списък с бизнеси (салони)</h2>
           {/* You will replace this with a table or list to display the businesses */}
           <ul>
             {businesses.map(business => (
