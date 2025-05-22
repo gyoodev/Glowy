@@ -18,23 +18,26 @@ import { getFirestore, collection, getDocs } from 'firebase/firestore';
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MIN_PRICE = 0;
-const DEFAULT_MAX_PRICE = 500;
+const DEFAULT_MIN_PRICE = 0; // Default min price (0 for any)
+const DEFAULT_MAX_PRICE = 500; // Default max price (e.g., 500 for any)
+
 
 interface HeroImage {
   src: string;
   alt: string;
   hint: string;
   id: string;
+  priority?: boolean;
 }
 
-// Static list of the first three images
-const heroImages: HeroImage[] = [
+// Static list of the three images
+const staticHeroImages: HeroImage[] = [
   {
     id: 'hero1',
     src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Интериор на модерен бръснарски салон',
     hint: 'barber salon',
+    priority: true,
   },
   {
     id: 'hero2',
@@ -44,7 +47,7 @@ const heroImages: HeroImage[] = [
   },
   {
     id: 'hero3',
-    src: 'https://images.unsplash.com/photo-1595475693741-b445b025aec7?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxIYWlyJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzUwM3ww&ixlib=rb-4.1.0&q=80&w=1080',
+    src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080',
     alt: 'Стилист работещ във фризьорски салон',
     hint: 'hair studio',
   },
@@ -59,7 +62,7 @@ export default function SalonDirectoryPage() {
     location: ALL_CITIES_VALUE,
     serviceType: ALL_SERVICES_VALUE,
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MIN_PRICE,
+    maxPrice: DEFAULT_MIN_PRICE, // Initialize with DEFAULT_MIN_PRICE for "any"
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -125,7 +128,8 @@ export default function SalonDirectoryPage() {
           matchesAll = false;
         }
         
-        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE ) { // Apply if maxPrice is not the default "any"
+        // Apply maxPrice filter only if it's not the default "any price" (0)
+        if (matchesAll && typeof maxPrice === 'number' && maxPrice > DEFAULT_MIN_PRICE ) {
            const salonHasMatchingService = (salon.services || []).some(service =>
             service.price <= maxPrice
           );
@@ -164,46 +168,46 @@ export default function SalonDirectoryPage() {
             </p>
           </div>
 
-          {heroImages.length >= 3 && (
+          
             <div className="relative z-10 md:col-span-1 space-y-4">
               <div> 
                 <Image
-                  key={heroImages[0].id + '-large'} 
-                  src={heroImages[0].src}
-                  alt={heroImages[0].alt}
+                  key={staticHeroImages[0].id + '-large'} 
+                  src={staticHeroImages[0].src}
+                  alt={staticHeroImages[0].alt}
                   width={560}
                   height={320}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint={heroImages[0].hint}
-                  priority={true}
+                  data-ai-hint={staticHeroImages[0].hint}
+                  priority={staticHeroImages[0].priority}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Image
-                    key={heroImages[1].id + '-small1'} 
-                    src={heroImages[1].src}
-                    alt={heroImages[1].alt}
+                    key={staticHeroImages[1].id + '-small1'} 
+                    src={staticHeroImages[1].src}
+                    alt={staticHeroImages[1].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={heroImages[1].hint}
+                    data-ai-hint={staticHeroImages[1].hint}
                   />
                 </div>
                 <div>
                   <Image
-                    key={heroImages[2].id + '-small2'} 
-                    src={heroImages[2].src}
-                    alt={heroImages[2].alt}
+                    key={staticHeroImages[2].id + '-small2'} 
+                    src={staticHeroImages[2].src}
+                    alt={staticHeroImages[2].alt}
                     width={270}
                     height={270}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={heroImages[2].hint}
+                    data-ai-hint={staticHeroImages[2].hint}
                   />
                 </div>
               </div>
             </div>
-          )}
+          
         </div>
       </header>
 
