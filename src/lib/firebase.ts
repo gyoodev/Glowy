@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import type { UserProfile, Service, Booking } from '@/types'; // Ensure Service type is imported
 
@@ -50,9 +50,11 @@ export const createBooking = async (bookingDetails: {
   clientName: string;
   clientEmail: string;
   clientPhoneNumber: string;
+  salonAddress?: string;
+  salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore = {
+    const bookingDataForFirestore: Partial<Booking> = { // Use Partial<Booking> for better type safety
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
       userId: bookingDetails.userId,
@@ -66,6 +68,13 @@ export const createBooking = async (bookingDetails: {
       clientEmail: bookingDetails.clientEmail,
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
     };
+    if (bookingDetails.salonAddress) {
+      bookingDataForFirestore.salonAddress = bookingDetails.salonAddress;
+    }
+    if (bookingDetails.salonPhoneNumber) {
+      bookingDataForFirestore.salonPhoneNumber = bookingDetails.salonPhoneNumber;
+    }
+
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
     return docRef.id;
@@ -100,6 +109,8 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       clientEmail: data.clientEmail,
       clientPhoneNumber: data.clientPhoneNumber,
       createdAt: data.createdAt,
+      salonAddress: data.salonAddress, // Ensure these are mapped
+      salonPhoneNumber: data.salonPhoneNumber, // Ensure these are mapped
     };
     bookings.push(booking);
   });

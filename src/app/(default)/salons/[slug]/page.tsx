@@ -35,28 +35,10 @@ const dayTranslations: Record<string, string> = {
 };
 
 
-function formatWorkingHours(workingHours?: WorkingHoursStructure | string): string {
-  if (!workingHours) {
+function formatWorkingHours(workingHours?: WorkingHoursStructure): string {
+  if (!workingHours || typeof workingHours !== 'object' || Object.keys(workingHours).length === 0) {
     return 'Няма предоставено работно време';
   }
-  if (typeof workingHours === 'string') {
-    try {
-      // Attempt to parse if it's a JSON string (legacy format)
-      const parsed = JSON.parse(workingHours);
-      if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) { // Ensure it's an object, not array or null
-        workingHours = parsed as WorkingHoursStructure;
-      } else {
-        // If parsing fails or it's not a valid structure, return the original string or a default message
-        console.warn("WorkingHours is a string but not a valid JSON object:", workingHours);
-        return 'Информацията за работно време е непълна.';
-      }
-    } catch (e) {
-      // If it's not a JSON string, return the string itself or a default message
-      console.warn("WorkingHours string could not be parsed:", workingHours, e);
-      return 'Информацията за работно време е непълна.';
-    }
-  }
-
 
   const parts: string[] = [];
   daysOrder.forEach(dayKey => {
@@ -68,8 +50,6 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure | string): stri
         parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
       }
     } else {
-      // If a day is missing from the structure, assume it's not set.
-      // This case should ideally not happen if data is saved correctly.
       parts.push(`${dayTranslations[dayKey] || dayKey}: Няма информация`);
     }
   });
@@ -116,7 +96,7 @@ export default function SalonProfilePage() {
       setSalon(null);
       setDisplayedReviews([]);
       console.log("[SalonProfilePage] Fetching salon from Firestore for name:", name);
-      toast({ title: "Зареждане на салон...", description: `Търсене на "${name}"...` });
+      // toast({ title: "Зареждане на салон...", description: `Търсене на "${name}"...` }); // Can be noisy
 
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
@@ -127,13 +107,15 @@ export default function SalonProfilePage() {
           const salonDoc = querySnapshot.docs[0];
           let salonData = { id: salonDoc.id, ...salonDoc.data() } as Salon;
 
-          // Ensure nested arrays are initialized if undefined
           salonData.services = salonData.services || [];
           salonData.photos = salonData.photos || [];
-          salonData.reviews = salonData.reviews || []; // Though we fetch reviews separately now
+          salonData.reviews = salonData.reviews || []; 
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
+          salonData.address = salonData.address || 'Няма предоставен адрес';
+          salonData.city = salonData.city || 'Не е посочен град';
 
-          if (!salonData.workingHours || typeof salonData.workingHours === 'string') {
+
+          if (!salonData.workingHours || typeof salonData.workingHours !== 'object') {
               const defaultHours: WorkingHoursStructure = {};
               daysOrder.forEach(day => {
                   defaultHours[day] = { open: '09:00', close: '18:00', isOff: day === 'sunday' };
@@ -145,7 +127,7 @@ export default function SalonProfilePage() {
 
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found in Firestore:", salonData);
-          toast({ title: "Салонът е зареден", description: `Данните за "${salonData.name}" са показани.` });
+          // toast({ title: "Салонът е зареден", description: `Данните за "${salonData.name}" са показани.` });
         } else {
           console.error("[SalonProfilePage] Salon not found in Firestore for name:", name);
           setSalon(null);
@@ -191,7 +173,8 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [slugParam, firestore, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slugParam, firestore]); // Removed toast from dependencies
 
   useEffect(() => {
     const fetchUserRoleAndCheckOwnership = async () => {
@@ -235,10 +218,9 @@ export default function SalonProfilePage() {
         if (reviewsData.length > 0) {
             const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
             const newAverageRating = totalRating / reviewsData.length;
-            // Update salon state locally, Firestore update happens on new review
             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
         } else {
-             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null); // Default to 0 if no reviews
+             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null); 
         }
 
       } catch (error) {
@@ -255,7 +237,7 @@ export default function SalonProfilePage() {
       fetchSalonReviews();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [salon?.id, firestore]);
+  }, [salon?.id, firestore]); // salon.id dependency handles re-fetch if salon changes
 
   const fetchUserReviews = async () => {
     if (!auth.currentUser || !salon?.id) {
@@ -341,16 +323,16 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
-      let clientName = auth.currentUser.displayName; // Default to Firebase Auth displayName
+      let clientName = auth.currentUser.displayName; 
       const clientEmail = auth.currentUser.email || 'Няма имейл';
       let clientPhoneNumber = 'Няма номер';
 
       const userProfileData = await getUserProfile(userId);
       if (userProfileData) {
-        clientName = userProfileData.name || userProfileData.displayName || clientName || 'Клиент'; // Prioritize profile name
+        clientName = userProfileData.name || userProfileData.displayName || clientName || 'Клиент'; 
         clientPhoneNumber = userProfileData.phoneNumber || clientPhoneNumber;
       } else {
-        clientName = clientName || 'Клиент'; // Fallback if profile fetch fails
+        clientName = clientName || 'Клиент'; 
       }
 
 
@@ -370,6 +352,8 @@ export default function SalonProfilePage() {
         clientName: clientName,
         clientEmail: clientEmail,
         clientPhoneNumber: clientPhoneNumber,
+        salonAddress: salon.address,
+        salonPhoneNumber: salon.phone,
       });
 
       toast({
@@ -381,7 +365,7 @@ export default function SalonProfilePage() {
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); 
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -391,18 +375,27 @@ export default function SalonProfilePage() {
         }
         reminderTimeoutId.current = setTimeout(async () => {
           try {
-            await sendReviewReminderEmail({
+            const reminderResult = await sendReviewReminderEmail({
               salonName: bookingSalonName,
-              serviceName: bookingServiceName,
+              serviceName: bookingServiceName || undefined,
               bookingDate: bookingDateTime.toLocaleDateString('bg-BG'),
               bookingTime: bookingTime,
             });
-            toast({
-              title: "Покана за отзив изпратена",
-              description: `Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName || 'услугата'} приключи, Ви изпратихме покана по имейл да оставите отзив.`,
-              variant: "default",
-              duration: 7000,
-            });
+            if(reminderResult.success) {
+                 toast({
+                    title: "Покана за отзив изпратена",
+                    description: `Тъй като резервацията Ви в ${bookingSalonName} за ${bookingServiceName || 'услугата'} приключи, Ви изпратихме покана по имейл да оставите отзив.`,
+                    variant: "default",
+                    duration: 7000,
+                });
+            } else {
+                console.warn("Reminder email not sent (simulated failure or actual):", reminderResult.message);
+                 toast({
+                    title: "Проблем с изпращане на покана",
+                    description: "Възникна проблем при изпращането на покана за отзив.",
+                    variant: "default", // Not destructive, as booking is fine
+                });
+            }
           } catch (emailError) {
             console.error("[SalonProfilePage] Error sending review reminder email:", emailError);
             toast({
@@ -453,13 +446,13 @@ export default function SalonProfilePage() {
         try {
           const userProfileData = await getUserProfile(userId);
           if (userProfileData) {
-            reviewerName = userProfileData.name || userProfileData.displayName; // Prefer name from profile
+            reviewerName = userProfileData.name || userProfileData.displayName; 
           }
         } catch (profileError) {
           console.error("Error fetching user profile for review name:", profileError);
         }
       }
-      reviewerName = reviewerName || 'Анонимен потребител'; // Fallback
+      reviewerName = reviewerName || 'Анонимен потребител'; 
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
       const newReviewData = {
