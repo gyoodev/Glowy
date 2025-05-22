@@ -13,11 +13,10 @@ interface ContactEntry {
   isAnswered: boolean;
 }
 
-export default function AdminContactEntriesPage() {
+export default function AdminContactsPage() {
   const [contacts, setContacts] = useState<ContactEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null); // To track which contact is being updated
   const firestore = getFirestore();
 
   useEffect(() => {
@@ -34,6 +33,7 @@ export default function AdminContactEntriesPage() {
             ...doc.data() as Omit<ContactEntry, 'id'> // Type assertion for fetched data
           });
         });
+        console.log("Fetched contacts:", fetchedContacts); // Log fetched contacts
         setContacts(fetchedContacts);
       } catch (err: any) {
         console.error("Error fetching contacts:", err);
@@ -46,35 +46,9 @@ export default function AdminContactEntriesPage() {
     fetchContacts();
   }, [firestore]);
 
-  const markAsAnswered = useCallback(async (contactId: string) => {
-    setUpdatingId(contactId);
-    try {
-      const contactDocRef = doc(firestore, 'contacts', contactId);
-      await updateDoc(contactDocRef, {
-        isAnswered: true,
-      });
-
-      // Update local state
-      setContacts(prevContacts =>
-        prevContacts.map(contact =>
-          contact.id === contactId ? { ...contact, isAnswered: true } : contact
-        )
-      );
-      console.log(`Contact ${contactId} marked as answered.`);
-    } catch (err: any) {
-      console.error(`Error marking contact ${contactId} as answered:`, err);
-      // Optionally show a toast or error message to the admin
-    } finally {
-      setUpdatingId(null);
-    }
-  }, [firestore]); // Include firestore in the dependency array
-
   return (
     <div className="container mx-auto py-10 px-6">
-      <h1 className="text-3xl font-bold mb-6">Admin - Contact Entries</h1>
-      {isLoading && <p>Loading contact entries...</p>}
-      {error && <p className="text-red-500">Error: {error}</p>}
-      {!isLoading && !error && contacts.length === 0 && <p>No contact entries found.</p>}
+      <h1 className="text-3xl font-bold mb-6">Запитвания</h1>
       {!isLoading && !error && contacts.length > 0 && (
         <div className="space-y-6">
           {contacts.map(contact => ( // Corrected map to return JSX
@@ -83,17 +57,7 @@ export default function AdminContactEntriesPage() {
               <p className="text-sm text-gray-600">From: {contact.name} ({contact.email})</p>
               <p className="mt-2 text-gray-800">{contact.message}</p>
               <p className="mt-2 text-xs text-gray-500">Received: {contact.createdAt.toDate().toLocaleString()}</p>
-              <p className="mt-1 text-sm font-medium">{contact.isAnswered ? 'Status: Answered' : 'Status: Pending'}</p>
-              {!contact.isAnswered && (
-                <button
-                  onClick={() => markAsAnswered(contact.id)}
-                  disabled={updatingId === contact.id}
-                  className="mt-3 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {updatingId === contact.id ? 'Marking...' : 'Mark as Answered'}
-                </button>
-              )}
-            </div>
+            </div> // Removed isAnswered logic for now
           ))}
         </div>
       )}
