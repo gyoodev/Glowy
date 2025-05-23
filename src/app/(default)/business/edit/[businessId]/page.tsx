@@ -17,7 +17,6 @@ import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDow
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; 
@@ -26,6 +25,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { cn } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
@@ -49,9 +49,6 @@ const generateFullDayTimeOptions = () => {
   return options;
 };
 const fullDayTimeOptions = generateFullDayTimeOptions();
-
-// Define a type for the locale object used by react-day-picker
-type DayPickerLocale = Locale;
 
 const daysOfWeek = [
   { key: 'monday', label: 'Понеделник' },
