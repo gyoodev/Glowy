@@ -62,7 +62,7 @@ export default function AccountPage() {
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email?: string | null, userId: string } = {
+            const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email: string, userId: string } = {
               name: user.displayName || 'Потребител',
               email: user.email || '',
               profilePhotoUrl: user.photoURL || '',
@@ -74,7 +74,7 @@ export default function AccountPage() {
             setUserProfile({
               id: user.uid,
               name: dataToSave.name,
-              email: dataToSave.email || '',
+              email: dataToSave.email,
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
               role: 'customer',
@@ -110,7 +110,7 @@ export default function AccountPage() {
             console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it.");
             setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           } else if (error.code === 'permission-denied') {
-             setFetchError({ ...error, customMessage: "ГРЕШКА: Липсват права за достъп до Firestore!"});
+             setFetchError({ ...error, customMessage: "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно."});
           }
           setUserProfile(null);
           setBookings([]);
@@ -119,11 +119,12 @@ export default function AccountPage() {
         }
       } else if (user && !user.uid) {
         console.warn("User is authenticated but UID is null. This should not happen.");
- setFetchError({
- name: "CustomAccountError", // Add name property
- message: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката.",
- customMessage: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката." // Add customMessage property
- });
+        setFetchError({
+          name: "CustomAccountError", // Add name property
+          message: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката.",
+          customMessage: "Възникна неочакван проблем с Вашия акаунт. Моля, свържете се с поддръжката." // Add customMessage property
+        });
+        setIsLoading(false);
       } else {
         setCurrentUser(null);
         setUserProfile(null);
@@ -251,35 +252,35 @@ export default function AccountPage() {
                 <h3 className="text-xl font-semibold">Грешка при достъп до данни</h3>
               </div>
               {fetchError?.code === 'permission-denied' || (fetchError?.customMessage && fetchError.customMessage.includes("Липсват права")) ? (
-                  <div className="text-sm text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md">
-                    <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore (permission-denied)!</p>
-                    <p className="text-destructive-foreground/90">
-                      Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
-                      Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект (<code>glowy-gyoodev</code>).
-                    </p>
-                    <p className="text-destructive-foreground/90">
-                      <strong>За да разрешите това, МОЛЯ, направете следното във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>:</strong>
-                    </p>
-                    <ol className="list-decimal list-inside space-y-1 text-destructive-foreground/90 pl-4">
-                      <li>Отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
-                      <li>Изберете таба <strong>Rules</strong>.</li>
-                      <li>Заменете съществуващите правила със следните:</li>
-                    </ol>
-                    <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
-                      <code>
-                        {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // Allow an authenticated user to read and write their own document\n    // in the 'users' collection, where the document ID is their UID.\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n  }\n}`}
-                      </code>
-                    </pre>
-                    <p className="text-destructive-foreground/90">
-                      4. Натиснете бутона <strong>Publish</strong>.
-                    </p>
-                    <p className="font-semibold text-destructive-foreground">
-                      След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
-                    </p>
-                  </div>
-                ) : fetchError?.customMessage ? (
-                  <p>{fetchError.customMessage}</p>
-                ) : (
+                <div className="text-sm text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md">
+                  <p className="font-bold text-base text-destructive-foreground">ГРЕШКА: Липсват права за достъп до Firestore (permission-denied)!</p>
+                  <p className="text-destructive-foreground/90">
+                    Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
+                    Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект (<code>glowy-gyoodev</code>).
+                  </p>
+                  <p className="text-destructive-foreground/90">
+                    <strong>За да разрешите това, МОЛЯ, направете следното във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>:</strong>
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-destructive-foreground/90 pl-4">
+                    <li>Отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
+                    <li>Изберете таба <strong>Rules</strong>.</li>
+                    <li>Заменете съществуващите правила със следните:</li>
+                  </ol>
+                  <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
+                    <code>
+                      {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // Allow an authenticated user to read and write their own document\n    // in the 'users' collection, where the document ID is their UID.\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n  }\n}`}
+                    </code>
+                  </pre>
+                  <p className="text-destructive-foreground/90">
+                    4. Натиснете бутона <strong>Publish</strong>.
+                  </p>
+                  <p className="font-semibold text-destructive-foreground">
+                    След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
+                  </p>
+                </div>
+              ) : fetchError?.customMessage ? (
+                <p>{fetchError.customMessage}</p>
+              ) : (
                 <p>
                   Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
                   {fetchError?.message && <span className="block mt-2 text-sm">Детайли: {fetchError.message}</span>}
