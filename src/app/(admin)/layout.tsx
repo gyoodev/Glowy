@@ -5,8 +5,8 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation'; // Corrected import for App Router
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { auth, getUserProfile } from '../../lib/firebase'; // Changed from @/lib/firebase
+import { useToast } from '../../hooks/use-toast'; // Changed from @/hooks/use-toast
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,7 +14,7 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  const { toast } = useToast(); // Get toast function from the hook
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -31,38 +31,37 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             setIsAuthorized(true);
           } else {
             console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
-            toast({
-              title: 'Достъп отказан',
-              description: 'Нямате администраторски права. Пренасочване към началната страница.',
-              variant: 'destructive',
-            });
+            // toast({
+            //   title: 'Достъп отказан',
+            //   description: 'Нямате администраторски права. Пренасочване към началната страница.',
+            //   variant: 'destructive',
+            // });
             setIsAuthorized(false); // Ensure this is set before redirect
-            router.push('/');
+            if (router) router.push('/');
           }
         } catch (error: any) {
           console.error('AdminLayout: Error fetching profile:', error.message || error);
-          toast({
-            title: 'Грешка при проверка на права',
-            description: 'Неуспешно извличане на потребителски профил. Пренасочване към началната страница.',
-            variant: 'destructive',
-          });
+          // toast({
+          //   title: 'Грешка при проверка на права',
+          //   description: 'Неуспешно извличане на потребителски профил. Пренасочване към началната страница.',
+          //   variant: 'destructive',
+          // });
           setIsAuthorized(false); // Ensure this is set before redirect
-          router.push('/');
+          if (router) router.push('/');
         } finally {
           console.log('AdminLayout: Setting isLoading to false (user authenticated path).');
           setIsLoading(false);
         }
       } else {
         console.warn('AdminLayout: User not authenticated. Redirecting to login.');
-        toast({
-          title: 'Не сте влезли',
-          description: 'Моля, влезте, за да получите достъп до административния панел.',
-          variant: 'default',
-        });
+        // toast({
+        //   title: 'Не сте влезли',
+        //   description: 'Моля, влезте, за да получите достъп до административния панел.',
+        //   variant: 'default',
+        // });
         setIsAuthorized(false);
-        // Ensure isLoading is set to false before redirect for unauthenticated users
-        setIsLoading(false);
-        router.push('/login');
+        setIsLoading(false); // Ensure isLoading is set to false before redirect
+        if (router) router.push('/login');
       }
     });
 
@@ -70,7 +69,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: useEffect cleanup.');
       unsubscribe();
     };
-  }, [router, toast]); // Added toast to dependency array as it's used in the effect
+  }, [router]); // Removed toast from dependencies
 
   if (isLoading) {
     console.log('AdminLayout: Rendering loading state.');
@@ -78,13 +77,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
-    // This state should ideally not be reached for long if redirects are working,
-    // but it's a fallback. Or, if a redirect is in progress.
     console.log('AdminLayout: Rendering unauthorized state or redirecting.');
     return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате... (AdminLayout Unauthorized)</div>;
   }
 
-  // If loading is false and isAuthorized is true, render the layout
   console.log('AdminLayout: Rendering authorized admin content.');
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">

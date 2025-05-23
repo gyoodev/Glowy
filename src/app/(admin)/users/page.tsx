@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { auth } from '@/lib/firebase';
+import { auth } from '../../lib/firebase'; // Changed from @/lib/firebase
 import type { UserProfile } from '@/types';
 
 interface NewUserFormState {

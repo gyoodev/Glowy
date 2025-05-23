@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { auth } from '@/lib/firebase';
+import { auth } from '../../lib/firebase'; // Changed from @/lib/firebase
 import type { Salon } from '@/types';
 import Link from 'next/link';
 
