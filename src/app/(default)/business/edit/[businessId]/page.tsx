@@ -54,13 +54,13 @@ type DayPickerLocale = {
   localize: {
     month: (n: number) => string[];
   };
- formatLong: {
- date: () => string;
- firstWeekContainsDate: number;
- goIntoContext: boolean;
- hourCycle: string;
- ordinalNumber: (dirtyNumber: number, options?: object) => string;
- quartersInYear: number;
+  formatLong: {
+    date: () => string;
+    firstWeekContainsDate: number;
+    goIntoContext: boolean;
+    hourCycle: string;
+    ordinalNumber: (dirtyNumber: number, options?: object) => string;
+    quartersInYear: number;
  dayPeriod: (hours: number) => string;
  dayOfYear: number;
  daysInMonth: number;
@@ -70,8 +70,7 @@ type DayPickerLocale = {
   };
  code: string;
  formatDistance: (token: string, count: number, options?: { addSuffix?: boolean; includeSeconds?: boolean }) => string;
-};
-  formatRelative: (token: string, date: Date, baseDate: Date, options?: object) => string;
+  formatRelative: (token: any, date: Date, baseDate: Date, options?: object) => string;
 
 const daysOfWeek = [
   { key: 'monday', label: 'Понеделник' },
@@ -814,19 +813,22 @@ export default function EditBusinessPage() {
                         modifiers={availableDaysModifier}
                         modifiersStyles={{
                             available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
-                        }}
+ }}
                         locale={{ // This object is used internally by react-day-picker, not date-fns directly
- localize: {
- month: (n: number) => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
-                          },
+ localize: { month: (n: number) => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n] },
                           formatLong: { date: () => 'dd/MM/yyyy' },
- code: 'bg', // Add code
- formatDistance: (token, count, options, addSuffix, includeSeconds) => { // Provide a placeholder or actual implementation
+ code: 'bg',
+ formatDistance: (token, count, options) => { // Simplified placeholder
  // This is a simplified placeholder. You might need a more complex implementation
  // based on react-day-picker's expected behavior or import from a locale library.
  // For now, returning a generic string to satisfy the type.
- return `${count} ${token}${addSuffix ? ' назад' : ''}`;
-                          }
+                                const suffix = options?.addSuffix ? ' назад' : '';
+ return `${count} ${token}${suffix}`;
+ },
+ formatRelative: (token, date, baseDate, options) => { // Add formatRelative
+ // This is a required property. Provide a placeholder or actual implementation.
+ return `относително време за ${format(date, 'PPP', { locale: bg })}`;
+ }
                         } as DayPickerLocale} // Use the defined type here
                       />
                     </div>
