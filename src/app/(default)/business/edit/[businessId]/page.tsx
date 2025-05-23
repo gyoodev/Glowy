@@ -71,6 +71,7 @@ type DayPickerLocale = {
  code: string;
  formatDistance: (token: string, count: number, options?: { addSuffix?: boolean; includeSeconds?: boolean }) => string;
 };
+  formatRelative: (token: string, date: Date, baseDate: Date, options?: object) => string;
 
 const daysOfWeek = [
   { key: 'monday', label: 'Понеделник' },
