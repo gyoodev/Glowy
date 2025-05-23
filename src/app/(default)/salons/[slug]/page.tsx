@@ -460,9 +460,10 @@ export default function SalonProfilePage() {
     try {
       const userId = auth.currentUser.uid;
       const userProfileData = await getUserProfile(userId); 
-      let reviewerName = auth.currentUser.displayName;
+      let reviewerName: string | null = null; 
 
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
+        // Assign the non-empty value if userProfileData exists and name or displayName are not empty
         reviewerName = userProfileData.name || userProfileData.displayName;
       }
       reviewerName = reviewerName || 'Анонимен потребител'; 
