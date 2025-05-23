@@ -183,8 +183,7 @@ export default function PromoteBusinessPage() {
   const isCurrentlyPromoted = currentPromotion?.isActive && currentPromotion.expiresAt && isFuture(new Date(currentPromotion.expiresAt));
 
   return (
-    // Wrap the main content div within a React Fragment
- <React.Fragment>
+    <React.Fragment>
       <header className="mb-8">
         <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
@@ -247,11 +246,11 @@ export default function PromoteBusinessPage() {
                     disabled={isProcessing || !isOwner}
                   >
                     {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Tag className="mr-2 h-4 w-4" />}\
- Купи сега
+                    Купи сега
                   </Button>
                 </CardFooter>
               </Card>
-            ))}\
+            ))}
           </div>
         </section>
       )}
