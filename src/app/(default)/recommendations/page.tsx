@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { RecommendationForm } from '@/components/ai/recommendation-form';
 import { RecommendationResults } from '@/components/ai/recommendation-results';
 import { Wand2 } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 const RecommendSalonsOutputSchema = {
   recommendations: {
@@ -19,8 +19,6 @@ type RecommendSalonsOutput = {
 
 export default function RecommendationsPage() {
   const [recommendationOutput, setRecommendationOutput] = useState<RecommendSalonsOutput | null>(null);
-
-  const { useToast } = '@/hooks/use-toast';
   const [isLoading, setIsLoading] = useState(false);
  const { toast } = useToast();
   // Define the expected type for the data from the RecommendationForm
@@ -79,15 +77,6 @@ export default function RecommendationsPage() {
       </header>
       
       <RecommendationForm onSubmit={handleFormSubmit} isLoading={isLoading} />
-
-      {isLoading && (
-        <div className="w-full max-w-2xl mx-auto mt-8 space-y-4">
-          <Skeleton className="h-8 w-3/4" />
-          <Skeleton className="h-6 w-full" />
-          <Skeleton className="h-6 w-5/6" />
-          <Skeleton className="h-6 w-full" />
-        </div>
-      )}
 
       {recommendationOutput && recommendationOutput.recommendations && (
         <RecommendationResults recommendations={recommendationOutput.recommendations} />
