@@ -24,7 +24,6 @@ const promotionPackages = [
 export default function PromoteBusinessPage() {
   const params = useParams();
   const router = useRouter();
-  const businessId = params.businessId as string;
   const firestore = getFirestore();
   const { toast } = useToast();
   const [salon, setSalon] = useState<Salon | null>(null); // This state variable is correct
@@ -34,6 +33,13 @@ export default function PromoteBusinessPage() {
   const [isOwner, setIsOwner] = useState(false);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Safer way to access businessId and handle null/invalid cases
+  const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
+
+  if (!businessId) {
+    return <div className="container mx-auto py-10 px-6">Invalid business ID</div>;
+  }
 
   const fetchSalonData = async (userId: string) => {
     setIsLoading(true);
