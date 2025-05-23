@@ -9,7 +9,7 @@ export type WorkingHoursStructure = Record<string, DayWorkingHours>;
 export interface Service {
   id: string;
   name: string;
-  description?: string; // Направено незадължително
+  description?: string;
   price: number;
   duration: number; // in minutes
   categoryIcon?: React.ElementType;
@@ -46,7 +46,7 @@ export interface Salon {
   priceRange: 'cheap' | 'moderate' | 'expensive' | '';
   photos?: string[];
   services: Service[];
-  reviews: Review[]; // Може да се премахне, ако отзивите се извличат отделно
+  reviews: Review[];
   heroImage?: string;
   availability?: Record<string, string[]>;
   ownerId?: string;
@@ -94,4 +94,17 @@ export interface Booking {
   clientPhoneNumber: string;
   salonAddress?: string;
   salonPhoneNumber?: string;
+}
+
+export type NotificationType = 'new_booking' | 'booking_status_change' | 'admin_alert' | 'review_reminder' | 'generic';
+
+export interface Notification {
+  id: string;
+  userId: string; // The user who should receive this notification
+  message: string;
+  link?: string;
+  read: boolean;
+  createdAt: any; // Firestore Timestamp
+  type?: NotificationType;
+  relatedEntityId?: string; // e.g., bookingId, salonId
 }

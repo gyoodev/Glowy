@@ -1,25 +1,23 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"; // Added FirebaseApp
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
-import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import type { UserProfile, Service, Booking } from '@/types'; // Ensure Service type is imported
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import type { UserProfile, Service, Booking, Notification } from '@/types';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
-  authDomain: "glowy-gyoodev.firebaseapp.com",
-  projectId: "glowy-gyoodev",
-  storageBucket: "glowy-gyoodev.firebasestorage.app",
-  messagingSenderId: "404029225537",
-  appId: "1:404029225537:web:2f9144a90f82f82eff64c0",
-  measurementId: "G-6Z1J5B647X"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "glowy-gyoodev.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "glowy-gyoodev",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "glowy-gyoodev.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "404029225537",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:404029225537:web:2f9144a90f82f82eff64c0",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-6Z1J5B647X"
 };
 
-// Initialize Firebase
-let app: FirebaseApp; // Explicitly typed app
+let app: FirebaseApp;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
 } else {
@@ -27,7 +25,7 @@ if (!getApps().length) {
 }
 
 const auth = getAuth(app);
-const firestore = getFirestore(app); // Initialize firestore once
+const firestore = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
@@ -38,11 +36,10 @@ if (typeof window !== 'undefined') {
   });
 }
 
-
-// Function to create a new booking
 export const createBooking = async (bookingDetails: {
   salonId: string;
   salonName: string;
+  salonOwnerId?: string; // Made optional for safety, but should be provided
   userId: string;
   service: Service;
   date: string;
@@ -62,7 +59,7 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'confirmed', // Default status
+      status: 'confirmed',
       createdAt: Timestamp.fromDate(new Date()),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
@@ -77,14 +74,31 @@ export const createBooking = async (bookingDetails: {
 
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
+
+    // Create notification for salon owner
+    if (bookingDetails.salonOwnerId) {
+      const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
+      await addDoc(collection(firestore, 'notifications'), {
+        userId: bookingDetails.salonOwnerId, // Notification is for the salon owner
+        message: notificationMessage,
+        link: `/business/salon-bookings/${bookingDetails.salonId}`, // Link to salon bookings page
+        read: false,
+        createdAt: Timestamp.fromDate(new Date()),
+        type: 'new_booking',
+        relatedEntityId: docRef.id, // Link to the booking itself
+      });
+      console.log('Notification created for salon owner:', bookingDetails.salonOwnerId);
+    } else {
+      console.warn('Salon owner ID not provided for booking, notification not created.');
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error creating booking:', error);
-    throw error; // Re-throw the error to be caught by the calling function
+    throw error;
   }
 };
 
-// Function to get bookings for a specific user
 export const getUserBookings = async (userId: string): Promise<Booking[]> => {
   const bookings: Booking[] = [];
   const q = query(
@@ -109,15 +123,14 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       clientEmail: data.clientEmail,
       clientPhoneNumber: data.clientPhoneNumber,
       createdAt: data.createdAt,
-      salonAddress: data.salonAddress, // Ensure these are mapped
-      salonPhoneNumber: data.salonPhoneNumber, // Ensure these are mapped
+      salonAddress: data.salonAddress,
+      salonPhoneNumber: data.salonPhoneNumber,
     };
     bookings.push(booking);
   });
   return bookings;
 };
 
-// Function to get user profile data by UID
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
   if (!userId) {
     console.warn("getUserProfile called with null or undefined userId.");
@@ -152,52 +165,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
   }
 };
 
-
-// Function to get user profile data by email
-export const getUserProfileByEmail = async (email: string): Promise<UserProfile | null> => {
-  if (!email) {
-    console.warn("Attempted to fetch profile with null or undefined email.");
-    return null;
-  }
-  try {
-    const usersQuery = query(collection(firestore, 'users'), where('email', '==', email));
-    const querySnapshot = await getDocs(usersQuery);
-    if (!querySnapshot.empty) {
-      const userDoc = querySnapshot.docs[0];
-      const data = userDoc.data();
-      return {
-        id: userDoc.id,
-        name: data.name || data.displayName || '',
-        email: data.email || '',
-        role: data.role,
-        userId: data.userId || userDoc.id,
-        profilePhotoUrl: data.profilePhotoUrl,
-        phoneNumber: data.phoneNumber,
-        preferences: {
-          favoriteServices: data.preferences?.favoriteServices || [],
-          priceRange: data.preferences?.priceRange || '',
-          preferredLocations: data.preferences?.preferredLocations || [],
-        },
-      } as UserProfile;
-    } else {
-      console.log(`No profile found for email: ${email} in getUserProfileByEmail.`);
-      return null;
-    }
-  } catch (error: any) {
-    console.error('Error fetching user profile by email (getUserProfileByEmail):', error);
-    if (error.code === 'failed-precondition') {
-        console.error(
-        "Firestore query failed: This usually means you're missing a composite index " +
-        "for the query on the 'email' field in the 'users' collection. " +
-        "Check the Firebase console for a link to create it."
-        );
-    }
-    return null;
-  }
-};
-
-
-// Function to update a user's role
 export const updateUserRole = async (userId: string, role: string) => {
   try {
     const userDocRef = doc(firestore, 'users', userId);
@@ -209,20 +176,55 @@ export const updateUserRole = async (userId: string, role: string) => {
   }
 };
 
-// Function to get booking status
-export const getBookingStatus = async (bookingId: string) => {
+// Notification functions
+export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
+  if (!userId) return [];
+  const notifications: Notification[] = [];
   try {
-    const bookingDocRef = doc(firestore, 'bookings', bookingId);
-    const bookingDocSnap = await getDoc(bookingDocRef);
-
-    if (bookingDocSnap.exists()) {
-      return bookingDocSnap.data().status || null; // Return status or null if missing
-    } else {
-      return null; // Booking document not found
-    }
+    const q = query(
+      collection(firestore, 'notifications'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(10) // Get latest 10 notifications, for example
+    );
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((docSnap) => {
+      notifications.push({ id: docSnap.id, ...docSnap.data() } as Notification);
+    });
   } catch (error) {
-    console.error('Error fetching booking status:', error);
-    throw error;
+    console.error("Error fetching user notifications:", error);
+  }
+  return notifications;
+};
+
+export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+  try {
+    const notificationRef = doc(firestore, 'notifications', notificationId);
+    await updateDoc(notificationRef, { read: true });
+  } catch (error) {
+    console.error("Error marking notification as read:", error);
   }
 };
+
+export const markAllUserNotificationsAsRead = async (userId: string): Promise<void> => {
+  if (!userId) return;
+  try {
+    const q = query(
+      collection(firestore, 'notifications'),
+      where('userId', '==', userId),
+      where('read', '==', false)
+    );
+    const querySnapshot = await getDocs(q);
+    const batch = []; // Firestore batch writes are more efficient but not strictly necessary here for a few updates
+    querySnapshot.forEach((docSnap) => {
+      batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
+    });
+    await Promise.all(batch);
+    console.log(`Marked all unread notifications as read for user ${userId}`);
+  } catch (error) {
+    console.error("Error marking all user notifications as read:", error);
+  }
+};
+
+
 export { app, auth, analytics, firestore };
