@@ -65,19 +65,19 @@ export default function AccountPage() {
             const dataToSave: Omit<UserProfile, 'id' | 'role'> & { createdAt: Timestamp, email: string, userId: string } = {
               name: user.displayName || 'Потребител',
               email: user.email || '',
+              userId: user.uid,
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
               createdAt: Timestamp.fromDate(new Date()),
-              userId: user.uid, // Ensure userId is saved
             };
-            await setDoc(newUserDocRef, { ...dataToSave, role: 'customer' });
+            await setDoc(newUserDocRef, { ...dataToSave, role: 'customer' }); // Default role to customer
             setUserProfile({
               id: user.uid,
               name: dataToSave.name,
               email: dataToSave.email,
               profilePhotoUrl: dataToSave.profilePhotoUrl,
               preferences: dataToSave.preferences,
-              role: 'customer',
+              role: 'customer', // Default role to customer
               userId: user.uid,
             });
           }
@@ -97,6 +97,7 @@ export default function AccountPage() {
           console.error("Error fetching/creating user profile or bookings:", error);
           setFetchError(error as FirebaseError);
 
+          // Enhanced error logging
           if (error.code) {
             console.error("Firebase error code:", error.code);
           }
@@ -106,11 +107,12 @@ export default function AccountPage() {
           if (error.details) {
             console.error("Firebase error details:", error.details);
           }
+
           if (error.code === 'failed-precondition') {
             console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it.");
-            setFetchError({ ...error, customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
+            setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
           } else if (error.code === 'permission-denied') {
-             setFetchError({ ...error, customMessage: "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно."});
+            setFetchError({ name: "FirestorePermissionError", message: "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно.", customMessage: "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно."});
           }
           setUserProfile(null);
           setBookings([]);
@@ -214,17 +216,15 @@ export default function AccountPage() {
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="flex flex-wrap justify-center gap-4 w-full md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm">
-          <div className="flex flex-wrap justify-center gap-4 w-full">
-            <TabsTrigger value="profile" className="py-3 text-base">
-              <Edit3 className="mr-2 h-5 w-5" /> Профил
-            </TabsTrigger>
-            <TabsTrigger value="reviews" className="py-3 text-base">
-              <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
-            </TabsTrigger>
-            <TabsTrigger value="bookings" className="py-3 text-base">
-              <History className="mr-2 h-5 w-5" /> Резервации
-            </TabsTrigger>
-          </div>
+          <TabsTrigger value="profile" className="py-3 text-base">
+            <Edit3 className="mr-2 h-5 w-5" /> Профил
+          </TabsTrigger>
+          <TabsTrigger value="reviews" className="py-3 text-base">
+            <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
+          </TabsTrigger>
+          <TabsTrigger value="bookings" className="py-3 text-base">
+            <History className="mr-2 h-5 w-5" /> Резервации
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="profile">
@@ -266,7 +266,7 @@ export default function AccountPage() {
                   <ol className="list-decimal list-inside space-y-1 text-destructive-foreground/90 pl-4">
                     <li>Отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
                     <li>Изберете таба <strong>Rules</strong>.</li>
-                    <li>Заменете съществуващите правила със следните:</li>
+                    <li>Заменете съществуващите правила със следните (ако не са вече така):</li>
                   </ol>
                   <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
                     <code>
