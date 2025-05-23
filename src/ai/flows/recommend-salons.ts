@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -36,18 +37,25 @@ export type RecommendSalonsOutput = z.infer<typeof RecommendSalonsOutputSchema>;
 export async function recommendSalons(input: RecommendSalonsInput): Promise<RecommendSalonsOutput> {
   try {
     const result = await recommendSalonsFlow(input);
-    // The flow now directly returns the output schema.
-    return result;
+    return { recommendations: result.recommendations };
   } catch (e: any) {
-    console.error("Error directly in recommendSalons exported function:", e);
-    return { error: e.message || "Failed to generate recommendations due to an unexpected error." };
+    console.error("Error in recommendSalons flow execution:", e);
+    let errorMessage = "Failed to generate recommendations due to an unexpected error.";
+    if (typeof e?.message === 'string') {
+      errorMessage = e.message;
+    } else if (typeof e === 'string') {
+      errorMessage = e;
+    } else if (e && typeof e.toString === 'function') {
+      errorMessage = e.toString();
+    }
+    return { error: errorMessage };
   }
 }
 
 const prompt = ai.definePrompt({
   name: 'recommendSalonsPrompt',
   input: {schema: RecommendSalonsInputSchema},
-  output: {schema: RecommendSalonsOutputSchema}, // Output schema for prompt
+  output: {schema: z.object({ recommendations: z.string().optional() })}, // Allow optional here, flow will handle if required
   prompt: `You are an AI beauty consultant. Based on user preferences, past bookings and current trending choices, recommend salons and services to the user.
 
 User Preferences: {{{userPreferences}}}
@@ -61,13 +69,12 @@ const recommendSalonsFlow = ai.defineFlow(
   {
     name: 'recommendSalonsFlow',
     inputSchema: RecommendSalonsInputSchema,
-    // The flow's direct output schema does not include the error field.
-    outputSchema: z.object({ recommendations: z.string() }),
+    outputSchema: z.object({ recommendations: z.string() }), // Flow requires recommendations
   },
   async (input): Promise<{ recommendations: string }> => {
     const {output} = await prompt(input);
-    if (!output || !output.recommendations) {
-        throw new Error("AI did not return recommendations.");
+    if (!output || typeof output.recommendations !== 'string' || output.recommendations.trim() === '') {
+        throw new Error("AI did not return valid recommendations.");
     }
     return { recommendations: output.recommendations };
   }

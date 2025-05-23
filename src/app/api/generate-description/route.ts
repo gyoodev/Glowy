@@ -7,6 +7,7 @@ export async function POST(request: NextRequest) {
     const data = await request.json() as GenerateSalonDescriptionInput;
     console.log('Received data for description generation:', data);
 
+    // Call the correctly imported and exported wrapper function
     const result = await generateSalonDescription(data);
 
     if (result.error) {
@@ -14,6 +15,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: result.error }, { status: 500 });
     }
 
+    // Ensure we are accessing .salonDescription if there's no error.
     return NextResponse.json({ success: true, salonDescription: result.salonDescription }, { status: 200 });
 
   } catch (error: any) {
