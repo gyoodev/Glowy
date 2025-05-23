@@ -791,7 +791,7 @@ export default function EditBusinessPage() {
                         modifiersStyles={{
                             available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
                         }}
-                        locale={{
+                        locale={{ // This object is used internally by react-day-picker, not date-fns directly
                           localize: {
                             month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
                           },
