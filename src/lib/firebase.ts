@@ -1,6 +1,6 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app"; // Added FirebaseApp
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
@@ -9,7 +9,7 @@ import type { UserProfile, Service, Booking } from '@/types'; // Ensure Service 
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M", // Reverted to hardcoded for now
+  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
   authDomain: "glowy-gyoodev.firebaseapp.com",
   projectId: "glowy-gyoodev",
   storageBucket: "glowy-gyoodev.firebasestorage.app",
@@ -19,7 +19,7 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-let app;
+let app: FirebaseApp; // Explicitly typed app
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
 } else {
@@ -54,7 +54,7 @@ export const createBooking = async (bookingDetails: {
   salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore: Partial<Booking> = { // Use Partial<Booking> for better type safety
+    const bookingDataForFirestore: Partial<Booking> = {
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
       userId: bookingDetails.userId,
@@ -90,7 +90,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
   const q = query(
     collection(firestore, 'bookings'),
     where('userId', '==', userId),
-    orderBy('createdAt', 'desc') 
+    orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
   querySnapshot.forEach((doc) => {
@@ -104,7 +104,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       userId: data.userId,
       date: data.date,
       time: data.time,
-      status: data.status as Booking['status'], 
+      status: data.status as Booking['status'],
       clientName: data.clientName,
       clientEmail: data.clientEmail,
       clientPhoneNumber: data.clientPhoneNumber,
@@ -130,10 +130,10 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       const data = userDocSnap.data();
       return {
         id: userDocSnap.id,
-        name: data.name || data.displayName || '', 
+        name: data.name || data.displayName || '',
         email: data.email || '',
         role: data.role,
-        userId: data.userId || userId, 
+        userId: data.userId || userId,
         profilePhotoUrl: data.profilePhotoUrl,
         phoneNumber: data.phoneNumber,
         preferences: {
@@ -148,7 +148,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     }
   } catch (error) {
     console.error('Error fetching user profile by UID (getUserProfile):', error);
-    return null; 
+    return null;
   }
 };
 
