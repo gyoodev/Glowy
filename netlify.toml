@@ -8,3 +8,4 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "10.8.0"
+  NODE_ENV = "production"
