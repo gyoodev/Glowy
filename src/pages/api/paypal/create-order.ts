@@ -40,12 +40,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   request.requestBody({
     intent: 'CAPTURE',
     purchase_units: [{
-      custom_id: packageId,
-      reference_id: businessId,
+      custom_id: packageId, // Used to pass packageId
+      reference_id: businessId, // Used to pass businessId
       description: description,
       amount: {
         currency_code: currency,
-        value: Number(amount).toFixed(2),
+        value: Number(amount).toFixed(2), // Ensure amount is a string with 2 decimal places
       },
     }],
     application_context: {
@@ -59,29 +59,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   } catch (error: any) {
     console.error('PayPal Create Order Error:', error);
     let errorMessage = 'Failed to create PayPal order.';
-    // Attempt to parse more detailed error messages from PayPal SDK
-    if (error.statusCode && error.message) { // PayPal SDK v1 style errors
+    let errorDetails = null;
+
+    if (error.statusCode && error.message) {
         try {
-            const errorDetailsParsed = JSON.parse(error.message);
-            if (errorDetailsParsed.details && errorDetailsParsed.details.length > 0) {
-                errorMessage = errorDetailsParsed.details.map((d: any) => d.issue + (d.description ? (' (' + d.description + ')') : '')).join(', ');
-            } else if (errorDetailsParsed.message) {
-                errorMessage = errorDetailsParsed.message;
-            }
+            const parsedMessage = JSON.parse(error.message);
+            if (parsedMessage.message) errorMessage = parsedMessage.message;
+            if (parsedMessage.details) errorDetails = parsedMessage.details;
+            if (parsedMessage.name) errorMessage = `${parsedMessage.name}: ${errorMessage}`;
         } catch (e) {
-            // If parsing fails, use the original error.message
             errorMessage = error.message;
         }
-        console.error('PayPal Error Details (SDK v1 style or similar):', error.message);
-    } else if (error.data && error.data.message) { // PayPal SDK v2 often has error.data
+    } else if (error.data && error.data.message) {
         errorMessage = error.data.message;
-        if (error.data.details && error.data.details.length > 0) {
-            errorMessage += ' Details: ' + error.data.details.map((d: any) => d.issue + (d.description ? (' (' + d.description + ')') : '')).join(', ');
-        }
-        console.error('PayPal Create Error Details (SDK v2 style):', error.data);
-    } else if (error.message) { // Fallback for other error types
+        if (error.data.details) errorDetails = error.data.details;
+    } else if (error.message) {
         errorMessage = error.message;
     }
-    res.status(error.statusCode || 500).json({ success: false, message: errorMessage, details: error.data?.details || error.details || null });
+
+    console.error('Formatted PayPal Error:', errorMessage, 'Details:', errorDetails);
+    res.status(error.statusCode || 500).json({ success: false, message: errorMessage, details: errorDetails });
   }
 }
