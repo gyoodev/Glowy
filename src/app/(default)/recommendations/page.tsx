@@ -18,7 +18,10 @@ export default function RecommendationsPage() {
     setIsLoading(true);
     setRecommendationOutput(null);
     try {
-      const result = await recommendSalons(data);
+      const result = await recommendSalons({
+        ...data,
+        pastBookings: data.pastBookings || '', // Ensure pastBookings is always a string
+      });
       setRecommendationOutput(result);
       toast({
         title: 'Препоръките са генерирани',
