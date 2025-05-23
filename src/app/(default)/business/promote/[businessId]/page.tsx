@@ -254,8 +254,7 @@ export default function PromoteBusinessPage() {
           </div>
         </section>
       )}
-    </div>
-    {/* Developer Tip: Error Information Section */
+      {/* Developer Tip: Error Information Section */}
       {error && (
         <div className="container mx-auto py-6 px-6 mt-8">
           <div className="border border-red-400 rounded-md bg-red-50 p-4">
