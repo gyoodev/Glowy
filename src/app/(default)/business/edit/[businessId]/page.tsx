@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase, type Icon as LucideIcon } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
@@ -29,6 +29,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { type Locale } from 'date-fns';
 import { SubmitHandler } from 'react-hook-form';
 
 
@@ -50,28 +51,8 @@ const generateFullDayTimeOptions = () => {
 const fullDayTimeOptions = generateFullDayTimeOptions();
 
 // Define a type for the locale object used by react-day-picker
-type DayPickerLocale = {
-  localize: {
-    month: (n: number) => string[];
-  };
-  formatLong: {
-    date: () => string;
-    firstWeekContainsDate: number;
-    goIntoContext: boolean;
-    hourCycle: string;
-    ordinalNumber: (dirtyNumber: number, options?: object) => string;
-    quartersInYear: number;
- dayPeriod: (hours: number) => string;
- dayOfYear: number;
- daysInMonth: number;
- extraDayPeriodRules: string;
- extraWeekdays: string;
- extraQuarterPeriods: string;
-  };
- code: string;
- formatDistance: (token: string, count: number, options?: { addSuffix?: boolean; includeSeconds?: boolean }) => string;
-  formatRelative: (token: any, date: Date, baseDate: Date, options?: object) => string;
-};
+type DayPickerLocale = Locale;
+
 const daysOfWeek = [
   { key: 'monday', label: 'Понеделник' },
   { key: 'tuesday', label: 'Вторник' },
