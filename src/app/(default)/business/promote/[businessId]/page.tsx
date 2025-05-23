@@ -183,7 +183,7 @@ export default function PromoteBusinessPage() {
   const isCurrentlyPromoted = currentPromotion?.isActive && currentPromotion.expiresAt && isFuture(new Date(currentPromotion.expiresAt));
 
   return (
-    <React.Fragment>
+ <React.Fragment>
       <header className="mb-8">
         <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
