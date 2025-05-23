@@ -1,12 +1,10 @@
 [build]
   command = "npm run build"
   publish = ".next"
-  
-  prebuild = "npm install @paypal/paypal-js"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
-
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "10.8.0"
