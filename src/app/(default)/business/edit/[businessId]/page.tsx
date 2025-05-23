@@ -5,7 +5,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -27,7 +26,8 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { zodResolver } from "@hookform/resolvers/zod"
+import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
 import { type Locale } from 'date-fns';
 import { SubmitHandler } from 'react-hook-form';
@@ -795,22 +795,7 @@ export default function EditBusinessPage() {
                         modifiersStyles={{
                             available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
  }}
-                        locale={{ // This object is used internally by react-day-picker, not date-fns directly
- localize: { month: (n: number) => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n] },
-                          formatLong: { date: () => 'dd/MM/yyyy' },
- code: 'bg',
- formatDistance: (token, count, options) => { // Simplified placeholder
- // This is a simplified placeholder. You might need a more complex implementation
- // based on react-day-picker's expected behavior or import from a locale library.
- // For now, returning a generic string to satisfy the type.
-                                const suffix = options?.addSuffix ? ' назад' : '';
- return `${count} ${token}${suffix}`;
- },
- formatRelative: (token, date, baseDate, options) => { // Add formatRelative
- // This is a required property. Provide a placeholder or actual implementation.
- return `относително време за ${format(date, 'PPP', { locale: bg })}`;
- }
-                        } as DayPickerLocale} // Use the defined type here
+                        locale={bg}
                       />
                     </div>
                     
