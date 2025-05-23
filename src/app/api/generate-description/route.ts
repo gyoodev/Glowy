@@ -1,21 +1,24 @@
+
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSalonDescriptionFlow } from '@/ai/flows/generate-salon-description'; // Assuming this export exists
+import { generateSalonDescription, type GenerateSalonDescriptionInput } from '@/ai/flows/generate-salon-description';
 
 export async function POST(request: NextRequest) {
   try {
-    const data = await request.json();
+    const data = await request.json() as GenerateSalonDescriptionInput;
     console.log('Received data for description generation:', data);
 
-    // For now, just log and return success. We'll call the flow later.
-    // await generateSalonDescriptionFlow.run({}); // Example call - will refine later
+    const result = await generateSalonDescription(data);
 
-    return NextResponse.json({ success: true, message: 'Data received for description generation' }, { status: 200 });
+    if (result.error) {
+      console.error('Error from generateSalonDescription flow:', result.error);
+      return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, salonDescription: result.salonDescription }, { status: 200 });
 
   } catch (error: any) {
-    console.error('Error processing description generation request:', error);
-    return NextResponse.json({ success: false, error: error.message || 'An error occurred' }, { status: 500 });
+    console.error('Error processing description generation request in API route:', error);
+    // This catch is for unexpected errors in the API route itself
+    return NextResponse.json({ success: false, error: error.message || 'An unexpected error occurred in the API route' }, { status: 500 });
   }
 }
-
-// You can also add other HTTP methods if needed, e.g., GET, PUT, DELETE
-// export async function GET(request: NextRequest) { ... }

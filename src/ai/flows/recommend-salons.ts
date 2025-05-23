@@ -27,35 +27,48 @@ export type RecommendSalonsInput = z.infer<typeof RecommendSalonsInputSchema>;
 const RecommendSalonsOutputSchema = z.object({
   recommendations: z
     .string()
+    .optional()
     .describe('A list of recommended salons and services based on the user preferences, past bookings, and trending choices.'),
+  error: z.string().optional().describe('An error message if the recommendation failed.'),
 });
 export type RecommendSalonsOutput = z.infer<typeof RecommendSalonsOutputSchema>;
 
 export async function recommendSalons(input: RecommendSalonsInput): Promise<RecommendSalonsOutput> {
-  return recommendSalonsFlow(input);
+  try {
+    const result = await recommendSalonsFlow(input);
+    // The flow now directly returns the output schema.
+    return result;
+  } catch (e: any) {
+    console.error("Error directly in recommendSalons exported function:", e);
+    return { error: e.message || "Failed to generate recommendations due to an unexpected error." };
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'recommendSalonsPrompt',
   input: {schema: RecommendSalonsInputSchema},
-  output: {schema: RecommendSalonsOutputSchema},
+  output: {schema: RecommendSalonsOutputSchema}, // Output schema for prompt
   prompt: `You are an AI beauty consultant. Based on user preferences, past bookings and current trending choices, recommend salons and services to the user.
 
 User Preferences: {{{userPreferences}}}
 Past Bookings: {{{pastBookings}}}
 Trending Choices: {{{trendingChoices}}}
 
-Recommendations:`, // Handlebars syntax is used here
+Recommendations:`,
 });
 
 const recommendSalonsFlow = ai.defineFlow(
   {
     name: 'recommendSalonsFlow',
     inputSchema: RecommendSalonsInputSchema,
-    outputSchema: RecommendSalonsOutputSchema,
+    // The flow's direct output schema does not include the error field.
+    outputSchema: z.object({ recommendations: z.string() }),
   },
-  async input => {
+  async (input): Promise<{ recommendations: string }> => {
     const {output} = await prompt(input);
-    return output!;
+    if (!output || !output.recommendations) {
+        throw new Error("AI did not return recommendations.");
+    }
+    return { recommendations: output.recommendations };
   }
 );

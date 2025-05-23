@@ -22,20 +22,30 @@ const GenerateSalonDescriptionInputSchema = z.object({
 export type GenerateSalonDescriptionInput = z.infer<typeof GenerateSalonDescriptionInputSchema>;
 
 const GenerateSalonDescriptionOutputSchema = z.object({
-  salonDescription: z.string().describe('A compelling description of the salon.'),
+  salonDescription: z.string().optional().describe('A compelling description of the salon.'),
+  error: z.string().optional().describe('An error message if the generation failed.'),
 });
 export type GenerateSalonDescriptionOutput = z.infer<typeof GenerateSalonDescriptionOutputSchema>;
 
 export async function generateSalonDescription(
   input: GenerateSalonDescriptionInput
 ): Promise<GenerateSalonDescriptionOutput> {
-  return generateSalonDescriptionFlow(input);
+  try {
+    const result = await generateSalonDescriptionFlow(input);
+    // The flow now directly returns the output schema, so no need to access result.output
+    // and ensure it matches GenerateSalonDescriptionOutput.
+    // If generateSalonDescriptionFlow resolves, its output should match the schema.
+    return result;
+  } catch (e: any) {
+    console.error("Error directly in generateSalonDescription exported function:", e);
+    return { error: e.message || "Failed to generate salon description due to an unexpected error." };
+  }
 }
 
 const prompt = ai.definePrompt({
   name: 'generateSalonDescriptionPrompt',
   input: {schema: GenerateSalonDescriptionInputSchema},
-  output: {schema: GenerateSalonDescriptionOutputSchema},
+  output: {schema: GenerateSalonDescriptionOutputSchema}, // Output schema should just be { salonDescription: string } if error is handled outside
   prompt: `You are an expert marketing copywriter for beauty salons. Your task is to create a compelling and attractive description for a salon based on the information provided.
 
 Salon Name: {{salonName}}
@@ -52,10 +62,18 @@ const generateSalonDescriptionFlow = ai.defineFlow(
   {
     name: 'generateSalonDescriptionFlow',
     inputSchema: GenerateSalonDescriptionInputSchema,
-    outputSchema: GenerateSalonDescriptionOutputSchema,
+    // The flow's direct output schema does not include the error field.
+    // The error field is handled by the wrapper.
+    outputSchema: z.object({ salonDescription: z.string() }),
   },
-  async input => {
+  async (input): Promise<{ salonDescription: string }> => {
+    // The prompt is expected to return an object matching its output schema.
+    // If the prompt's output schema is { salonDescription: string }, then this is fine.
     const {output} = await prompt(input);
-    return output!;
+    if (!output || !output.salonDescription) {
+        // This case should ideally be caught by Zod validation if output schema is strict
+        throw new Error("AI did not return a salon description.");
+    }
+    return { salonDescription: output.salonDescription };
   }
 );
