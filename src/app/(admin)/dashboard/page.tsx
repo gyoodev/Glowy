@@ -1,18 +1,14 @@
-'use client';
+'use client'; // Ensure it's a client component
 
 import React from 'react';
 
-// This page now assumes AdminLayout has already verified the user is an admin.
 export default function AdminDashboardPage() {
+  console.log('AdminDashboardPage: Rendering (simplified for 404 debug)');
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Административно табло</h1>
-      <p>Добре дошли в административното табло. Тук ще бъдат добавени още функции.</p>
-      {/* Test content to ensure the page itself can render if reached */}
-      <p className="mt-4 p-4 border border-dashed border-primary text-primary">
-        Ако виждате това, значи страницата /admin/dashboard/page.tsx се рендира.
-        Проблемът с 404 вероятно е свързан с билд процеса в Netlify или с рутирането.
-      </p>
+      <h1 className="text-3xl font-bold mb-6">Минимално Табло</h1>
+      <p>Ако виждате това, значи /admin/dashboard/page.tsx и /admin/layout.tsx се рендират.</p>
+      <p className="mt-4 text-red-500">Ако все още получавате 404, проблемът е най-вероятно в Netlify build/routing конфигурацията.</p>
     </div>
   );
 }

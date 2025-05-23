@@ -1,103 +1,28 @@
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation'; // Corrected import for App Router
-import Link from 'next/link';
-import { onAuthStateChanged } from 'firebase/auth';
-import { auth, getUserProfile } from '../../lib/firebase'; // Changed from @/lib/firebase
-// Removed unused useToast import to simplify for build debugging
+import React, { type ReactNode } from 'react';
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
+// Extremely simplified layout for testing route group rendering
 export default function AdminLayout({ children }: AdminLayoutProps) {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-
-  useEffect(() => {
-    console.log('AdminLayout: useEffect triggered.');
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('AdminLayout: onAuthStateChanged triggered. User:', user ? user.uid : 'null');
-      if (user) {
-        try {
-          const profile = await getUserProfile(user.uid);
-          console.log('AdminLayout: Fetched profile:', profile);
-          if (profile && profile.role === 'admin') {
-            console.log('AdminLayout: User is admin. Authorizing.');
-            setIsAuthorized(true);
-          } else {
-            console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
-            setIsAuthorized(false);
-            if (router && router.push && typeof router.push === 'function') { // Defensive check for router
-                router.push('/');
-            } else {
-                console.error("AdminLayout: Router not available for redirect.");
-            }
-          }
-        } catch (error: any) {
-          console.error('AdminLayout: Error fetching profile:', error.message || error);
-          setIsAuthorized(false);
-          if (router && router.push && typeof router.push === 'function') { // Defensive check for router
-            router.push('/');
-          } else {
-            console.error("AdminLayout: Router not available for redirect.");
-          }
-        } finally {
-          console.log('AdminLayout: Setting isLoading to false (user authenticated path).');
-          setIsLoading(false);
-        }
-      } else {
-        console.warn('AdminLayout: User not authenticated. Redirecting to login.');
-        setIsAuthorized(false);
-        setIsLoading(false); 
-        if (router && router.push && typeof router.push === 'function') { // Defensive check for router
-          router.push('/login');
-        } else {
-          console.error("AdminLayout: Router not available for redirect.");
-        }
-      }
-    });
-
-    return () => {
-      console.log('AdminLayout: useEffect cleanup.');
-      unsubscribe();
-    };
-  }, [router]);
-
-  if (isLoading) {
-    console.log('AdminLayout: Rendering loading state.');
-    return <div className="flex justify-center items-center h-screen">Зареждане на административния панел... (AdminLayout Loading)</div>;
-  }
-
-  if (!isAuthorized) {
-    console.log('AdminLayout: Rendering unauthorized state or redirecting.');
-    // This message is shown briefly before redirect or if redirect fails.
-    return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате... (AdminLayout Unauthorized)</div>;
-  }
-
-  console.log('AdminLayout: Rendering authorized admin content.');
+  console.log('AdminLayout: Rendering (simplified for 404 debug)');
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       <aside className="w-64 bg-gray-800 text-white p-4">
-        <h2 className="text-2xl font-bold mb-6">Админ панел</h2>
+        <h2 className="text-2xl font-bold mb-6">Админ Панел (Тест)</h2>
         <nav>
           <ul>
-            <li className="mb-2"><Link href="/admin/dashboard" className="hover:text-gray-300">Табло</Link></li>
-            <li className="mb-2"><Link href="/admin/users" className="hover:text-gray-300">Потребители</Link></li>
-            <li className="mb-2"><Link href="/admin/business" className="hover:text-gray-300">Бизнеси (Салони)</Link></li>
-            <li className="mb-2"><Link href="/admin/bookings" className="hover:text-gray-300">Резервации</Link></li>
-            <li className="mb-2"><Link href="/admin/contacts" className="hover:text-gray-300">Запитвания</Link></li>
+            <li className="mb-2"><a href="/admin/dashboard">Тест Табло</a></li>
+            {/* Add other links here if needed for testing, using simple <a> tags for now */}
           </ul>
         </nav>
       </aside>
-
       <main className="flex-1 overflow-y-auto p-6 bg-background text-foreground">
-        <header className="flex justify-between items-center pb-4 border-b border-gray-300 dark:border-gray-700 mb-6">
-          <h1 className="text-3xl font-semibold">Административно съдържание</h1>
-          {/* You can add user profile/logout for admin here if needed */}
+        <header className="pb-4 border-b border-gray-300 dark:border-gray-700 mb-6">
+          <h1 className="text-3xl font-semibold">Админ Съдържание (Тест)</h1>
         </header>
         {children}
       </main>
