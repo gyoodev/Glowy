@@ -5,7 +5,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { auth, getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
+import { auth, getUserProfile } from '@/lib/firebase'; // Import getUserProfile
 import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -24,7 +24,7 @@ interface ExtendedBooking extends Booking {
 export default function SalonBookingsPage() {
   const params = useParams();
   const router = useRouter();
-  const businessId = params.businessId as string;
+  const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
   const firestore = getFirestore();
   const { toast } = useToast();
 
@@ -47,7 +47,12 @@ export default function SalonBookingsPage() {
   }, [router]);
 
   useEffect(() => {
-    if (!currentUser || !businessId) {
+    if (!businessId) {
+      setError('Невалиден ID на бизнес.');
+      setIsLoading(false);
+      return;
+    }
+    if (!currentUser) {
       if (!businessId) setIsLoading(false);
       return;
     }
