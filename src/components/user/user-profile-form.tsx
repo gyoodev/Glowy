@@ -11,23 +11,24 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart } from 'lucide-react'; // Added icons
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { mockServices, allBulgarianCities } from '@/lib/mock-data'; 
+import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { useState, useEffect } from 'react';
-import { auth } from '@/lib/firebase'; 
-import { getFirestore, doc, setDoc } from 'firebase/firestore'; 
+import { auth } from '@/lib/firebase';
+import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
+const ANY_PRICE_FORM_VALUE = "any";
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
   favoriteServices: z.array(z.string()).optional(),
-  priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
+  priceRange: z.enum(['cheap', 'moderate', 'expensive', ANY_PRICE_FORM_VALUE]).optional(),
   preferredLocations: z.array(z.string()).optional(),
 });
 
@@ -49,7 +50,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
       name: userProfile.displayName || userProfile.name || '',
       email: userProfile.email || '',
       favoriteServices: userProfile.preferences?.favoriteServices || [],
-      priceRange: userProfile.preferences?.priceRange || '',
+      priceRange: (userProfile.preferences?.priceRange === '' || userProfile.preferences?.priceRange === undefined) ? ANY_PRICE_FORM_VALUE : userProfile.preferences?.priceRange,
       preferredLocations: userProfile.preferences?.preferredLocations || [],
     },
   });
@@ -60,7 +61,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
         name: userProfile.displayName || userProfile.name || '',
         email: userProfile.email || '',
         favoriteServices: userProfile.preferences?.favoriteServices || [],
-        priceRange: userProfile.preferences?.priceRange || '',
+        priceRange: (userProfile.preferences?.priceRange === '' || userProfile.preferences?.priceRange === undefined) ? ANY_PRICE_FORM_VALUE : userProfile.preferences?.priceRange,
         preferredLocations: userProfile.preferences?.preferredLocations || [],
       });
     }
@@ -72,34 +73,33 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
       toast({ title: "Грешка", description: "Трябва да сте влезли, за да актуализирате профила.", variant: "destructive" });
       return;
     }
-    
+
     try {
       const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
-      const profileDataToSave: Partial<UserProfile> = { // Use Partial<UserProfile> for flexibility
-        userId: auth.currentUser.uid,
+      const profileDataToSave: Partial<UserProfile> & { userId: string } = {
+        userId: auth.currentUser.uid, // Ensure userId is always present
+        name: data.name,
         displayName: data.name,
-        name: data.name, // Also save to 'name' if that's what you primarily use
+        email: data.email, // Keep email from form (should be read-only)
         preferences: {
           favoriteServices: data.favoriteServices || [],
-          priceRange: data.priceRange || '', 
+          priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
           preferredLocations: data.preferredLocations || [],
         },
-        lastUpdatedAt: new Date(), 
+        lastUpdatedAt: new Date(),
       };
 
-      if (userProfile.email) {
-        (profileDataToSave as any).email = userProfile.email;
-      }
+      // Preserve existing role and profilePhotoUrl if they exist
       if (userProfile.role) {
-        (profileDataToSave as any).role = userProfile.role;
+        profileDataToSave.role = userProfile.role;
       }
-       if (userProfile.profilePhotoUrl) {
-        (profileDataToSave as any).profilePhotoUrl = userProfile.profilePhotoUrl;
+      if (userProfile.profilePhotoUrl) {
+        profileDataToSave.profilePhotoUrl = userProfile.profilePhotoUrl;
       }
 
 
       await setDoc(userDocRef, profileDataToSave, { merge: true });
-      
+
       toast({
         title: 'Профилът е актуализиран',
         description: 'Информацията за Вашия профил е успешно актуализирана.',
@@ -132,7 +132,7 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
               </div>
             </div>
           </CardHeader>
-          
+
           <CardContent className="p-6 space-y-8">
             <div>
                 <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
@@ -249,14 +249,14 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel className="flex items-center"><Tag className="mr-2 h-4 w-4 text-muted-foreground" />Предпочитан ценови диапазон</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <Select onValueChange={field.onChange} value={field.value || ANY_PRICE_FORM_VALUE}>
                             <FormControl>
                                 <SelectTrigger className="text-base">
                                 <SelectValue placeholder="Изберете ценови диапазон" />
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="">Всякакъв</SelectItem>
+                                <SelectItem value={ANY_PRICE_FORM_VALUE}>Всякакъв</SelectItem>
                                 <SelectItem value="cheap">Евтино ($)</SelectItem>
                                 <SelectItem value="moderate">Умерено ($$)</SelectItem>
                                 <SelectItem value="expensive">Скъпо ($$$)</SelectItem>
@@ -346,3 +346,4 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
     </Card>
   );
 }
+
