@@ -54,9 +54,22 @@ type DayPickerLocale = {
   localize: {
     month: (n: number) => string[];
   };
-  formatLong: {
-    date: () => string;
+ formatLong: {
+ date: () => string;
+ firstWeekContainsDate: number;
+ goIntoContext: boolean;
+ hourCycle: string;
+ ordinalNumber: (dirtyNumber: number, options?: object) => string;
+ quartersInYear: number;
+ dayPeriod: (hours: number) => string;
+ dayOfYear: number;
+ daysInMonth: number;
+ extraDayPeriodRules: string;
+ extraWeekdays: string;
+ extraQuarterPeriods: string;
   };
+ code: string;
+ formatDistance: (token: string, count: number, options?: { addSuffix?: boolean; includeSeconds?: boolean }) => string;
 };
 
 const daysOfWeek = [
@@ -805,7 +818,14 @@ export default function EditBusinessPage() {
  localize: {
  month: (n: number) => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
                           },
-                          formatLong: { date: () => 'dd/MM/yyyy' }
+                          formatLong: { date: () => 'dd/MM/yyyy' },
+ code: 'bg', // Add code
+ formatDistance: (token, count, options, addSuffix, includeSeconds) => { // Provide a placeholder or actual implementation
+ // This is a simplified placeholder. You might need a more complex implementation
+ // based on react-day-picker's expected behavior or import from a locale library.
+ // For now, returning a generic string to satisfy the type.
+ return `${count} ${token}${addSuffix ? ' назад' : ''}`;
+                          }
                         } as DayPickerLocale} // Use the defined type here
                       />
                     </div>
