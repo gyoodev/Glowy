@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
 
+// Replace with your actual PayPal credentials from environment variables
 const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
@@ -61,19 +62,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let errorMessage = 'Failed to create PayPal order.';
     let errorDetails = null;
 
+    // Attempt to parse PayPal SDK v1 error structure if that's what's coming back
     if (error.statusCode && error.message) {
         try {
+            // error.message might be a JSON string for PayPal SDK errors
             const parsedMessage = JSON.parse(error.message);
-            if (parsedMessage.message) errorMessage = parsedMessage.message;
+            if (parsedMessage.name) errorMessage = parsedMessage.name + ': ' + (parsedMessage.message || 'Unknown PayPal Error');
             if (parsedMessage.details) errorDetails = parsedMessage.details;
-            if (parsedMessage.name) errorMessage = `${parsedMessage.name}: ${errorMessage}`;
         } catch (e) {
+            // If error.message is not JSON, use it directly
             errorMessage = error.message;
         }
-    } else if (error.data && error.data.message) {
-        errorMessage = error.data.message;
-        if (error.data.details) errorDetails = error.data.details;
-    } else if (error.message) {
+    } else if (error.message) { // General error message
         errorMessage = error.message;
     }
 
