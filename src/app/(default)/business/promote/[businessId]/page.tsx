@@ -1,4 +1,4 @@
-typescriptreact
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -85,7 +85,6 @@ export default function PromoteBusinessPage() {
     }
   };
 
-  // Placeholder function for buying promotion
   const handleBuyPromotion = async (packageId: string) => {
     if (!salon || !currentUser || !isOwner || isProcessing) return;
 
@@ -104,21 +103,8 @@ export default function PromoteBusinessPage() {
     setError(null);
 
     try {
-      // Simulate payment processing or integrate with a payment gateway
-      console.log(`Initiating purchase for package: ${chosenPackage.name} for salon: ${salon.name}`);
-
-      // --- Placeholder: Integrate your payment gateway logic here ---
-      // Example: Call an API route to create a payment order (like PayPal Create Order)
-      // const response = await fetch('/api/paypal/create-order', { ... });
-      // const order = await response.json();
-      // Redirect user to approval_url or show payment modal
-      // --- End Placeholder ---
-
-      // Simulate successful payment after a delay
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // --- Placeholder: Update Firestore upon successful payment ---
-      // Calculate expiry date
       const now = new Date();
       const expiryDate = addDays(now, chosenPackage.durationDays);
       const expiryTimestamp = Timestamp.fromDate(expiryDate);
@@ -128,8 +114,10 @@ export default function PromoteBusinessPage() {
         packageId: chosenPackage.id,
         packageName: chosenPackage.name,
         isActive: true,
-        expiresAt: expiryTimestamp.toMillis(), // Store as milliseconds
-        purchasedAt: Timestamp.now().toMillis(), // Store as milliseconds
+        expiresAt: expiryTimestamp.toMillis().toString(),
+        purchasedAt: Timestamp.now().toMillis().toString(),
+        paymentMethod: 'paypal', // Assuming PayPal for now, as per previous context
+        transactionId: `sim_txn_${Date.now()}` // Simulated transaction ID
       };
 
       const salonRef = doc(firestore, 'salons', salon.id);
@@ -152,11 +140,10 @@ export default function PromoteBusinessPage() {
       });
     } finally {
       setIsProcessing(false);
-      setSelectedPackageId(null); // Clear selected package after process
+      setSelectedPackageId(null);
     }
   };
 
-  // Placeholder function for stopping promotion
   const handleStopPromotion = async () => {
     if (!salon || !salon.promotion || !currentUser || !isOwner || isProcessing) return;
 
@@ -167,8 +154,6 @@ export default function PromoteBusinessPage() {
       const updatedPromotion: Promotion = {
         ...salon.promotion,
         isActive: false,
-        // Optionally update expiresAt to now if stopping early
-        // expiresAt: Timestamp.now().toMillis(),
       };
 
       const salonRef = doc(firestore, 'salons', salon.id);
@@ -191,14 +176,12 @@ export default function PromoteBusinessPage() {
       });
     } finally {
       setIsProcessing(false);
-      // Note: After stopping, we don't clear selectedPackageId as the user might choose to buy again
-      setSelectedPackageId(null); // Clear selected package on stop
+      setSelectedPackageId(null);
     }
   };
 
   const currentPromotion = salon?.promotion;
-  // Convert expiresAt from milliseconds to Date for comparison
-  const promotionExpiryDate = currentPromotion?.expiresAt ? fromUnixTime(currentPromotion.expiresAt / 1000) : null;
+  const promotionExpiryDate = currentPromotion?.expiresAt ? fromUnixTime(Number(currentPromotion.expiresAt) / 1000) : null;
   const isCurrentlyPromoted = currentPromotion?.isActive && promotionExpiryDate && isFuture(promotionExpiryDate);
 
   if (isLoading) {
@@ -216,7 +199,7 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (error && !salon) { // Display full page error if salon data couldn't be loaded
+  if (error && !salon) {
     return (
       <div className="container mx-auto py-10 px-6">
          <header className="mb-8">
@@ -236,7 +219,7 @@ export default function PromoteBusinessPage() {
 
 
   return (
-    <React.Fragment>
+    <div className="container mx-auto py-10 px-6">
       <header className="mb-8">
         <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
@@ -247,7 +230,6 @@ export default function PromoteBusinessPage() {
         <p className="text-lg text-muted-foreground">Увеличете видимостта на Вашия салон и привлечете повече клиенти.</p>
       </header>
 
-      {/* Display owner access error if not owner */}
       {error && !isOwner && salon && (
          <div className="border border-red-400 rounded-md bg-red-50 p-4 mb-6">
             <h4 className="text-lg font-semibold text-red-700 flex items-center">
@@ -258,9 +240,8 @@ export default function PromoteBusinessPage() {
       )}
 
 
-      {salon && isOwner && ( // Render content only if salon data is loaded and user is owner
+      {salon && isOwner && (
         <>
-          {/* Status Card */}
           <Card className="mb-8 shadow-lg">
             <CardHeader>
               <CardTitle className="text-xl flex items-center">
@@ -288,7 +269,7 @@ export default function PromoteBusinessPage() {
             </CardContent>
           </Card>
 
-          {!isCurrentlyPromoted && ( // Only show packages if not currently promoted
+          {!isCurrentlyPromoted && (
             <section>
               <h2 className="text-2xl font-semibold mb-6 text-foreground">Изберете Промоционален Пакет</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -308,7 +289,7 @@ export default function PromoteBusinessPage() {
                       <Button
                         onClick={() => handleBuyPromotion(pkg.id)}
                         className="w-full"
-                        disabled={isProcessing} // Disable buy buttons while processing any action
+                        disabled={isProcessing}
                       >
                         {isProcessing && selectedPackageId === pkg.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Tag className="mr-2 h-4 w-4" />}
                         Купи сега
@@ -320,8 +301,7 @@ export default function PromoteBusinessPage() {
             </section>
           )}
 
-          {/* Developer Tip: Error Information Section (for buy/stop actions) */}
-          {error && isOwner && ( // Only show action-specific error if user is owner and an action caused error
+          {error && isOwner && (
             <div className="container mx-auto py-6 px-6 mt-8">
               <div className="border border-red-400 rounded-md bg-red-50 p-4">
                 <h4 className="text-lg font-semibold text-red-700 flex items-center">
@@ -333,6 +313,6 @@ export default function PromoteBusinessPage() {
           )}
         </>
       )}
-    </React.Fragment>
+    </div>
   );
 }
