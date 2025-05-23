@@ -444,6 +444,7 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
+      const userProfileData = await getUserProfile(userId); // Fetch userProfileData here
       let reviewerName = auth.currentUser.displayName;
 
       if (!reviewerName) {
