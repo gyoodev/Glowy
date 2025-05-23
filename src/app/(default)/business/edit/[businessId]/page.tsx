@@ -49,6 +49,16 @@ const generateFullDayTimeOptions = () => {
 };
 const fullDayTimeOptions = generateFullDayTimeOptions();
 
+// Define a type for the locale object used by react-day-picker
+type DayPickerLocale = {
+  localize: {
+    month: (n: number) => string[];
+  };
+  formatLong: {
+    date: () => string;
+  };
+};
+
 const daysOfWeek = [
   { key: 'monday', label: 'Понеделник' },
   { key: 'tuesday', label: 'Вторник' },
@@ -792,14 +802,14 @@ export default function EditBusinessPage() {
                             available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
                         }}
                         locale={{ // This object is used internally by react-day-picker, not date-fns directly
-                          localize: {
-                            month: n => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
+ localize: {
+ month: (n: number) => ['Януари', 'Февруари', 'Март', 'Април', 'Май', 'Юни', 'Юли', 'Август', 'Септември', 'Октомври', 'Ноември', 'Декември'][n],
                           },
                           formatLong: { date: () => 'dd/MM/yyyy' }
-                        } as any}
+                        } as DayPickerLocale} // Use the defined type here
                       />
                     </div>
-
+                    
                     {selectedAvailabilityDate && (
                       <div className="space-y-4">
                         <div>
