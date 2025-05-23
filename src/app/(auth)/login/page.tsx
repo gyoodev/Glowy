@@ -5,16 +5,16 @@ import React from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../../components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../components/ui/card';
-import { Checkbox } from '../../components/ui/checkbox';
-import { useToast } from '../../hooks/use-toast';
+import { Button } from '@/components/ui/button'; // Use alias
+import { Input } from '@/components/ui/input'; // Use alias
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'; // Use alias
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Use alias
+import { Checkbox } from '@/components/ui/checkbox'; // Use alias
+import { useToast } from '@/hooks/use-toast'; // Use alias
 import { LogIn, Mail, KeyRound, Chrome, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { auth } from '../../lib/firebase';
+import { auth } from '@/lib/firebase'; // Use alias
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 
 const loginSchema = z.object({
@@ -80,7 +80,7 @@ export default function LoginPage() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       console.log('Google Sign-In successful:', user); 
-      localStorage.setItem('isUserLoggedIn', 'true'); // Maintain consistency for header logic
+      localStorage.setItem('isUserLoggedIn', 'true'); 
       toast({
         title: 'Влизане с Google успешно',
         description: `Добре дошли, ${user.displayName || user.email}!`,

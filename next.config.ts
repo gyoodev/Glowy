@@ -1,12 +1,13 @@
 import type {NextConfig} from 'next';
+import path from 'path'; // Ensure path is imported
 
 const nextConfig: NextConfig = {
   /* config options here */
   typescript: {
-    ignoreBuildErrors: false, // CHANGED
+    ignoreBuildErrors: false,
   },
   eslint: {
-    ignoreDuringBuilds: false, // CHANGED
+    ignoreDuringBuilds: false,
   },
   images: {
     remotePatterns: [
@@ -25,6 +26,9 @@ const nextConfig: NextConfig = {
     ],
   },
   webpack: (config, {isServer}) => {
+    // Add alias for @ to resolve to src directory
+    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
+
     if (isServer) {
       config.externals.push('@paypal/paypal-js');
     }

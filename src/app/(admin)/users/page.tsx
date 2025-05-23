@@ -4,8 +4,8 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { auth } from '../../lib/firebase'; // Changed from @/lib/firebase
-import type { UserProfile } from '../../../types';
+import { auth } from '@/lib/firebase'; // Changed to alias
+import type { UserProfile } from '@/types'; // Changed to alias
 
 interface NewUserFormState {
   email: string;
@@ -81,6 +81,13 @@ export default function AdminUsersPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoading) {
+    return <div className="container mx-auto py-10">Зареждане на потребители...</div>;
+  }
+  if (error) {
+    return <div className="container mx-auto py-10 text-destructive">Грешка: {error}</div>;
+  }
 
   return (
     <div>

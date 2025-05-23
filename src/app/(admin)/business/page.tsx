@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { auth } from '../../lib/firebase'; // Changed from @/lib/firebase
-import type { Salon } from '../../../types';
+import { auth } from '@/lib/firebase'; // Changed to alias
+import type { Salon } from '@/types'; // Changed to alias
 import Link from 'next/link';
 
 export default function AdminBusinessPage() {
@@ -38,18 +38,21 @@ export default function AdminBusinessPage() {
     fetchSalons();
   }, []);
 
+  if (isLoading) {
+    return <div className="container mx-auto py-10">Зареждане на салони...</div>;
+  }
+
+  if (error) {
+    return <div className="container mx-auto py-10 text-destructive">Грешка: {error}</div>;
+  }
+
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1>
 
-      {isLoading && <p>Зареждане на салони...</p>}
-      {error && <p className="text-destructive">Грешка: {error}</p>}
-
-      {!isLoading && !error && salons.length === 0 && (
+      {salons.length === 0 ? (
         <p>Няма намерени салони.</p>
-      )}
-
-      {!isLoading && !error && salons.length > 0 && (
+      ) : (
         <div className="p-6 bg-card rounded-lg shadow">
           <h2 className="text-2xl font-semibold mb-4">Списък със салони ({salons.length})</h2>
            <div className="overflow-x-auto">
@@ -73,11 +76,9 @@ export default function AdminBusinessPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {/* Ensure salon.id is correctly passed */}
                       <Link href={`/business/edit/${salon.id}`} className="text-primary hover:underline">
                         Редактирай
                       </Link>
-                      {/* TODO: Add Delete functionality here (requires Firebase Function for secure deletion) */}
                     </td>
                   </tr>
                 ))}

@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { auth } from '../../lib/firebase'; // Changed from @/lib/firebase
-import type { Booking } from '../../../types'; // Assuming Booking type includes necessary fields
+import { auth } from '@/lib/firebase'; // Changed to alias
+import type { Booking } from '@/types'; // Changed to alias
 
 export default function AdminBookingManagementPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
