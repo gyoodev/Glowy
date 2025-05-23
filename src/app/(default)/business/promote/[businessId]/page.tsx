@@ -253,7 +253,7 @@ export default function PromoteBusinessPage() {
         </section>
       )}
       {/* Developer Tip: Error Information Section */}\
-      {error && (\
+      {error && (
         <div className="container mx-auto py-6 px-6 mt-8">\
           <div className="border border-red-400 rounded-md bg-red-50 p-4">\
             <h4 className="text-lg font-semibold text-red-700 flex items-center">\
