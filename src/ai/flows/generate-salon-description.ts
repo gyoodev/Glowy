@@ -51,16 +51,9 @@ export async function generateSalonDescription(
         console.error("Fallback error toString():", e.toString());
       }
     }
-
-    let errorMessage = "Failed to generate salon description due to an unexpected error.";
-    if (e instanceof Error && typeof e.message === 'string') {
-      errorMessage = e.message;
-    } else if (typeof e === 'string') {
-      errorMessage = e;
-    } else if (e && typeof e.toString === 'function') {
-      errorMessage = e.toString();
-    }
-    return { error: errorMessage };
+    // Re-throw the error so the caller can handle it appropriately.
+    // This aligns with the flow's expectation of always returning a description or throwing.
+    throw e;
   }
 }
 

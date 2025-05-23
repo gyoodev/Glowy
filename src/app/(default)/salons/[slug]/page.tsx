@@ -465,7 +465,7 @@ export default function SalonProfilePage() {
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
         // Assign the non-empty value if userProfileData exists and name or displayName are not empty
         reviewerName = userProfileData.name || userProfileData.displayName;
-      }
+      } else reviewerName = null; // Explicitly assign null if userProfileData is missing or names are empty
       reviewerName = reviewerName || 'Анонимен потребител'; 
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
