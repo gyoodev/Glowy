@@ -265,4 +265,5 @@ export default function PromoteBusinessPage() {
           </div>
         </div>
       )}
-}
+    )
+  }
