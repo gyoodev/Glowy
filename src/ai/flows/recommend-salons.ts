@@ -37,11 +37,25 @@ export type RecommendSalonsOutput = z.infer<typeof RecommendSalonsOutputSchema>;
 export async function recommendSalons(input: RecommendSalonsInput): Promise<RecommendSalonsOutput> {
   try {
     const result = await recommendSalonsFlow(input);
+    // The flow itself now throws an error if the output schema is not met.
     return { recommendations: result.recommendations };
   } catch (e: any) {
-    console.error("Error in recommendSalons flow execution:", e);
+    console.error("Error in recommendSalons flow execution. Type:", typeof e, "Content:", e);
+    if (e instanceof Error) {
+      console.error("Error name:", e.name);
+      console.error("Error message:", e.message);
+      console.error("Error stack:", e.stack);
+    } else if (typeof e === 'object' && e !== null) {
+      try {
+        console.error("Full error object (stringified):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+      } catch (stringifyError) {
+        console.error("Could not stringify the full error object:", stringifyError);
+        console.error("Fallback error toString():", e.toString());
+      }
+    }
+    
     let errorMessage = "Failed to generate recommendations due to an unexpected error.";
-    if (typeof e?.message === 'string') {
+    if (e instanceof Error && typeof e.message === 'string') {
       errorMessage = e.message;
     } else if (typeof e === 'string') {
       errorMessage = e;

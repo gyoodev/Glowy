@@ -33,11 +33,27 @@ export async function generateSalonDescription(
 ): Promise<GenerateSalonDescriptionOutput> {
   try {
     const result = await generateSalonDescriptionFlow(input);
+    // The flow itself now throws an error if the output schema is not met.
+    // So, a successful result here implies salonDescription is present.
     return { salonDescription: result.salonDescription };
   } catch (e: any) {
-    console.error("Error in generateSalonDescription flow execution:", e);
+    console.error("Error in generateSalonDescription flow execution. Type:", typeof e, "Content:", e);
+    if (e instanceof Error) {
+      console.error("Error name:", e.name);
+      console.error("Error message:", e.message);
+      console.error("Error stack:", e.stack);
+    } else if (typeof e === 'object' && e !== null) {
+      // Attempt to stringify, but be cautious with circular references or huge objects
+      try {
+        console.error("Full error object (stringified):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
+      } catch (stringifyError) {
+        console.error("Could not stringify the full error object:", stringifyError);
+        console.error("Fallback error toString():", e.toString());
+      }
+    }
+
     let errorMessage = "Failed to generate salon description due to an unexpected error.";
-    if (typeof e?.message === 'string') {
+    if (e instanceof Error && typeof e.message === 'string') {
       errorMessage = e.message;
     } else if (typeof e === 'string') {
       errorMessage = e;
