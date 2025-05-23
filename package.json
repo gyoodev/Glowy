@@ -42,6 +42,7 @@
     "@revolut/checkout": "^1.1.21",
     "@tanstack-query-firebase/react": "^1.0.5",
     "@tanstack/react-query": "^5.66.0",
+    "@types/node": "^22.15.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
@@ -62,15 +63,14 @@
     "styled-components": "^6.1.12",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.8.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "genkit-cli": "^1.8.0",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.5.4"
+    "tailwindcss": "^3.4.1"
   }
 }
