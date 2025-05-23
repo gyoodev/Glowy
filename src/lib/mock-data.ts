@@ -87,6 +87,7 @@ export const mockSalons: Salon[] = [
 
 export const mockUserProfile: UserProfile = {
   id: 'user1',
+  userId: 'user1', // Added missing userId field
   name: 'Яна Доева',
   email: 'yana.doeva@example.com',
   profilePhotoUrl: 'https://placehold.co/100x100.png',
@@ -98,17 +99,17 @@ export const mockUserProfile: UserProfile = {
 };
 
 export const mockBookings: Booking[] = [
-  { id: 'b1', salonId: 'salon1', salonName: 'Студио Блясък и Красота', serviceId: 's1', serviceName: 'Дамска подстрижка', date: '2024-04-20T00:00:00Z', time: '10:00', status: 'completed' },
-  { id: 'b2', salonId: 'salon3', salonName: 'Спокоен СПА & Салон', serviceId: 's7', serviceName: 'Процедура за лице', date: '2024-05-05T00:00:00Z', time: '15:00', status: 'completed' },
-  { id: 'b3', salonId: 'salon1', salonName: 'Студио Блясък и Красота', serviceId: 's5', serviceName: 'Маникюр', date: (new Date(Date.now() + 86400000 * 5)).toISOString().split('T')[0], time: '11:00', status: 'confirmed' },
+  { id: 'b1', salonId: 'salon1', salonName: 'Студио Блясък и Красота', serviceId: 's1', serviceName: 'Дамска подстрижка', date: '2024-04-20T00:00:00Z', time: '10:00', status: 'completed', userId: 'user1', clientName: 'Яна Доева', clientEmail: 'yana.doeva@example.com', clientPhoneNumber: '0888123456' },
+  { id: 'b2', salonId: 'salon3', salonName: 'Спокоен СПА & Салон', serviceId: 's7', serviceName: 'Процедура за лице', date: '2024-05-05T00:00:00Z', time: '15:00', status: 'completed', userId: 'user1', clientName: 'Яна Доева', clientEmail: 'yana.doeva@example.com', clientPhoneNumber: '0888123456' },
+  { id: 'b3', salonId: 'salon1', salonName: 'Студио Блясък и Красота', serviceId: 's5', serviceName: 'Маникюр', date: (new Date(Date.now() + 86400000 * 5)).toISOString().split('T')[0], time: '11:00', status: 'confirmed', userId: 'user1', clientName: 'Яна Доева', clientEmail: 'yana.doeva@example.com', clientPhoneNumber: '0888123456' },
 ];
 
 export const getSalonById = (id: string): Salon | undefined => mockSalons.find(salon => salon.id === id);
 
 export const allBulgarianCities: string[] = [
-  "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора", 
-  "Плевен", "Сливен", "Добрич", "Шумен", "Перник", "Хасково", 
-  "Ямбол", "Пазарджик", "Благоевград", "Велико Търново", "Враца", 
-  "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали", 
+  "София", "Пловдив", "Варна", "Бургас", "Русе", "Стара Загора",
+  "Плевен", "Сливен", "Добрич", "Шумен", "Перник", "Хасково",
+  "Ямбол", "Пазарджик", "Благоевград", "Велико Търново", "Враца",
+  "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали",
   "Търговище", "Ловеч", "Силистра", "Разград", "Смолян"
 ];
