@@ -4,13 +4,25 @@
 import { useState } from 'react';
 import { RecommendationForm } from '@/components/ai/recommendation-form';
 import { RecommendationResults } from '@/components/ai/recommendation-results';
-import { useToast } from '@/hooks/use-toast';
 import { Wand2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
+const RecommendSalonsOutputSchema = {
+  recommendations: {
+    _output: {} as string,
+  },
+};
+
+type RecommendSalonsOutput = {
+  recommendations: string;
+};
+
 export default function RecommendationsPage() {
   const [recommendationOutput, setRecommendationOutput] = useState<RecommendSalonsOutput | null>(null);
+
+  const { useToast } = '@/hooks/use-toast';
   const [isLoading, setIsLoading] = useState(false);
+ const { toast } = useToast();
   // Define the expected type for the data from the RecommendationForm
   interface RecommendationFormData {
     userPreferences: string;
@@ -18,18 +30,21 @@ export default function RecommendationsPage() {
     trendingChoices?: string;
   }
 
-  const { toast } = useToast();
 
   const handleFormSubmit = async (data: RecommendationFormData) => {
     setIsLoading(true);
     setRecommendationOutput(null);
     try {
       const response = await fetch('/api/recommend-salons', {
-        method: 'POST',
-        ...data,
-        pastBookings: data.pastBookings || '', // Ensure pastBookings is always a string
+ method: 'POST',
+ headers: {
+ 'Content-Type': 'application/json',
+ },
+ body: JSON.stringify({
+ ...data,
+ pastBookings: data.pastBookings || '', // Ensure pastBookings is always a string
+ }),
       });
-      setRecommendationOutput(result);
       toast({
         title: 'Препоръките са генерирани',
         description: 'Разгледайте персонализираните си предложения по-долу.',
@@ -38,6 +53,7 @@ export default function RecommendationsPage() {
         throw new Error(`API error: ${response.statusText}`);
       }
       const result = await response.json();
+      setRecommendationOutput(result);
     } catch (error) {
       console.error('Грешка при получаване на препоръки:', error);
       toast({
