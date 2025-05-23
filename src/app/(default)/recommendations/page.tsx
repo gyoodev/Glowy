@@ -4,7 +4,6 @@
 import { useState } from 'react';
 import { RecommendationForm } from '@/components/ai/recommendation-form';
 import { RecommendationResults } from '@/components/ai/recommendation-results';
-import { recommendSalons, type RecommendSalonsInput, type RecommendSalonsOutput } from '@/ai/flows/recommend-salons';
 import { useToast } from '@/hooks/use-toast';
 import { Wand2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,13 +11,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function RecommendationsPage() {
   const [recommendationOutput, setRecommendationOutput] = useState<RecommendSalonsOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Define the expected type for the data from the RecommendationForm
+  interface RecommendationFormData {
+    userPreferences: string;
+    pastBookings?: string; // Assuming pastBookings is optional as per previous error
+    trendingChoices?: string;
+  }
+
   const { toast } = useToast();
 
-  const handleFormSubmit = async (data: RecommendSalonsInput) => {
+  const handleFormSubmit = async (data: RecommendationFormData) => {
     setIsLoading(true);
     setRecommendationOutput(null);
     try {
-      const result = await recommendSalons({
+      const response = await fetch('/api/recommend-salons', {
+        method: 'POST',
         ...data,
         pastBookings: data.pastBookings || '', // Ensure pastBookings is always a string
       });
@@ -27,6 +34,10 @@ export default function RecommendationsPage() {
         title: 'Препоръките са генерирани',
         description: 'Разгледайте персонализираните си предложения по-долу.',
       });
+      if (!response.ok) {
+        throw new Error(`API error: ${response.statusText}`);
+      }
+      const result = await response.json();
     } catch (error) {
       console.error('Грешка при получаване на препоръки:', error);
       toast({
