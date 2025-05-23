@@ -50,6 +50,7 @@ export default function PromoteBusinessPage() {
       setCurrentUser(user);
       if (!user) {
         router.push('/login');
+        setIsLoading(false); // Ensure loading is false if no user
       } else {
         if (businessId) {
           fetchSalonData(user.uid);
@@ -60,19 +61,25 @@ export default function PromoteBusinessPage() {
       }
     });
     return () => unsubscribe();
-  }, [businessId, router]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId, router]); // currentUser removed as it's set inside
 
   const fetchSalonData = async (userId: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      if (!businessId) throw new Error("Business ID is not available.");
+      if (!businessId) {
+        setError("Business ID is not available.");
+        setIsLoading(false);
+        return;
+      }
       const salonRef = doc(firestore, 'salons', businessId);
       const salonSnap = await getDoc(salonRef);
 
       if (!salonSnap.exists()) {
-        setError(\`Салон с ID \${businessId} не е намерен.\`);
+        setError('Салон с ID ' + businessId + ' не е намерен.'); // Corrected line
         setSalon(null);
+        setIsLoading(false); 
         return;
       }
       const salonData = { id: salonSnap.id, ...salonSnap.data() } as Salon;
@@ -91,7 +98,10 @@ export default function PromoteBusinessPage() {
 
   const handlePaymentSuccess = (details: any, packageId: string) => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
-    if (!chosenPackage || !salon) return;
+    if (!chosenPackage || !salon) {
+      setIsLoading(false); // ensure loading state is reset
+      return;
+    }
 
     const now = new Date();
     const expiryDate = addDays(now, chosenPackage.durationDays);
@@ -102,16 +112,21 @@ export default function PromoteBusinessPage() {
       expiresAt: expiryDate.toISOString(),
       purchasedAt: now.toISOString(),
       paymentMethod: 'paypal',
-      transactionId: details.id, // PayPal order ID or capture ID
+      transactionId: details.id, 
     };
 
+    if (!salon.id) {
+        toast({ title: "Грешка", description: "ID на салона липсва.", variant: "destructive"});
+        setIsProcessing(null); // Reset processing state
+        return;
+    }
     const salonRef = doc(firestore, 'salons', salon.id);
     updateDoc(salonRef, { promotion: updatedPromotion })
       .then(() => {
         setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotion } : null);
         toast({
           title: 'Успешна покупка',
-          description: \`Промоцията "\${chosenPackage.name}" за \${salon.name} е активирана!\`,
+          description: `Промоцията "${chosenPackage.name}" за ${salon.name} е активирана!`,
         });
       })
       .catch(err => {
@@ -121,6 +136,9 @@ export default function PromoteBusinessPage() {
           description: 'Плащането е успешно, но възникна грешка при активиране на промоцията в системата.',
           variant: 'destructive',
         });
+      })
+      .finally(() => {
+        setIsProcessing(null); // Reset processing state
       });
   };
   
@@ -140,7 +158,7 @@ export default function PromoteBusinessPage() {
           businessId: businessId,
           amount: chosenPackage.price.toString(),
           currency: PAYPAL_CURRENCY,
-          description: \`Промоция: \${chosenPackage.name} за салон ID \${businessId}\`,
+          description: `Промоция: ${chosenPackage.name} за салон ID ${businessId}`,
         }),
       });
       const data = await response.json();
@@ -151,10 +169,9 @@ export default function PromoteBusinessPage() {
     } catch (err: any) {
       console.error("PayPal createOrder error:", err);
       toast({ title: "Грешка с PayPal", description: err.message, variant: "destructive" });
+      setIsProcessing(null); 
       throw err;
-    } finally {
-       // setIsProcessing(null); // Keep processing until onApprove/onError
-    }
+    } 
   };
 
   const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string) => {
@@ -175,23 +192,20 @@ export default function PromoteBusinessPage() {
         throw new Error(captureData.message || 'Грешка при финализиране на PayPal плащането.');
       }
       
-      // captureData.details should contain the PayPal order details
-      // including transaction ID, which is often captureData.details.id or captureData.details.purchase_units[0].payments.captures[0].id
       handlePaymentSuccess(captureData.details, packageId); 
       return Promise.resolve();
     } catch (err: any) {
       console.error("PayPal onApprove error:", err);
       toast({ title: "Грешка при плащане", description: err.message, variant: "destructive" });
-      setIsProcessing(null);
-      return Promise.reject(err);
+      return Promise.reject(err); 
     } finally {
-      setIsProcessing(null);
+      setIsProcessing(null); 
     }
   };
 
 
   const handleStopPromotion = async () => {
-    if (!salon || !salon.promotion || !currentUser || !isOwner || isProcessing) return;
+    if (!salon || !salon.id || !salon.promotion || !currentUser || !isOwner || isProcessing) return;
     setIsProcessing('stop');
     setError(null);
     try {
@@ -201,11 +215,11 @@ export default function PromoteBusinessPage() {
       setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotion } : null);
       toast({
         title: 'Промоцията е спряна',
-        description: \`Промоцията за \${salon.name} беше деактивирана.\`,
+        description: `Промоцията за ${salon.name} беше деактивирана.`,
       });
     } catch (err: any) {
       console.error("Error stopping promotion:", err);
-      setError(err.message || 'Възникна грешка при спиране на промоцията.');
+      setError((err as Error).message || 'Възникна грешка при спиране на промоцията.');
       toast({ title: 'Грешка при спиране', description: 'Неуспешно спиране на промоцията.', variant: 'destructive' });
     } finally {
       setIsProcessing(null);
@@ -228,7 +242,7 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (error && !salon) {
+  if (error && (!salon || !isOwner)) { 
     return (
       <div className="container mx-auto py-10 px-6">
         <header className="mb-8">
@@ -274,9 +288,9 @@ export default function PromoteBusinessPage() {
           <p className="text-lg text-muted-foreground">Увеличете видимостта на Вашия салон и привлечете повече клиенти.</p>
         </header>
 
-        {error && !isOwner && salon && (
+        {error && isOwner && salon && ( // Only show this error if owner is viewing their own salon promotion page
           <div className="border border-red-400 rounded-md bg-red-50 p-4 mb-6">
-            <h4 className="text-lg font-semibold text-red-700 flex items-center"><AlertTriangle className="mr-2 h-5 w-5" /> Грешка при достъп</h4>
+            <h4 className="text-lg font-semibold text-red-700 flex items-center"><AlertTriangle className="mr-2 h-5 w-5" /> Грешка при операция</h4>
             <p className="text-sm text-red-600 mt-2">{error}</p>
           </div>
         )}
@@ -327,7 +341,7 @@ export default function PromoteBusinessPage() {
                       <CardFooter className="flex-col items-stretch">
                         {isProcessing === pkg.id && <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto my-2" />}
                         <PayPalButtons
-                          key={pkg.id} // Important for PayPalButtons to re-render if props change
+                          key={`${pkg.id}-${salon.id}`} 
                           style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
                           disabled={!!isProcessing || isProcessing === pkg.id}
                           createOrder={() => createOrder(pkg.id)}
@@ -348,19 +362,9 @@ export default function PromoteBusinessPage() {
                 </div>
               </section>
             )}
-
-            {error && isOwner && (
-              <div className="container mx-auto py-6 px-6 mt-8">
-                <div className="border border-red-400 rounded-md bg-red-50 p-4">
-                  <h4 className="text-lg font-semibold text-red-700 flex items-center"><AlertTriangle className="mr-2 h-5 w-5" /> Грешка при операция</h4>
-                  <p className="text-sm text-red-600 mt-2">{error}</p>
-                </div>
-              </div>
-            )}
           </>
         )}
       </div>
     </PayPalScriptProvider>
   );
 }
-
