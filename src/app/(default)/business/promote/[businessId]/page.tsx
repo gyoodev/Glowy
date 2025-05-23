@@ -94,17 +94,8 @@ export default function PromoteBusinessPage() {
   const handleBuyPromotion = async (packageId: string) => {
     if (!salon || !currentUser || !isOwner) return;
 
-    const selectedPackage = promotionPackages.find(p => p.id === packageId);
-    if (!selectedPackage) {
-      // Handle invalid package selection, e.g., display an error message
-      return;
-    }
-    setIsProcessing(true);
-    setSelectedPackageId(packageId); // Set selected package for payment options
-    setError(null); // Clear any previous errors
-
-    const selectedPackage = promotionPackages.find(p => p.id === packageId);
-    if (!selectedPackage) {
+    const chosenPackage = promotionPackages.find(p => p.id === packageId);
+    if (!chosenPackage) {
       toast({
         title: 'Грешка',
         description: 'Невалиден промоционален пакет.',
@@ -112,6 +103,9 @@ export default function PromoteBusinessPage() {
       });
       return;
     }
+    setIsProcessing(true);
+    setSelectedPackageId(packageId);
+    setError(null);
     try {
       const response = await fetch('/api/paypal/create-order', {
         method: 'POST',
@@ -119,11 +113,11 @@ export default function PromoteBusinessPage() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          packageId: selectedPackage.id,
+          packageId: chosenPackage.id,
           businessId: salon.id,
-          amount: selectedPackage.price * 100, // Amount in cents
-          currency: 'BGN', // Replace with your currency
-          description: `Promotion package: ${selectedPackage.name} for ${salon.name}`,
+          amount: chosenPackage.price,
+          currency: 'BGN',
+          description: `Promotion package: ${chosenPackage.name} for ${salon.name}`,
         }),
       });
 

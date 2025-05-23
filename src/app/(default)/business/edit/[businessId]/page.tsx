@@ -392,8 +392,9 @@ export default function EditBusinessPage() {
                 </TabsTrigger>
                 <TabsTrigger value="availability" className="flex items-center">
                   <CalendarCheck className="mr-2 h-4 w-4" />
+                  Наличност
+                </TabsTrigger>
 
-                <TabsTrigger value="availability">Наличност</TabsTrigger>
               </TabsList>
 
               <TabsContent value="details" className="space-y-8">
