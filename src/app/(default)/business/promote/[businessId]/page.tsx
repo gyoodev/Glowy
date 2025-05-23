@@ -16,9 +16,9 @@ import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale/bg';
 
 const promotionPackages = [
-  { id: '7days', name: '7 Дни Промоция', durationDays: 7, price: 10, description: 'Вашият салон на челни позиции за 1 седмица.' },
-  { id: '30days', name: '30 Дни Промоция', durationDays: 30, price: 35, description: 'Максимална видимост за цял месец.' },
-  { id: '90days', name: '90 Дни Промоция', durationDays: 90, price: 90, description: 'Най-изгодният пакет за дългосрочен ефект.' },
+  { id: '7days', name: '7 Дни Промоция', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
+  { id: '30days', name: '30 Дни Промоция', durationDays: 30, price: 15, description: 'Максимална видимост за цял месец.' },
+  { id: '90days', name: '90 Дни Промоция', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
 ];
 
 export default function PromoteBusinessPage() {
@@ -255,7 +255,7 @@ export default function PromoteBusinessPage() {
         </section>
       )}
     </div>
-      {/* Developer Tip: Error Information Section */}
+    {/* Developer Tip: Error Information Section */
       {error && (
         <div className="container mx-auto py-6 px-6 mt-8">
           <div className="border border-red-400 rounded-md bg-red-50 p-4">
