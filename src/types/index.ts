@@ -8,49 +8,48 @@ export type WorkingHoursStructure = Record<string, DayWorkingHours>;
 
 export interface Service {
   id: string;
-  name: string; // Ще бъде преведено в mock-data
-  description: string; // Ще бъде преведено в mock-data
+  name: string;
+  description?: string; // Направено незадължително
   price: number;
   duration: number; // in minutes
-  categoryIcon?: React.ElementType; // For Lucide icons
+  categoryIcon?: React.ElementType;
 }
 
 export interface Review {
   id: string;
-  userName: string; // Ще бъде преведено в mock-data
+  userName: string;
   userAvatar?: string;
   rating: number; // 1-5
-  comment: string; // Ще бъде преведено в mock-data
+  comment: string;
   date: string; // ISO date string
-  userId?: string; // Added for consistency
-  salonId?: string; // Added for consistency
+  userId?: string;
+  salonId?: string;
 }
 
 export interface Promotion {
   isActive: boolean;
   expiresAt?: string; // ISO string date
   packageId?: string; // e.g., '7days', '30days'
+  packageName?: string; // e.g., "Сребърен план"
   purchasedAt?: string; // ISO string date
-  packageName?: string; // e.g., "7 Дни Промоция"
-  paymentMethod?: 'paypal' | 'stripe' | 'revolut' | 'other'; // Added for tracking
-  transactionId?: string; // Added for tracking
+  paymentMethod?: 'paypal' | 'stripe' | 'revolut' | 'other';
+  transactionId?: string;
 }
 
 export interface Salon {
   id: string;
-  name: string; // Ще бъде преведено в mock-data
-  description: string; // Ще бъде преведено в mock-data
-  address?: string; // Ще бъде преведено в mock-data
-  city?: string; // Ще бъде преведено в mock-data
+  name: string;
+  description: string;
+  address?: string;
+  city?: string;
   rating: number; // 1-5
-  priceRange: 'cheap' | 'moderate' | 'expensive' | ''; // Updated to include empty string for "any"
-  photos?: string[]; // URLs to photos - Should always be an array, even if empty
-  services: Service[]; // In a real app, these might be IDs referencing a separate services collection
-  reviews: Review[]; // In a real app, these might be IDs referencing a separate reviews collection
-  heroImage?: string; // URL to a hero image
-  availability?: Record<string, string[]>; // Date string -> array of time slots e.g., "HH:mm"
-  ownerId?: string; // UID of the business owner
-  // Fields for AI generation, might not be stored directly if only used for generating the main description
+  priceRange: 'cheap' | 'moderate' | 'expensive' | '';
+  photos?: string[];
+  services: Service[];
+  reviews: Review[]; // Може да се премахне, ако отзивите се извличат отделно
+  heroImage?: string;
+  availability?: Record<string, string[]>;
+  ownerId?: string;
   atmosphereForAi?: string;
   targetCustomerForAi?: string;
   uniqueSellingPointsForAi?: string;
@@ -58,7 +57,7 @@ export interface Salon {
   phone?: string;
   email?: string;
   website?: string;
-  workingHours?: WorkingHoursStructure; // Updated type
+  workingHours?: WorkingHoursStructure;
   promotion?: Promotion;
 }
 
@@ -75,7 +74,7 @@ export interface UserProfile {
   };
   lastUpdatedAt?: Date;
   userId: string; // Firebase Auth UID
-  displayName?: string; // From Firebase Auth or user input
+  displayName?: string;
   phoneNumber?: string;
 }
 
@@ -85,7 +84,7 @@ export interface Booking {
   salonName: string;
   serviceId: string;
   serviceName: string;
-  userId: string; // UID of the user who made the booking
+  userId: string;
   date: string; // ISO date string
   time: string; // "HH:mm"
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
@@ -93,6 +92,6 @@ export interface Booking {
   clientName: string;
   clientEmail: string;
   clientPhoneNumber: string;
-  salonAddress?: string; // Added for displaying in booking history
-  salonPhoneNumber?: string; // Added for displaying in booking history
+  salonAddress?: string;
+  salonPhoneNumber?: string;
 }
