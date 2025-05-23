@@ -214,17 +214,19 @@ export default function AccountPage() {
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="flex flex-wrap justify-center gap-4 w-full md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm">
-          <TabsTrigger value="profile" className="py-3 text-base">
-            <Edit3 className="mr-2 h-5 w-5" /> Профил
-          </TabsTrigger>
-          <TabsTrigger value="reviews" className="py-3 text-base">
-            <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
-          </TabsTrigger>
-          <TabsTrigger value="bookings" className="py-3 text-base">
-            <History className="mr-2 h-5 w-5" /> Резервации
-          </TabsTrigger>
+          <div className="flex flex-wrap justify-center gap-4 w-full">
+            <TabsTrigger value="profile" className="py-3 text-base">
+              <Edit3 className="mr-2 h-5 w-5" /> Профил
+            </TabsTrigger>
+            <TabsTrigger value="reviews" className="py-3 text-base">
+              <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
+            </TabsTrigger>
+            <TabsTrigger value="bookings" className="py-3 text-base">
+              <History className="mr-2 h-5 w-5" /> Резервации
+            </TabsTrigger>
+          </div>
         </TabsList>
-
+        
         <TabsContent value="profile">
           {isLoading ? (
             <div className="space-y-4 max-w-2xl mx-auto">

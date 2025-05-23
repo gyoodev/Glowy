@@ -378,23 +378,24 @@ export default function EditBusinessPage() {
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" className="w-full">
               <TabsList className="flex flex-wrap justify-center gap-4 w-full md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm">
-                <TabsTrigger value="details" className="flex items-center">
-                  <FileText className="mr-2 h-4 w-4" />
-                  Детайли
-                </TabsTrigger>
-                <TabsTrigger value="servicesTab" className="flex items-center">
-                  <Briefcase className="mr-2 h-4 w-4" />
-                  Услуги
-                </TabsTrigger>
-                <TabsTrigger value="workingHours" className="flex items-center">
-                  <Clock className="mr-2 h-4 w-4" />
-                  Работно Време
-                </TabsTrigger>
-                <TabsTrigger value="availability" className="flex items-center">
-                  <CalendarCheck className="mr-2 h-4 w-4" />
-                  Наличност
-                </TabsTrigger>
-
+                <div className="flex flex-wrap justify-center gap-4 w-full">
+                  <TabsTrigger value="details" className="flex items-center">
+                    <FileText className="mr-2 h-4 w-4" />
+                    Детайли
+                  </TabsTrigger>
+                  <TabsTrigger value="servicesTab" className="flex items-center">
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Услуги
+                  </TabsTrigger>
+                  <TabsTrigger value="workingHours" className="flex items-center">
+                    <Clock className="mr-2 h-4 w-4" />
+                    Работно Време
+                  </TabsTrigger>
+                  <TabsTrigger value="availability" className="flex items-center">
+                    <CalendarCheck className="mr-2 h-4 w-4" />
+                    Наличност
+                  </TabsTrigger>
+                </div>
               </TabsList>
 
               <TabsContent value="details" className="space-y-8">
