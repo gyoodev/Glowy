@@ -463,10 +463,11 @@ export default function SalonProfilePage() {
       let reviewerName: string | null = null; 
 
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
-        // Assign the non-empty value if userProfileData exists and name or displayName are not empty
-        reviewerName = userProfileData.name || userProfileData.displayName;
-      } else reviewerName = null; // Explicitly assign null if userProfileData is missing or names are empty
-      reviewerName = reviewerName || 'Анонимен потребител'; 
+        reviewerName = userProfileData.name || userProfileData?.displayName || null; // Assign null if both values are undefined
+      } else {
+        reviewerName = null; // Explicitly assign null
+      }
+      reviewerName = reviewerName || 'Анонимен потребител'; // If reviewerName is still falsy, assign a default value
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
       const newReviewData = {
