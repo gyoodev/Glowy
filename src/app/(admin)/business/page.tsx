@@ -2,67 +2,85 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
-import { auth } from '@/lib/firebase'; // Assuming auth is needed for Firestore initialization
-
-interface Business {
-  id: string;
-  [key: string]: any; // Allow any other properties
-}
+import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore'; // Added query and orderBy
+import { auth } from '@/lib/firebase';
+import type { Salon } from '@/types';
+import Link from 'next/link'; // Import Link for navigation
 
 export default function AdminBusinessPage() {
-  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [salons, setSalons] = useState<Salon[]>([]); // Use Salon type
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchBusinesses = async () => {
+    const fetchSalons = async () => {
       try {
-        const db = getFirestore(auth.app); // Use the Firebase app from auth
-        // Changed 'businesses' to 'salons' to match Firestore rules and data structure
-        const businessesCollection = collection(db, 'salons');
-        const businessesSnapshot = await getDocs(businessesCollection);
-        const businessesList = businessesSnapshot.docs.map(doc => ({
+        const db = getFirestore(auth.app);
+        const salonsCollectionRef = collection(db, 'salons');
+        // Optionally order salons, e.g., by name or creation date
+        const q = query(salonsCollectionRef, orderBy('name', 'asc')); // Example: order by name
+        const salonsSnapshot = await getDocs(q);
+        const salonsList = salonsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
-        
-        })) as Business[];
-        setBusinesses(businessesList);
+        })) as Salon[];
+        setSalons(salonsList);
       } catch (err: any) {
-        console.error('Error fetching businesses (salons):', err);
-        setError('Failed to load businesses (salons).');
+        console.error('Error fetching salons:', err);
+        setError('Failed to load salons.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchBusinesses();
+    fetchSalons();
   }, []);
 
   return (
     <div className="container mx-auto py-10">
-      <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1> {/* Updated Title */}
+      <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1>
 
-      {isLoading && <p>Зареждане на бизнеси (салони)...</p>}
-      {error && <p className="text-red-500">Грешка: {error}</p>}
+      {isLoading && <p>Зареждане на салони...</p>}
+      {error && <p className="text-destructive">Грешка: {error}</p>}
 
-      {!isLoading && !error && businesses.length === 0 && (
-        <p>Няма намерени бизнеси (салони).</p>
+      {!isLoading && !error && salons.length === 0 && (
+        <p>Няма намерени салони.</p>
       )}
 
-      {!isLoading && !error && businesses.length > 0 && (
-        <div>
-          {/* Placeholder for displaying business data */}
-          <h2 className="text-2xl font-semibold mb-4">Списък с бизнеси (салони)</h2>
-          {/* You will replace this with a table or list to display the businesses */}
-          <ul>
-            {businesses.map(business => (
-              <li key={business.id} className="border-b border-gray-200 py-2">
-                {/* Display some key business info */}
-                {business.name} (ID: {business.id})
-              </li>
-            ))}
-          </ul>
+      {!isLoading && !error && salons.length > 0 && (
+        <div className="p-6 bg-card rounded-lg shadow">
+          <h2 className="text-2xl font-semibold mb-4">Списък със салони ({salons.length})</h2>
+           <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Име на Салона</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Град</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Адрес</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Рейтинг</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Собственик ID</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {salons.map(salon => (
+                  <tr key={salon.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{salon.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.city || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.address || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                       <Link href={`/business/edit/${salon.id}`} className="text-primary hover:underline">
+                        Редактирай
+                      </Link>
+                      {/* TODO: Add Delete functionality here */}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

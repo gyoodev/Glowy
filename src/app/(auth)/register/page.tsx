@@ -5,7 +5,7 @@ import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Corrected import
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -42,6 +42,7 @@ export default function RegisterPage() {
   const firestore = getFirestore();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -56,24 +57,39 @@ export default function RegisterPage() {
   });
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
+    setIsSubmitting(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      const counterDocRef = doc(firestore, 'counters', 'users');
-      const counterDocSnap = await getDoc(counterDocRef);
-      let newUserCount = 1;
-      if (counterDocSnap.exists()) {
-        newUserCount = counterDocSnap.data().count + 1;
+      // WARNING: Client-side counter management is insecure and prone to race conditions.
+      // This should ideally be handled by a server-side mechanism like a Cloud Function
+      // triggered on Firebase Auth user creation.
+      // For demonstration purposes, it's kept here, but it's not recommended for production.
+      // A 'numericId' field is added, but its reliability is questionable.
+      let numericIdForUser: number | undefined = undefined;
+      try {
+        const counterDocRef = doc(firestore, 'counters', 'users');
+        const counterDocSnap = await getDoc(counterDocRef);
+        if (counterDocSnap.exists()) {
+          numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
+        } else {
+          numericIdForUser = 1; // First user
+        }
+        await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
+      } catch (counterError) {
+         console.error("Error updating user counter:", counterError);
+         // Continue without numericId if counter fails
       }
-      await setDoc(counterDocRef, { count: newUserCount });
+      // End of insecure counter logic
 
       if (user) {
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
           email: user.email,
           displayName: data.name,
-          userId: user.uid,
+          userId: user.uid, // Storing Firebase Auth UID
+          numericId: numericIdForUser, // Storing the insecure numeric ID (can be undefined)
           phoneNumber: data.phoneNumber,
           createdAt: Timestamp.fromDate(new Date()),
           role: data.profileType,
@@ -101,10 +117,13 @@ export default function RegisterPage() {
           variant: 'destructive',
         });
       }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleGoogleSignUp = async () => {
+    setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
@@ -116,17 +135,26 @@ export default function RegisterPage() {
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
-          const counterDocRef = doc(firestore, 'counters', 'users');
-          const counterDocSnap = await getDoc(counterDocRef);
-          let newUserCount = 1;
-          if (counterDocSnap.exists()) {
-            newUserCount = counterDocSnap.data().count + 1;
+          // WARNING: Client-side counter management is insecure. See comment above.
+          let numericIdForUser: number | undefined = undefined;
+          try {
+            const counterDocRef = doc(firestore, 'counters', 'users');
+            const counterDocSnap = await getDoc(counterDocRef);
+            if (counterDocSnap.exists()) {
+              numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
+            } else {
+              numericIdForUser = 1; // First user
+            }
+            await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
+          } catch (counterError) {
+            console.error("Error updating user counter for Google sign-up:", counterError);
           }
-          await setDoc(counterDocRef, { count: newUserCount });
+          // End of insecure counter logic
 
           await setDoc(userRef, {
             email: user.email,
-            userId: user.uid,
+            userId: user.uid, // Storing Firebase Auth UID
+            numericId: numericIdForUser, // Storing the insecure numeric ID
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
@@ -147,6 +175,8 @@ export default function RegisterPage() {
         description: error.message || 'Възникна неочаквана грешка.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -179,7 +209,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Пълно име</FormLabel>
                   <FormControl>
-                    <Input placeholder="Въведете Вашето пълно име" {...field} />
+                    <Input placeholder="Въведете Вашето пълно име" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -192,7 +222,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Имейл</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="vashiat.email@primer.com" {...field} />
+                    <Input type="email" placeholder="vashiat.email@primer.com" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -205,7 +235,7 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Телефонен номер</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+359 881 234 567" {...field} />
+                    <Input type="tel" placeholder="+359 881 234 567" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -219,13 +249,14 @@ export default function RegisterPage() {
                   <FormLabel>Парола</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Input type={showPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isSubmitting} />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
                         onClick={() => setShowPassword((prev) => !prev)}
+                        disabled={isSubmitting}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
@@ -243,13 +274,14 @@ export default function RegisterPage() {
                   <FormLabel>Потвърдете паролата</FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} />
+                      <Input type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" {...field} disabled={isSubmitting} />
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         className="absolute right-0 top-0 h-full px-3 py-1 hover:bg-transparent"
                         onClick={() => setShowConfirmPassword((prev) => !prev)}
+                        disabled={isSubmitting}
                       >
                         {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
                       </Button>
@@ -270,20 +302,21 @@ export default function RegisterPage() {
                       onValueChange={field.onChange}
                       defaultValue={field.value}
                       className="flex flex-col space-y-1"
+                      disabled={isSubmitting}
                     >
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="customer" id="profileTypeCustomer" />
+                          <RadioGroupItem value="customer" id="profileTypeCustomer" disabled={isSubmitting} />
                         </FormControl>
-                        <FormLabel htmlFor="profileTypeCustomer" className="font-normal">
+                        <FormLabel htmlFor="profileTypeCustomer" className={cn("font-normal", isSubmitting && "opacity-50")}>
                           Клиент
                         </FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-3 space-y-0">
                         <FormControl>
-                          <RadioGroupItem value="business" id="profileTypeBusiness" />
+                          <RadioGroupItem value="business" id="profileTypeBusiness" disabled={isSubmitting} />
                         </FormControl>
-                        <FormLabel htmlFor="profileTypeBusiness" className="font-normal">
+                        <FormLabel htmlFor="profileTypeBusiness" className={cn("font-normal", isSubmitting && "opacity-50")}>
                           Бизнес
                         </FormLabel>
                       </FormItem>
@@ -295,15 +328,15 @@ export default function RegisterPage() {
             />
            </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Регистриране...' : 'Регистрация'}
+            <Button type="submit" className="w-full" disabled={isSubmitting || form.formState.isSubmitting}>
+              {isSubmitting || form.formState.isSubmitting ? 'Регистриране...' : 'Регистрация'}
             </Button>
             <div className="relative flex py-2 items-center">
               <div className="flex-grow border-t border-muted-foreground"></div>
               <span className="flex-shrink mx-4 text-muted-foreground text-xs">ИЛИ</span>
               <div className="flex-grow border-t border-muted-foreground"></div>
             </div>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} type="button">
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignUp} type="button" disabled={isSubmitting}>
               <Chrome className="mr-2 h-5 w-5" /> Регистрация с Google
             </Button>
             <div className="text-center text-sm text-muted-foreground">
@@ -318,5 +351,3 @@ export default function RegisterPage() {
     </Card>
   );
 }
-
-    
