@@ -448,10 +448,10 @@ export default function SalonProfilePage() {
 
       if (!reviewerName) {
         try {
-          const userProfileData = await getUserProfile(userId);
-          if (userProfileData) {
-            reviewerName = userProfileData.name || userProfileData.displayName; 
+          if (userProfileData && userProfileData.name) {
+            reviewerName = userProfileData.name;
           }
+          
         } catch (profileError) {
           console.error("Error fetching user profile for review name:", profileError);
         }
