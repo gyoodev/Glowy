@@ -388,7 +388,7 @@ export default function EditBusinessPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10">
-              <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none">
+              <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
                 <TabsTrigger value="details" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <FileText className="mr-2 h-5 w-5" />
                     Детайли
