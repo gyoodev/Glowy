@@ -10,7 +10,7 @@ import type { Salon, Promotion } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale/bg';
@@ -31,6 +31,7 @@ export default function PromoteBusinessPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
+  const [error, setError] = useState<string | null>(null); // Add error state
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
 
   // Safer way to access businessId and handle null/invalid cases
@@ -181,8 +182,10 @@ export default function PromoteBusinessPage() {
   const currentPromotion = salon?.promotion;
   const isCurrentlyPromoted = currentPromotion?.isActive && currentPromotion.expiresAt && isFuture(new Date(currentPromotion.expiresAt));
 
-    <div className="container mx-auto py-10 px-6">
-      <header className="mb-8">
+  return (
+    // Wrap the main content div within a React Fragment
+    <React.Fragment>
+       <header className="mb-8">
         <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
           <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
         </Button>
@@ -263,6 +266,6 @@ export default function PromoteBusinessPage() {
           </div>\
         </div>\
       )}\
-    </div>
+    </React.Fragment>
   );
 }
