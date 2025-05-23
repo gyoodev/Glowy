@@ -16,9 +16,9 @@ import { format, addDays, isFuture, fromUnixTime } from 'date-fns';
 import { bg } from 'date-fns/locale/bg';
 
 const promotionPackages = [
-  { id: '7days', name: '7 Дни Промоция', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
-  { id: '30days', name: '30 Дни Промоция', durationDays: 30, price: 15, description: 'Максимална видимост за цял месец.' },
-  { id: '90days', name: '90 Дни Промоция', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
+  { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
+  { id: '30days', name: 'Златен план', durationDays: 30, price: 15, description: 'Максимална видимост за цял месец.' },
+  { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
 ];
 
 export default function PromoteBusinessPage() {
@@ -103,6 +103,7 @@ export default function PromoteBusinessPage() {
     setError(null);
 
     try {
+      // Simulate payment processing
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       const now = new Date();
@@ -112,12 +113,12 @@ export default function PromoteBusinessPage() {
 
       const updatedPromotion: Promotion = {
         packageId: chosenPackage.id,
-        packageName: chosenPackage.name,
+        packageName: chosenPackage.name, 
         isActive: true,
-        expiresAt: expiryTimestamp.toMillis().toString(),
-        purchasedAt: Timestamp.now().toMillis().toString(),
-        paymentMethod: 'paypal', // Assuming PayPal for now, as per previous context
-        transactionId: `sim_txn_${Date.now()}` // Simulated transaction ID
+        expiresAt: expiryTimestamp.toMillis().toString(), 
+        purchasedAt: Timestamp.now().toMillis().toString(), 
+        paymentMethod: 'paypal', 
+        transactionId: `sim_txn_${Date.now()}` 
       };
 
       const salonRef = doc(firestore, 'salons', salon.id);
@@ -166,7 +167,7 @@ export default function PromoteBusinessPage() {
         description: `Промоцията за ${salon.name} беше деактивирана.`,
       });
 
-    } catch (err: any) {
+    } catch (err: any) { // Added opening brace here
       console.error("Error stopping promotion:", err);
       setError(err.message || 'Възникна грешка при спиране на промоцията.');
       toast({
@@ -176,7 +177,7 @@ export default function PromoteBusinessPage() {
       });
     } finally {
       setIsProcessing(false);
-      setSelectedPackageId(null);
+      setSelectedPackageId(null); 
     }
   };
 
@@ -199,7 +200,7 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (error && !salon) {
+  if (error && !salon) { 
     return (
       <div className="container mx-auto py-10 px-6">
          <header className="mb-8">
@@ -259,7 +260,7 @@ export default function PromoteBusinessPage() {
                     Промоцията е активна до: {format(promotionExpiryDate, 'PPP p', { locale: bg })}.
                   </p>
                   <Button onClick={handleStopPromotion} variant="destructive" className="mt-4" disabled={isProcessing}>
-                    {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    {isProcessing && !selectedPackageId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null} 
                     Спри Промоцията
                   </Button>
                 </div>
