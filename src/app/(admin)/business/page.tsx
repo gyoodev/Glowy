@@ -2,23 +2,25 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore'; // Added query and orderBy
+import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import type { Salon } from '@/types';
-import Link from 'next/link'; // Import Link for navigation
+import Link from 'next/link';
 
 export default function AdminBusinessPage() {
-  const [salons, setSalons] = useState<Salon[]>([]); // Use Salon type
+  const [salons, setSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchSalons = async () => {
+      setIsLoading(true);
+      setError(null);
       try {
         const db = getFirestore(auth.app);
+        // Ensure you are querying the 'salons' collection, not 'businesses'
         const salonsCollectionRef = collection(db, 'salons');
-        // Optionally order salons, e.g., by name or creation date
-        const q = query(salonsCollectionRef, orderBy('name', 'asc')); // Example: order by name
+        const q = query(salonsCollectionRef, orderBy('name', 'asc'));
         const salonsSnapshot = await getDocs(q);
         const salonsList = salonsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -27,7 +29,7 @@ export default function AdminBusinessPage() {
         setSalons(salonsList);
       } catch (err: any) {
         console.error('Error fetching salons:', err);
-        setError('Failed to load salons.');
+        setError('Failed to load salons. Please ensure Firestore rules allow admin access and the collection exists.');
       } finally {
         setIsLoading(false);
       }
@@ -71,10 +73,11 @@ export default function AdminBusinessPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                       <Link href={`/business/edit/${salon.id}`} className="text-primary hover:underline">
+                      {/* Ensure salon.id is correctly passed */}
+                      <Link href={`/business/edit/${salon.id}`} className="text-primary hover:underline">
                         Редактирай
                       </Link>
-                      {/* TODO: Add Delete functionality here */}
+                      {/* TODO: Add Delete functionality here (requires Firebase Function for secure deletion) */}
                     </td>
                   </tr>
                 ))}

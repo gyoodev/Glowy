@@ -4,42 +4,42 @@
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
-import { auth } from '@/lib/firebase'; // Assuming auth is used to initialize firestore
-import type { UserProfile } from '@/types'; // Import UserProfile type
+import { auth } from '@/lib/firebase';
+import type { UserProfile } from '@/types';
 
-// Interface for the new user form
 interface NewUserFormState {
   email: string;
   password: string;
   displayName: string;
   phoneNumber: string;
-  role: 'user' | 'business' | 'admin'; // Define possible roles
+  role: 'user' | 'business' | 'admin';
 }
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<UserProfile[]>([]); // Use UserProfile type
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newUser, setNewUser] = useState<NewUserFormState>({ // Use NewUserFormState
+  const [error, setError] = useState<string | null>(null);
+  const [newUser, setNewUser] = useState<NewUserFormState>({
     email: '',
     password: '',
     displayName: '',
     phoneNumber: '',
-    role: 'user', // Default role
+    role: 'user',
   });
-
 
   const fetchUsers = async () => {
     setIsLoading(true);
+    setError(null);
     try {
-      const db = getFirestore(auth.app); // Initialize Firestore with the same app as auth
+      const db = getFirestore(auth.app);
       const usersCollection = collection(db, 'users');
       const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile)); // Cast to UserProfile
+      const usersList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
       setUsers(usersList);
-      console.log("Fetched users:", usersList); // Log for verification
-    } catch (error) {
-      console.error("Error fetching users:", error);
+    } catch (err: any) {
+      console.error("Error fetching users:", err);
+      setError("Failed to load users.");
     } finally {
       setIsLoading(false);
     }
@@ -50,39 +50,44 @@ export default function AdminUsersPage() {
   }, []);
 
   const handleDeleteUser = (userId: string) => {
-    // Placeholder for delete functionality
-    // In a real app, you'd call a Firebase Function to delete the user from Auth and their Firestore doc
-    console.log(`Deleting user: ${userId}`);
-    alert(`Симулация: Изтриване на потребител ${userId}. Имплементирайте реална логика, включително извикване на Firebase Function за изтриване от Firebase Auth.`);
+    console.log(`Attempting to delete user: ${userId}`);
+    alert(`СИМУЛАЦИЯ: Изтриване на потребител ${userId}. В реално приложение, това трябва да извика Firebase Function, която изтрива потребителя от Firebase Authentication и неговия Firestore документ. Тази функция трябва да бъде защитена, за да може да се извиква само от администратори.`);
+    // To implement:
+    // 1. Create a Firebase Function (e.g., 'deleteUserAdmin').
+    // 2. This function takes 'userId' as input.
+    // 3. Uses Firebase Admin SDK to delete the user from Auth: admin.auth().deleteUser(userId)
+    // 4. Deletes the user's document from Firestore: admin.firestore().collection('users').doc(userId).delete()
+    // 5. Call this function using httpsCallable from the client.
+    // 6. Re-fetch users on success.
   };
 
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError(null);
     const functions = getFunctions();
-    // Ensure your Cloud Function is named 'createUserAdmin' or adjust the name here.
-    // This function should handle creating the user in Firebase Auth AND their Firestore document.
     const createUserAdminFunction = httpsCallable(functions, 'createUserAdmin');
 
     try {
       const result: any = await createUserAdminFunction(newUser);
-      alert('Потребителят е създаден успешно: ' + result.data.uid + '. Моля, обърнете внимание, че Firestore документът за този потребител трябва да бъде създаден от createUserAdmin Cloud Function.');
-      setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'user' }); // Clear form
+      alert('Потребителят е създаден успешно: ' + (result.data?.uid || 'N/A') + '. Firestore документът за този потребител трябва да бъде създаден от createUserAdmin Cloud Function.');
+      setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'user' });
       await fetchUsers(); // Re-fetch users to update the list
-    } catch (error: any) {
-      console.error('Error creating user via function:', error);
-      alert('Грешка при създаване на потребител: ' + error.message + '. Уверете се, че Cloud Function "createUserAdmin" е deploy-ната и работи коректно.');
+    } catch (err: any) {
+      console.error('Error creating user via function:', err);
+      setError('Грешка при създаване на потребител: ' + err.message + '. Уверете се, че Cloud Function "createUserAdmin" е deploy-ната и работи коректно, и че имате права да я извикате.');
+      alert('Грешка при създаване на потребител: ' + err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Управление на потребители</h1>
 
-      {/* Section for Creating New User */}
+      {error && <p className="text-destructive mb-4">Грешка: {error}</p>}
+
       <div className="mb-8 p-6 bg-card rounded-lg shadow">
         <h2 className="text-2xl font-semibold mb-4">Създаване на нов потребител (чрез Cloud Function)</h2>
         <form onSubmit={handleCreateUser}>
@@ -149,7 +154,7 @@ export default function AdminUsersPage() {
             </div>
           </div>
           <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50" disabled={isSubmitting}>
-            {isSubmitting ? 'Създаване...' : 'Създаване на потребител'}
+            {isSubmitting ? 'Създаване...' : 'Създай потребител'}
           </button>
         </form>
          <p className="mt-4 text-sm text-muted-foreground">
@@ -161,7 +166,7 @@ export default function AdminUsersPage() {
         <h2 className="text-2xl font-semibold mb-4">Списък с потребители</h2>
         {isLoading ? (
           <p>Зареждане на потребители...</p>
-        ) : users.length === 0 ? (
+        ) : users.length === 0 && !error ? (
           <p>Няма намерени потребители.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -180,7 +185,7 @@ export default function AdminUsersPage() {
                 {users.map(user => (
                   <tr key={user.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.email || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.displayName || user.name || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.role || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.phoneNumber || 'N/A'}</td>
