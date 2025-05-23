@@ -73,6 +73,7 @@ export interface UserProfile {
     priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
     preferredLocations?: string[];
   };
+  lastUpdatedAt?: Date;
   userId: string; // Firebase Auth UID
   displayName?: string; // From Firebase Auth or user input
   phoneNumber?: string;
