@@ -6,10 +6,10 @@ import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking, Review, Salon } from '@/types';
+import type { UserProfile, Booking, Review } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardHeader, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ReviewCard } from '@/components/salon/review-card';
 import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
@@ -21,6 +21,19 @@ interface FirebaseError extends Error {
   code?: string;
   customMessage?: string;
   details?: string;
+}
+
+function getRoleDisplayName(role?: string) {
+  switch (role) {
+    case 'admin':
+      return 'Администратор';
+    case 'business':
+      return 'Бизнес';
+    case 'customer':
+      return 'Потребител';
+    default:
+      return 'Потребител';
+  }
 }
 
 export default function AccountPage() {
@@ -62,7 +75,7 @@ export default function AccountPage() {
             const dataToSave = {
               name: user.displayName || 'Потребител',
               email: user.email || '',
-              userId: user.uid,
+              userId: user.uid, // Ensure userId is stored
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
               createdAt: Timestamp.fromDate(new Date()),
@@ -178,22 +191,9 @@ export default function AccountPage() {
     }
   }, [userProfile, firestore]);
 
-  const getRoleDisplayName = (role?: string) => {
-    switch (role) {
-      case 'admin':
-        return 'Администратор';
-      case 'business':
-        return 'Бизнес';
-      case 'customer':
-        return 'Потребител';
-      default:
-        return 'Потребител';
-    }
-  };
-
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
-      <header className="mb-10 pb-6 border-b border-border">
+      <header className="mb-8 pb-6 border-b border-border">
         <div className="flex items-center gap-4">
             <UserCircle className="w-12 h-12 text-primary" />
             <div>
@@ -212,147 +212,153 @@ export default function AccountPage() {
         )}
       </header>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="flex flex-wrap justify-center gap-2 md:gap-4 w-full max-w-lg mx-auto mb-10 shadow-sm bg-muted p-1 rounded-lg">
-          <TabsTrigger value="profile" className="flex-1 sm:flex-initial py-2.5 px-4 text-sm sm:text-base data-[state=active]:bg-background data-[state=active]:shadow-md">
+      <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10">
+        <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none">
+          <TabsTrigger 
+            value="profile" 
+            className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
+          >
             <Edit3 className="mr-2 h-5 w-5" /> Профил
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="flex-1 sm:flex-initial py-2.5 px-4 text-sm sm:text-base data-[state=active]:bg-background data-[state=active]:shadow-md">
+          <TabsTrigger 
+            value="reviews" 
+            className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
+          >
             <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
           </TabsTrigger>
-          <TabsTrigger value="bookings" className="flex-1 sm:flex-initial py-2.5 px-4 text-sm sm:text-base data-[state=active]:bg-background data-[state=active]:shadow-md">
+          <TabsTrigger 
+            value="bookings" 
+            className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
+          >
             <History className="mr-2 h-5 w-5" /> Резервации
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="profile">
-          {isLoading ? (
-            <div className="space-y-4 max-w-2xl mx-auto p-6 bg-card rounded-lg shadow-md">
-              <div className="flex items-center space-x-4 mb-6">
-                <Skeleton className="h-20 w-20 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-64" />
-                  <Skeleton className="h-5 w-24 mt-2" />
+        <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent content overflow issues */}
+          <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+            {isLoading ? (
+              <div className="space-y-4 max-w-2xl mx-auto p-6">
+                <div className="flex items-center space-x-4 mb-6">
+                  <Skeleton className="h-20 w-20 rounded-full" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-64" />
+                    <Skeleton className="h-5 w-24 mt-2" />
+                  </div>
                 </div>
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-12 w-32 mt-4" />
               </div>
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-12 w-32 mt-4" />
-            </div>
-          ) : userProfile ? (
-            <UserProfileForm userProfile={userProfile} />
-          ) : (
-            <Card className="text-center border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto shadow-lg">
-                <CardHeader>
-                    <div className="mx-auto bg-destructive/20 p-3 rounded-full w-fit">
-                        <AlertTriangle className="w-10 h-10 text-destructive" />
-                    </div>
-                    <CardTitle className="text-xl font-semibold text-destructive mt-3">Грешка при достъп до данни</CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm text-destructive-foreground">
-                    {fetchError?.code === 'permission-denied' || (fetchError?.customMessage && fetchError.customMessage.includes("Липсват права")) ? (
-                    <div className="text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md mt-4">
-                        <p className="font-bold text-base">ГРЕШКА: Липсват права за достъп до Firestore (permission-denied)!</p>
-                        <p>
-                        Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
-                        Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong> във Вашия Firebase проект (<code>glowy-gyoodev</code>).
-                        </p>
-                        <p>
-                        <strong>За да разрешите това, МОЛЯ, направете следното във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>:</strong>
-                        </p>
-                        <ol className="list-decimal list-inside space-y-1 pl-4">
-                        <li>Отидете на <strong>Build</strong> &gt; <strong>Firestore Database</strong>.</li>
-                        <li>Изберете таба <strong>Rules</strong>.</li>
-                        <li>Заменете съществуващите правила със следните (ако не са вече така):</li>
-                        </ol>
-                        <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border">
-                        <code>
-                            {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n  }\n}`}
-                        </code>
-                        </pre>
-                        <p>4. Натиснете бутона <strong>Publish</strong>.</p>
-                        <p className="font-semibold">
-                        След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
-                        </p>
-                    </div>
+            ) : userProfile ? (
+              <UserProfileForm userProfile={userProfile} />
+            ) : (
+              <Card className="text-center border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto shadow-lg">
+                  <CardHeader>
+                      <div className="mx-auto bg-destructive/20 p-3 rounded-full w-fit">
+                          <AlertTriangle className="w-10 h-10 text-destructive" />
+                      </div>
+                      <CardTitle className="text-xl font-semibold text-destructive mt-3">Грешка при достъп до данни</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-destructive-foreground">
+                    {fetchError?.customMessage && fetchError.customMessage.includes("Firebase Console") ? (
+                      <div className="text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md mt-4">
+                          <p className="font-bold text-base">ГРЕШКА: Липсват права за достъп до Firestore!</p>
+                          <p>
+                          Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
+                          Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong>.
+                          </p>
+                          <p>
+                          <strong>Моля, влезте във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>, изберете проект <code>glowy-gyoodev</code>, отидете на Firestore Database &gt; Rules и ги заменете със следните:</strong>
+                          </p>
+                          <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all">
+                          <code>
+                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Добавете правила и за други колекции, ако е необходимо\n    match /salons/{salonId} {\n      allow read: if true;\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;\n    }\n  }\n}`}
+                          </code>
+                          </pre>
+                          <p>Натиснете бутона <strong>Publish</strong>.</p>
+                          <p className="font-semibold">
+                          След като публикувате тези правила, моля, <strong className="underline">презаредете тази страница</strong>.
+                          </p>
+                      </div>
                     ) : fetchError?.customMessage ? (
-                    <p>{fetchError.customMessage}</p>
+                      <p>{fetchError.customMessage}</p>
                     ) : (
-                    <p>
-                        Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
-                        {fetchError?.message && <span className="block mt-2 text-xs">Детайли: {fetchError.message}</span>}
-                    </p>
+                      <p>
+                          Неуспешно зареждане на данните за профила. Моля, проверете връзката си или опитайте да влезете отново.
+                          {fetchError?.message && <span className="block mt-2 text-xs">Детайли: {fetchError.message}</span>}
+                      </p>
                     )}
-                </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        <TabsContent value="bookings" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">История на Вашите Резервации</h2>
-            {isLoading && bookings.length === 0 ? (
-              <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="shadow-sm animate-pulse">
-                    <CardHeader>
-                      <Skeleton className="h-6 w-3/4 mb-2" />
-                      <Skeleton className="h-4 w-1/2" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-4 w-5/6" />
-                      <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : bookings.length > 0 ? (
-              <div className="space-y-6">
-                {bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(booking => (
-                  <BookingHistoryItem key={booking.id} booking={booking} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-10">Все още нямате история на резервациите.</p>
+                  </CardContent>
+              </Card>
             )}
-          </div>
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="reviews" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
-           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
-              {userProfile?.role === 'customer' ? 'Вашите Отзиви' : userProfile?.role === 'business' ? 'Отзиви за Вашите Салони' : 'Отзиви'}
-            </h2>
-            {isLoadingReviews ? (
-               <div className="space-y-4">
-                {[...Array(3)].map((_, i) => (
-                  <Card key={i} className="shadow-sm animate-pulse">
-                     <CardHeader>
-                      <Skeleton className="h-5 w-1/3 mb-1" />
-                      <Skeleton className="h-4 w-1/4" />
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                       <Skeleton className="h-4 w-2/3" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : reviews.length > 0 ? (
-              <div className="space-y-6">
-                {reviews.map(review => (
-                  <ReviewCard key={review.id} review={review} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-10">Няма намерени отзиви.</p>
-            )}
-          </div>
-        </TabsContent>
+          <TabsContent value="bookings" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+            <div className="max-w-3xl mx-auto">
+              <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">История на Вашите Резервации</h2>
+              {isLoading && bookings.length === 0 ? (
+                <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="shadow-sm animate-pulse">
+                      <CardHeader>
+                        <Skeleton className="h-6 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Skeleton className="h-4 w-5/6" />
+                        <Skeleton className="h-4 w-2/3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : bookings.length > 0 ? (
+                <div className="space-y-6">
+                  {bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(booking => (
+                    <BookingHistoryItem key={booking.id} booking={booking} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-10">Все още нямате история на резервациите.</p>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="reviews" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+             <div className="max-w-3xl mx-auto">
+              <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
+                {userProfile?.role === 'customer' ? 'Вашите Отзиви' : userProfile?.role === 'business' ? 'Отзиви за Вашите Салони' : 'Отзиви'}
+              </h2>
+              {isLoadingReviews ? (
+                 <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+                    <Card key={i} className="shadow-sm animate-pulse">
+                       <CardHeader>
+                        <Skeleton className="h-5 w-1/3 mb-1" />
+                        <Skeleton className="h-4 w-1/4" />
+                      </CardHeader>
+                      <CardContent className="space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                         <Skeleton className="h-4 w-2/3" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : reviews.length > 0 ? (
+                <div className="space-y-6">
+                  {reviews.map(review => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-10">Няма намерени отзиви.</p>
+              )}
+            </div>
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
