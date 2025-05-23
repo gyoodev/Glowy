@@ -22,7 +22,7 @@ const client = new paypal.core.PayPalHttpClient(environment);
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    // Using standard string concatenation
+    // Using standard string concatenation to avoid parsing issues
     return res.status(405).end('Method ' + req.method + ' Not Allowed');
   }
 
@@ -63,9 +63,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // More robust error message extraction from PayPal SDK
     if (error.statusCode && error.message) { // PayPal SDK v1 error structure (older SDK versions)
-      errorMessage = error.message; // The message might be a JSON string
+      errorMessage = error.message;
       try {
-        // Attempt to parse if message is JSON stringified error details
         const errorDetailsParsed = JSON.parse(error.message);
         if (errorDetailsParsed.details && errorDetailsParsed.details.length > 0) {
           errorMessage = errorDetailsParsed.details.map((d: any) => d.issue + (d.description ? (' (' + d.description + ')') : '')).join(', ');
