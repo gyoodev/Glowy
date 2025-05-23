@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'; // Corrected import for App Router
 import Link from 'next/link';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '../../lib/firebase'; // Changed from @/lib/firebase
-import { useToast } from '../../hooks/use-toast'; // Changed from @/hooks/use-toast
+// Removed unused useToast import to simplify for build debugging
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -14,7 +14,6 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -31,37 +30,34 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             setIsAuthorized(true);
           } else {
             console.warn(`AdminLayout: Access denied. User role: ${profile?.role || 'undefined'}. Redirecting to home.`);
-            // toast({
-            //   title: 'Достъп отказан',
-            //   description: 'Нямате администраторски права. Пренасочване към началната страница.',
-            //   variant: 'destructive',
-            // });
-            setIsAuthorized(false); // Ensure this is set before redirect
-            if (router) router.push('/');
+            setIsAuthorized(false);
+            if (router && router.push && typeof router.push === 'function') { // Defensive check for router
+                router.push('/');
+            } else {
+                console.error("AdminLayout: Router not available for redirect.");
+            }
           }
         } catch (error: any) {
           console.error('AdminLayout: Error fetching profile:', error.message || error);
-          // toast({
-          //   title: 'Грешка при проверка на права',
-          //   description: 'Неуспешно извличане на потребителски профил. Пренасочване към началната страница.',
-          //   variant: 'destructive',
-          // });
-          setIsAuthorized(false); // Ensure this is set before redirect
-          if (router) router.push('/');
+          setIsAuthorized(false);
+          if (router && router.push && typeof router.push === 'function') { // Defensive check for router
+            router.push('/');
+          } else {
+            console.error("AdminLayout: Router not available for redirect.");
+          }
         } finally {
           console.log('AdminLayout: Setting isLoading to false (user authenticated path).');
           setIsLoading(false);
         }
       } else {
         console.warn('AdminLayout: User not authenticated. Redirecting to login.');
-        // toast({
-        //   title: 'Не сте влезли',
-        //   description: 'Моля, влезте, за да получите достъп до административния панел.',
-        //   variant: 'default',
-        // });
         setIsAuthorized(false);
-        setIsLoading(false); // Ensure isLoading is set to false before redirect
-        if (router) router.push('/login');
+        setIsLoading(false); 
+        if (router && router.push && typeof router.push === 'function') { // Defensive check for router
+          router.push('/login');
+        } else {
+          console.error("AdminLayout: Router not available for redirect.");
+        }
       }
     });
 
@@ -69,7 +65,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: useEffect cleanup.');
       unsubscribe();
     };
-  }, [router]); // Removed toast from dependencies
+  }, [router]);
 
   if (isLoading) {
     console.log('AdminLayout: Rendering loading state.');
@@ -78,6 +74,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   if (!isAuthorized) {
     console.log('AdminLayout: Rendering unauthorized state or redirecting.');
+    // This message is shown briefly before redirect or if redirect fails.
     return <div className="flex justify-center items-center h-screen">Нямате достъп или се пренасочвате... (AdminLayout Unauthorized)</div>;
   }
 
