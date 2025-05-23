@@ -59,7 +59,7 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure): string {
 
 export default function SalonProfilePage() {
   const params = useParams();
-  const slugParam = params.slug;
+  const slugParam = params?.slug; // Safely access slug, could be null or undefined
 
   const [salon, setSalon] = useState<Salon | null>(null);
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
@@ -79,11 +79,15 @@ export default function SalonProfilePage() {
 
   useEffect(() => {
     let currentSlug: string | undefined;
-    if (typeof slugParam === 'string') {
-      currentSlug = slugParam;
+    // Check if params and slugParam are not null/undefined before processing
+    if (params && typeof slugParam === 'string') {
+       currentSlug = slugParam;
     } else if (Array.isArray(slugParam) && slugParam.length > 0) {
       currentSlug = slugParam[0];
     } else {
+      // Handle the case where slugParam is null/undefined or not in expected format
+      console.warn("[SalonProfilePage] Invalid or missing slug parameter:", slugParam);
+      // You might want to redirect or show an error message here
       currentSlug = undefined;
     }
 
