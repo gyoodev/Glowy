@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase, type Icon as LucideIcon } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase, type Icon as LucideIcon, FileText, CalendarCheck } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
@@ -377,10 +377,22 @@ export default function EditBusinessPage() {
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
             <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
-                <TabsTrigger value="details">Детайли</TabsTrigger>
-                <TabsTrigger value="servicesTab">Услуги</TabsTrigger>
-                <TabsTrigger value="workingHours">Работно Време</TabsTrigger>
+              <TabsList className="flex flex-wrap justify-center gap-4 w-full md:w-2/3 lg:w-1/2 mx-auto mb-8 shadow-sm">
+                <TabsTrigger value="details" className="flex items-center">
+                  <FileText className="mr-2 h-4 w-4" />
+                  Детайли
+                </TabsTrigger>
+                <TabsTrigger value="servicesTab" className="flex items-center">
+                  <Briefcase className="mr-2 h-4 w-4" />
+                  Услуги
+                </TabsTrigger>
+                <TabsTrigger value="workingHours" className="flex items-center">
+                  <Clock className="mr-2 h-4 w-4" />
+                  Работно Време
+                </TabsTrigger>
+                <TabsTrigger value="availability" className="flex items-center">
+                  <CalendarCheck className="mr-2 h-4 w-4" />
+
                 <TabsTrigger value="availability">Наличност</TabsTrigger>
               </TabsList>
 

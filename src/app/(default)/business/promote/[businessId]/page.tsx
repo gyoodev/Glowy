@@ -103,10 +103,17 @@ export default function PromoteBusinessPage() {
     setSelectedPackageId(packageId); // Set selected package for payment options
     setError(null); // Clear any previous errors
 
+    const selectedPackage = promotionPackages.find(p => p.id === packageId);
+    if (!selectedPackage) {
+      toast({
+        title: 'Грешка',
+        description: 'Невалиден промоционален пакет.',
+        variant: 'destructive',
+      });
+      return;
+    }
     try {
-      // Call your backend endpoint to create a payment order (e.g., PayPal or Stripe)
-      // Replace '/api/revolut/create-payment-order' with your actual endpoint
-      const response = await fetch('/api/create-payment-order', {
+      const response = await fetch('/api/paypal/create-order', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,12 +134,15 @@ export default function PromoteBusinessPage() {
       }
 
       const order = await response.json();
-      // Here you would integrate with your chosen payment gateway (e.g., PayPal or Stripe)
-      // This example assumes you have a PayPal or Stripe integration ready to handle the payment flow
-      // After successful payment initiation, you would typically redirect the user
-      // or open a payment modal provided by your payment gateway.
-      // For example, if using PayPal: router.push(order.approval_url);
 
+      // Find the 'approve' link and redirect the user
+      const approveLink = order.links?.find((link: any) => link.rel === 'approve');
+
+      if (approveLink && approveLink.href) {
+        window.location.href = approveLink.href;
+      } else {
+        throw new Error('Could not find approval URL from PayPal');
+      }
     } catch (err: any) {
       console.error("Error initiating payment:", err);
       setError(err.message || 'Възникна грешка при стартиране на плащането.');
