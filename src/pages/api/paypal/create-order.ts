@@ -8,8 +8,7 @@ const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
 // This check is important for server-side execution.
 if (!clientId || !clientSecret) {
-  console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set in environment variables for create-order API.");
-  // In a real app, you might throw an error here or handle it more gracefully.
+  console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set in environment variables for create-order API. Ensure PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET are set.");
 }
 
 // Determine PayPal environment based on NODE_ENV
@@ -22,11 +21,11 @@ const client = new paypal.core.PayPalHttpClient(environment);
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST']);
-    // Using standard string concatenation
-    return res.status(405).end('Method ' + req.method + ' Not Allowed');
+    return res.status(405).end('Method ' + req.method + ' Not Allowed'); // Corrected line
   }
 
   if (!clientId || !clientSecret) {
+    console.error("PayPal API credentials not configured on the server for create-order handler.");
     return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server.' });
   }
 
@@ -62,18 +61,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let errorMessage = 'Failed to create PayPal order.';
     let errorDetails = null;
 
-    // Attempt to parse PayPal SDK v1 error structure if that's what's coming back
     if (error.statusCode && error.message) {
         try {
-            // error.message might be a JSON string for PayPal SDK errors
             const parsedMessage = JSON.parse(error.message);
             if (parsedMessage.name) errorMessage = parsedMessage.name + ': ' + (parsedMessage.message || 'Unknown PayPal Error');
             if (parsedMessage.details) errorDetails = parsedMessage.details;
         } catch (e) {
-            // If error.message is not JSON, use it directly
             errorMessage = error.message;
         }
-    } else if (error.message) { // General error message
+    } else if (error.isAxiosError && error.response && error.response.data) {
+        errorMessage = error.response.data.message || errorMessage;
+        if(error.response.data.details && error.response.data.details.length > 0){
+            errorMessage += ' Details: ' + error.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
+        }
+        console.error('PayPal SDK v2 Error Details:', error.response.data);
+    } else if (error.message) {
         errorMessage = error.message;
     }
 
