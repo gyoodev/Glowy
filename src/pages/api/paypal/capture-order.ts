@@ -97,7 +97,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const chosenPackage = promotionPackages.find(p => p.id === packageId);
       if (!chosenPackage) {
-        console.error(\`Invalid packageId "\${packageId}" received from PayPal order.\`);
+        console.error(`Invalid packageId "${packageId}" received from PayPal order.`);
         return res.status(500).json({ success: false, message: 'Invalid promotion package ID.' });
       }
 
