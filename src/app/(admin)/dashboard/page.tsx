@@ -1,5 +1,4 @@
-'use client'; // Ensure it's a client component
-
+'use client'; // Keep as client component as it's under a layout that *was* client-side
 import React from 'react';
 
 export default function AdminDashboardPage() {
