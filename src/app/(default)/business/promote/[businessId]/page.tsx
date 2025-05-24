@@ -174,7 +174,7 @@ export default function PromoteBusinessPage() {
     }
   };
 
-  const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string) => {
+  const onApprove = async (data, actions, packageId: string) => {
     if (!actions.order) {
       toast({ title: "Грешка", description: "PayPal actions.order е неопределен.", variant: "destructive" });
       setIsProcessing(null);
