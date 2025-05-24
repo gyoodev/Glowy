@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import type { OnApproveData, OnApproveActions } from "@paypal/react-paypal-js"; // Changed import source
+import type {} from "@paypal/react-paypal-js"; // Changed import source
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
