@@ -59,7 +59,7 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'pending', // Default status changed to pending
+      status: 'pending', // Default status
       createdAt: Timestamp.fromDate(new Date()),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
@@ -212,7 +212,7 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch = []; 
+    const batch: Promise<void>[] = [];
     querySnapshot.forEach((docSnap) => {
       batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
@@ -231,16 +231,22 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
+    // Directly add the document. If duplicates are a concern, it's better handled by Firestore rules
+    // (e.g., using email as document ID if uniqueness is critical and you want to prevent duplicates at write time)
+    // or by periodic cleanup if occasional duplicates are acceptable.
+    // The current Firestore rules allow anyone to create, which simplifies client-side logic.
     await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
-      subscribedAt: serverTimestamp(),
+      subscribedAt: serverTimestamp(), // Use serverTimestamp for reliability
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error subscribing to newsletter:', error);
+    // Basic error message. Could be more specific if you check error.code for Firestore errors.
     return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
   }
 }
+
 
 export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
   const subscribers: NewsletterSubscriber[] = [];
@@ -266,7 +272,7 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     return !querySnapshot.empty;
   } catch (error) {
     console.warn('Could not check newsletter subscription status (might be due to permissions):', error);
-    return false; 
+    return false;
   }
 }
 
