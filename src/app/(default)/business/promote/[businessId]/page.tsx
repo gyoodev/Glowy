@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,20 +15,9 @@ import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import type { ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
+import type { OnApproveData, OnApproveActions } from '@paypal/paypal-js';
 
-interface OnApproveData {
-  orderID: string;
-  payerID: string;
-  subscriptionID?: string;
-}
-
-interface OnApproveActions {
-  order?: {
-    capture: () => Promise<any>;
-    get: () => Promise<any>;
-    patch: () => Promise<any>;
-  };
-}
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -52,8 +42,8 @@ export default function PromoteBusinessPage() {
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-  const paypalScriptOptions = {
-    clientId: paypalClientId || "test",
+  const paypalScriptOptions: ReactPayPalScriptOptions = {
+    clientId: paypalClientId || "test", // Fallback to "test" if undefined, but should be caught by the check below
     currency: PAYPAL_CURRENCY,
     intent: "capture",
   };
@@ -155,7 +145,7 @@ export default function PromoteBusinessPage() {
       });
   };
 
-  const createOrder = async (packageId: string) => {
+  const createOrder = async (packageId: string): Promise<string> => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !businessId) {
       toast({ title: "Грешка", description: "Невалиден пакет или ID на бизнеса.", variant: "destructive" });
@@ -183,11 +173,11 @@ export default function PromoteBusinessPage() {
       console.error("PayPal createOrder error:", err);
       toast({ title: "Грешка с PayPal", description: err.message || "Възникна грешка при създаване на PayPal поръчка.", variant: "destructive" });
       setIsProcessing(null);
-      throw err;
+      throw err; // Rethrow to be caught by PayPalButtons onError
     }
   };
 
-  const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string) => {
+  const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string): Promise<void> => {
     if (!actions.order) {
       toast({ title: "Грешка", description: "PayPal actions.order е неопределен.", variant: "destructive" });
       setIsProcessing(null);
@@ -206,13 +196,12 @@ export default function PromoteBusinessPage() {
       }
 
       handlePaymentSuccess(captureData.details, packageId);
-      return Promise.resolve();
+      // No need to explicitly return Promise.resolve();, async function implicitly returns a Promise.
     } catch (err: any) {
       console.error("PayPal onApprove error:", err);
       toast({ title: "Грешка при плащане", description: err.message || "Възникна грешка при обработка на плащането.", variant: "destructive" });
-      return Promise.reject(err);
-    } finally {
-      setIsProcessing(null);
+      setIsProcessing(null); // Ensure processing is reset on error
+      throw err; // Rethrow to be caught by PayPalButtons onError
     }
   };
 
@@ -358,7 +347,7 @@ export default function PromoteBusinessPage() {
                           style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
                           disabled={!!isProcessing || isProcessing === pkg.id}
                           createOrder={() => createOrder(pkg.id)}
-                          onApprove={(data, actions) => onApprove(data, actions, pkg.id)}
+                          onApprove={(data: OnApproveData, actions: OnApproveActions) => onApprove(data, actions, pkg.id)}
                           onError={(err: any) => {
                             console.error("PayPal Button onError:", err);
                             let message = "Възникна грешка по време на PayPal процеса.";
