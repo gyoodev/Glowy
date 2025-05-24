@@ -12,9 +12,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2, XCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { format, addDays, isFuture } from 'date-fns'; 
+import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { PayPalScriptProvider, PayPalButtons, type PayPalScriptOptions, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
+import { PayPalScriptProvider, PayPalButtons, type ReactPayPalScriptOptions, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -39,7 +39,7 @@ export default function PromoteBusinessPage() {
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-  const paypalScriptOptions: PayPalScriptOptions = {
+  const paypalScriptOptions: ReactPayPalScriptOptions = {
     clientId: paypalClientId || "test", // Fallback to "test" if not set, but PayPalButtons will error
     currency: PAYPAL_CURRENCY,
     intent: "capture",
@@ -50,7 +50,7 @@ export default function PromoteBusinessPage() {
       setCurrentUser(user);
       if (!user) {
         router.push('/login');
-        setIsLoading(false); 
+        setIsLoading(false);
       } else {
         if (businessId) {
           fetchSalonData(user.uid);
@@ -79,7 +79,7 @@ export default function PromoteBusinessPage() {
       if (!salonSnap.exists()) {
         setError('Салон с ID ' + businessId + ' не е намерен.');
         setSalon(null);
-        setIsLoading(false); 
+        setIsLoading(false);
         return;
       }
       const salonData = { id: salonSnap.id, ...salonSnap.data() } as Salon;
@@ -99,7 +99,7 @@ export default function PromoteBusinessPage() {
   const handlePaymentSuccess = (details: any, packageId: string) => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon) {
-      setIsLoading(false); 
+      setIsLoading(false);
       return;
     }
 
@@ -107,17 +107,17 @@ export default function PromoteBusinessPage() {
     const expiryDate = addDays(now, chosenPackage.durationDays);
     const updatedPromotion: Promotion = {
       packageId: chosenPackage.id,
-      packageName: chosenPackage.name, 
+      packageName: chosenPackage.name,
       isActive: true,
       expiresAt: expiryDate.toISOString(),
-      purchasedAt: FirestoreTimestamp.fromDate(now).toDate().toISOString(), 
+      purchasedAt: FirestoreTimestamp.fromDate(now).toDate().toISOString(),
       paymentMethod: 'paypal',
-      transactionId: details.id, 
+      transactionId: details.id,
     };
 
     if (!salon.id) {
         toast({ title: "Грешка", description: "ID на салона липсва.", variant: "destructive"});
-        setIsProcessing(null); 
+        setIsProcessing(null);
         return;
     }
     const salonRef = doc(firestore, 'salons', salon.id);
@@ -138,10 +138,10 @@ export default function PromoteBusinessPage() {
         });
       })
       .finally(() => {
-        setIsProcessing(null); 
+        setIsProcessing(null);
       });
   };
-  
+
   const createOrder = async (packageId: string) => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !businessId) {
@@ -169,9 +169,9 @@ export default function PromoteBusinessPage() {
     } catch (err: any) {
       console.error("PayPal createOrder error:", err);
       toast({ title: "Грешка с PayPal", description: err.message || "Възникна грешка при създаване на PayPal поръчка.", variant: "destructive" });
-      setIsProcessing(null); 
+      setIsProcessing(null);
       throw err;
-    } 
+    }
   };
 
   const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string) => {
@@ -191,15 +191,15 @@ export default function PromoteBusinessPage() {
       if (!response.ok || !captureData.success) {
         throw new Error(captureData.message || 'Грешка при финализиране на PayPal плащането.');
       }
-      
-      handlePaymentSuccess(captureData.details, packageId); 
+
+      handlePaymentSuccess(captureData.details, packageId);
       return Promise.resolve();
     } catch (err: any) {
       console.error("PayPal onApprove error:", err);
       toast({ title: "Грешка при плащане", description: err.message || "Възникна грешка при обработка на плащането.", variant: "destructive" });
-      return Promise.reject(err); 
+      return Promise.reject(err);
     } finally {
-      setIsProcessing(null); 
+      setIsProcessing(null);
     }
   };
 
@@ -242,7 +242,7 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (error && (!salon || !isOwner)) { 
+  if (error && (!salon || !isOwner)) {
     return (
       <div className="container mx-auto py-10 px-6">
         <header className="mb-8">
@@ -257,7 +257,7 @@ export default function PromoteBusinessPage() {
       </div>
     );
   }
-  
+
   if (!paypalClientId) {
     return (
       <div className="container mx-auto py-10 px-6">
@@ -288,7 +288,7 @@ export default function PromoteBusinessPage() {
           <p className="text-lg text-muted-foreground">Увеличете видимостта на Вашия салон и привлечете повече клиенти.</p>
         </header>
 
-        {error && isOwner && salon && ( 
+        {error && isOwner && salon && (
           <div className="border border-red-400 rounded-md bg-red-50 p-4 mb-6">
             <h4 className="text-lg font-semibold text-red-700 flex items-center"><AlertTriangle className="mr-2 h-5 w-5" /> Грешка при операция</h4>
             <p className="text-sm text-red-600 mt-2">{error}</p>
@@ -341,16 +341,16 @@ export default function PromoteBusinessPage() {
                       <CardFooter className="flex-col items-stretch">
                         {isProcessing === pkg.id && <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto my-2" />}
                         <PayPalButtons
-                          key={`${pkg.id}-${salon.id}`} 
+                          key={`${pkg.id}-${salon.id}`}
                           style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
                           disabled={!!isProcessing || isProcessing === pkg.id}
                           createOrder={() => createOrder(pkg.id)}
                           onApprove={(data, actions) => onApprove(data, actions, pkg.id)}
-                          onError={(err: any) => { 
+                          onError={(err: any) => {
                             console.error("PayPal Button onError:", err);
                             let message = "Възникна грешка по време на PayPal процеса.";
                             if (err && err.message) {
-                                message = err.message; 
+                                message = err.message;
                             }
                             toast({ title: "Грешка с PayPal", description: message, variant: "destructive" });
                             setIsProcessing(null);
@@ -372,4 +372,3 @@ export default function PromoteBusinessPage() {
     </PayPalScriptProvider>
   );
 }
-
