@@ -77,8 +77,8 @@ export async function captureOrder(data: CaptureOrderPayload): Promise<CaptureOr
   }
 }
 
-/*
-  { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5 },
+
+const promotionPackages = [
   { id: '30days', name: 'Златен план', durationDays: 30, price: 15 },
   { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35 },
 ];
@@ -191,4 +191,3 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ success: false, message: errorMessage });
   }
 }
-*/
