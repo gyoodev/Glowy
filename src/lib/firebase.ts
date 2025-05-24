@@ -59,7 +59,7 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'confirmed',
+      status: 'pending', // Default status changed to pending
       createdAt: Timestamp.fromDate(new Date()),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
@@ -118,7 +118,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       clientName: data.clientName,
       clientEmail: data.clientEmail,
       clientPhoneNumber: data.clientPhoneNumber,
-      createdAt: data.createdAt,
+      createdAt: data.createdAt, // Ensure this is handled as Timestamp if needed
       salonAddress: data.salonAddress,
       salonPhoneNumber: data.salonPhoneNumber,
     };
@@ -231,17 +231,13 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    // No longer querying for existing subscriptions to avoid permission issues for non-admins.
-    // This means duplicates are possible if a user subscribes multiple times.
-    // Handling duplicates would be an admin task or require more complex rules/logic.
     await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
-      subscribedAt: serverTimestamp(), // Use serverTimestamp for consistency
+      subscribedAt: serverTimestamp(),
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
   } catch (error) {
     console.error('Error subscribing to newsletter:', error);
-    // Consider more specific error messages if possible, e.g., by checking error.code
     return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
   }
 }
@@ -269,8 +265,6 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
   } catch (error) {
-    // If a non-admin tries this and rules prevent read, it will throw an error.
-    // Log the error but return false as they effectively aren't confirmed as subscribed.
     console.warn('Could not check newsletter subscription status (might be due to permissions):', error);
     return false; 
   }

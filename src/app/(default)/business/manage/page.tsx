@@ -10,12 +10,12 @@ import { getFirestore, collection, query, where, getDocs, orderBy } from 'fireba
 import type { UserProfile, Salon } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift } from 'lucide-react'; // Added Gift
+import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
 export default function BusinessManagePage() {
-  const [isLoading, setIsLoading] = useState(true); // For initial auth check
+  const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userBusinesses, setUserBusinesses] = useState<Salon[]>([]);
   const [isFetchingBusinesses, setIsFetchingBusinesses] = useState(true);
@@ -75,7 +75,7 @@ export default function BusinessManagePage() {
     );
   }
   
-  const salonNameToSlug = (name: string) => name ? name.replace(/\s+/g, '_') : 'unknown-salon';
+  const salonNameToSlug = (name?: string) => name ? name.replace(/\s+/g, '_') : 'unknown-salon';
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -172,6 +172,12 @@ export default function BusinessManagePage() {
                     Резервации
                   </Link>
                 </Button>
+                 <Button variant="outline" size="sm" asChild className="border-purple-500 text-purple-600 hover:bg-purple-500/10 hover:text-purple-700 dark:border-purple-400 dark:text-purple-400 dark:hover:bg-purple-400/10 dark:hover:text-purple-300">
+                  <Link href={`/business/salon-reviews/${business.id}`}>
+                    <MessageSquareText className="mr-2 h-4 w-4" />
+                    Отзиви
+                  </Link>
+                </Button>
                 <Button variant="outline" size="sm" asChild className="border-primary text-primary hover:bg-primary/10 hover:text-primary">
                   <Link href={`/business/promote/${business.id}`}>
                     <Gift className="mr-2 h-4 w-4" />
@@ -186,4 +192,3 @@ export default function BusinessManagePage() {
     </div>
   );
 }
-

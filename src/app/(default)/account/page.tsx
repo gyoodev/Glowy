@@ -15,7 +15,7 @@ import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getUserProfile, getNewsletterSubscriptionStatus } from '@/lib/firebase';
+import { getUserProfile, getNewsletterSubscriptionStatus, getUserBookings } from '@/lib/firebase';
 
 interface FirebaseError extends Error {
   code?: string;
@@ -40,7 +40,7 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]); // Reviews written BY this user
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
@@ -53,7 +53,7 @@ export default function AccountPage() {
       const subStatus = await getNewsletterSubscriptionStatus(email);
       setNewsletterStatus(subStatus);
     } else {
-      setNewsletterStatus(false); // Assume not subscribed if no email
+      setNewsletterStatus(false);
     }
   };
 
@@ -84,13 +84,14 @@ export default function AccountPage() {
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave: Omit<UserProfile, 'id'> = {
-              name: user.displayName || 'Потребител',
-              email: user.email || '',
+            const dataToSave: Omit<UserProfile, 'id'> & { createdAt: Timestamp } = {
               userId: user.uid,
+              name: user.displayName || 'Потребител',
+              email: user.email || '', // Handle null email from auth
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              role: 'customer', 
+              role: 'customer',
+              createdAt: Timestamp.fromDate(new Date()),
             };
             await setDoc(newUserDocRef, dataToSave);
             const newProfile = {
@@ -101,35 +102,28 @@ export default function AccountPage() {
             await fetchNewsletterStatus(newProfile.email);
           }
 
-          const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
-          const bookingSnapshot = await getDocs(bookingsQuery);
-          const fetchedBookings: Booking[] = [];
-          bookingSnapshot.forEach((doc) => {
-            fetchedBookings.push({
-              id: doc.id,
-              ...doc.data()
-            } as Booking);
-          });
-          setBookings(fetchedBookings);
+          // Fetch user's bookings
+          const userBookings = await getUserBookings(user.uid);
+          setBookings(userBookings);
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
-          setFetchError(error as FirebaseError);
+          const typedError = error as FirebaseError;
+          setFetchError(typedError);
 
-          if (error.code) {
-            console.error("Firebase error code:", error.code);
+          if (typedError.code) {
+            console.error("Firebase error code:", typedError.code);
           }
-          if (error.message) {
-            console.error("Firebase error message:", error.message);
+          if (typedError.message) {
+            console.error("Firebase error message:", typedError.message);
           }
-          if (error.details) {
-            console.error("Firebase error details:", error.details);
+          if (typedError.details) {
+            console.error("Firebase error details:", typedError.details);
           }
 
-          if (error.code === 'failed-precondition') {
-            console.error("Firestore query failed: This usually means you're missing a composite index. Check the Firebase console for a link to create it.");
-            setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "A database index is required. Please check the browser console for a link from Firebase to create it, then refresh the page." });
-          } else if (error.code === 'permission-denied') {
+          if (typedError.code === 'failed-precondition') {
+             setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "Грешка с базата данни: Необходим е индекс за тази операция. Моля, проверете конзолата на браузъра за линк от Firebase, за да го създадете, след което презаредете страницата." });
+          } else if (typedError.code === 'permission-denied') {
              const specificMessage = "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно. За повече информация, вижте конзолата на браузъра.";
              console.error(specificMessage);
              setFetchError({ name: "FirestorePermissionError", message: specificMessage, customMessage: specificMessage});
@@ -160,7 +154,7 @@ export default function AccountPage() {
   }, [firestore, router]);
 
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchUserWrittenReviews = async () => {
       if (!userProfile || !userProfile.id) return;
 
       setIsLoadingReviews(true);
@@ -168,39 +162,22 @@ export default function AccountPage() {
       const reviewsCollectionRef = collection(firestore, 'reviews');
 
       try {
-        let reviewsQuery;
-        if (userProfile.role === 'customer') {
-          reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id), orderBy('date', 'desc'));
-        } else if (userProfile.role === 'business') {
-          const salonsQuery = query(collection(firestore, 'salons'), where('ownerId', '==', userProfile.id));
-          const salonSnapshot = await getDocs(salonsQuery);
-          const salonIds = salonSnapshot.docs.map(doc => doc.id);
-
-          if (salonIds.length === 0) {
-            setReviews([]);
-            setIsLoadingReviews(false);
-            return;
-          }
-          reviewsQuery = query(reviewsCollectionRef, where('salonId', 'in', salonIds), orderBy('date', 'desc'));
-        } else {
-          setIsLoadingReviews(false);
-          return;
-        }
-
+        // Fetch reviews written BY the current user, regardless of their role
+        const reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id), orderBy('date', 'desc'));
         const reviewSnapshot = await getDocs(reviewsQuery);
         const fetchedReviews: Review[] = [];
-        reviewSnapshot.forEach(doc => {
-          fetchedReviews.push({ id: doc.id, ...doc.data() } as Review);
+        reviewSnapshot.forEach(docSnap => { // Renamed to docSnap
+          fetchedReviews.push({ id: docSnap.id, ...docSnap.data() } as Review);
         });
         setReviews(fetchedReviews);
       } catch (error) {
-        console.error("Error fetching reviews:", error);
+        console.error("Error fetching user's written reviews:", error);
       } finally {
         setIsLoadingReviews(false);
       }
     };
     if (userProfile) {
-      fetchReviews();
+      fetchUserWrittenReviews();
     }
   }, [userProfile, firestore]);
 
@@ -243,7 +220,7 @@ export default function AccountPage() {
             value="reviews"
             className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
           >
-            <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
+            <MessageSquareText className="mr-2 h-5 w-5" />Вашите Отзиви
           </TabsTrigger>
           <TabsTrigger
             value="bookings"
@@ -253,7 +230,7 @@ export default function AccountPage() {
           </TabsTrigger>
         </TabsList>
 
-        <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent content overflow issues */}
+        <div className="flex-1 min-w-0">
           <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
             {isLoading ? (
               <div className="space-y-4 max-w-2xl mx-auto p-6">
@@ -299,7 +276,7 @@ export default function AccountPage() {
                           </p>
                           <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all">
                           <code>
-                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Example for other collections if needed\n    match /salons/{salonId} {\n      allow read: if true;\n      // Add write rules if business users or admins should write\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;\n      // Add update/delete rules as needed, e.g., for salon owners or admins\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      // Allow read/list only for admins\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /notifications/{notificationId} {\n      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null; // Be more specific in production\n      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n  }\n}`}
+                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    match /salons/{salonId} {\n      allow read: if true;\n      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';\n      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;\n      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;\n    }\n    match /bookings/{bookingId} {\n      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;\n      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid);\n      allow update: if request.auth != null && get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /notifications/{notificationId} {\n      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null;\n      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /counters/users {\n      allow read, write: if request.auth != null;\n    }\n  }\n}`}
                           </code>
                           </pre>
                           <p>Натиснете бутона <strong>Publish</strong>.</p>
@@ -340,7 +317,7 @@ export default function AccountPage() {
                 </div>
               ) : bookings.length > 0 ? (
                 <div className="space-y-6">
-                  {bookings.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(booking => (
+                  {bookings.map(booking => (
                     <BookingHistoryItem key={booking.id} booking={booking} />
                   ))}
                 </div>
@@ -353,7 +330,7 @@ export default function AccountPage() {
           <TabsContent value="reviews" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
              <div className="max-w-3xl mx-auto">
               <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
-                {userProfile?.role === 'customer' ? 'Вашите Отзиви' : userProfile?.role === 'business' ? 'Отзиви за Вашите Салони' : 'Отзиви'}
+                Вашите Отзиви
               </h2>
               {isLoadingReviews ? (
                  <div className="space-y-4">
@@ -377,7 +354,7 @@ export default function AccountPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-center text-muted-foreground py-10">Няма намерени отзиви.</p>
+                <p className="text-center text-muted-foreground py-10">Все още не сте оставили отзиви.</p>
               )}
             </div>
           </TabsContent>
@@ -386,4 +363,3 @@ export default function AccountPage() {
     </div>
   );
 }
-
