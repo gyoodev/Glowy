@@ -97,14 +97,15 @@ export interface Booking {
   salonPhoneNumber?: string;
 }
 
-export type NotificationType = 
-  | 'new_booking_business' 
+export type NotificationType =
+  | 'new_booking_business'
   | 'booking_status_change_customer'
   | 'new_review_business'
   | 'new_user_admin'
   | 'new_salon_admin'
   | 'new_payment_admin'
-  | 'review_reminder' 
+  | 'review_reminder'
+  | 'welcome_user' // Added welcome user type
   | 'generic';
 
 export interface Notification {

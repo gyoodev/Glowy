@@ -21,7 +21,7 @@ import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-rea
 
 import { auth, subscribeToNewsletter } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore'; // Added addDoc
+import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -113,6 +113,16 @@ export default function RegisterPage() {
           role: data.profileType === 'business' ? 'business' : 'customer',
         });
 
+        // Create welcome notification for new user
+        await addDoc(collection(firestore, 'notifications'), {
+          userId: user.uid,
+          message: 'Добре дошли в Glowy! Радваме се да Ви видим. Разгледайте своя профил и започнете да откривате салони.',
+          link: '/account',
+          read: false,
+          createdAt: Timestamp.fromDate(new Date()),
+          type: 'welcome_user',
+        });
+
         // Placeholder for notifying admins (better done server-side)
         await notifyAdminsOfNewUser(user.email, data.name);
 
@@ -190,17 +200,28 @@ export default function RegisterPage() {
             name: user.displayName, // Also set name field
             phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
-            role: 'customer', 
+            role: 'customer', // Default role for Google sign-up, can be changed later
           });
+
+          // Create welcome notification for new Google user
+          await addDoc(collection(firestore, 'notifications'), {
+            userId: user.uid,
+            message: 'Добре дошли в Glowy! Радваме се да Ви видим. Вашият профил е създаден чрез Google.',
+            link: '/account',
+            read: false,
+            createdAt: Timestamp.fromDate(new Date()),
+            type: 'welcome_user',
+          });
+
           // Placeholder for notifying admins (better done server-side)
           await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
         }
-        
+
         if (user.email && form.getValues('subscribeNewsletter')) {
             const newsletterResult = await subscribeToNewsletter(user.email);
              if (newsletterResult.success) {
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
-            } else if (!newsletterResult.message.includes("вече е абониран")) { 
+            } else if (!newsletterResult.message.includes("вече е абониран")) {
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: "destructive" });
             }
         }
