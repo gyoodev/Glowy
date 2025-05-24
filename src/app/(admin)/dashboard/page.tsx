@@ -1,8 +1,9 @@
-'use client'; // Keep as client component as it's under a layout that *was* client-side
-import React from 'react';
+
+// src/app/(admin)/dashboard/page.tsx (Ultra-simplified for 404 debug - v2)
+import React from 'react'; // Explicitly import React
 
 export default function AdminDashboardPage() {
-  console.log('AdminDashboardPage: Rendering (simplified for 404 debug)');
+  console.log('AdminDashboardPage: ATTEMPTING TO RENDER (ULTRA-SIMPLIFIED)');
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Минимално Табло</h1>
