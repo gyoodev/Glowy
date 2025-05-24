@@ -55,9 +55,6 @@ if (!getApps().length) {
 }
 const adminFirestore = getAdminFirestore(adminApp);
 
-const promotionPackages = [
-
-
 export async function captureOrder(data: CaptureOrderPayload): Promise<CaptureOrderResponse> {
   try {
     const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/paypal/capture-order`, {
