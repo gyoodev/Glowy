@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'; // Removed SheetClose as it's implicitly handled or part of SheetContent
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Menu, Sparkles as AppIcon, User, LogOut, Bell } from 'lucide-react';
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
@@ -55,7 +55,6 @@ export function Header() {
           if (typeof window !== 'undefined') {
             localStorage.setItem('isUserLoggedIn', 'true');
           }
-          // Initial fetch of notifications
           fetchNotifications(user.uid);
         } catch (error) {
             console.error("Error fetching user profile in Header:", error);
@@ -76,15 +75,13 @@ export function Header() {
     });
     
     return () => unsubscribeAuth();
-  }, []); // Empty dependency array is correct for onAuthStateChanged
+  }, []);
 
   useEffect(() => {
-    // This effect re-fetches notifications if the currentUser.uid changes
-    // (e.g., after login/logout, though logout should clear notifications anyway)
     if (currentUser?.uid) {
       fetchNotifications(currentUser.uid);
     }
-  }, [currentUser?.uid]); // Dependency on currentUser.uid
+  }, [currentUser?.uid]);
 
 
   const isLoggedIn = !!currentUser;
@@ -120,11 +117,7 @@ export function Header() {
     if (!notification.read) {
         try {
             await markNotificationAsRead(notification.id);
-            // Optimistically update UI or re-fetch
-            setNotifications(prev => prev.map(n => n.id === notification.id ? {...n, read: true} : n));
-            setUnreadCount(prev => Math.max(0, prev -1));
-            // Optionally re-fetch for full consistency if other processes might change read status
-            // fetchNotifications(currentUser.uid); 
+            fetchNotifications(currentUser.uid); 
         } catch (error) {
             console.error("Error marking single notification as read:", error);
         }
@@ -149,9 +142,8 @@ export function Header() {
                     <AppIcon className="h-6 w-6 text-primary" />
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
                 </div>
-                <div className="flex-1"></div> {/* This pushes auth buttons to the right */}
+                <div className="flex-1"></div>
                 <div className="flex items-center space-x-2">
-                    <div className="h-9 w-20 rounded-md bg-muted animate-pulse"></div>
                     <div className="h-9 w-20 rounded-md bg-muted animate-pulse"></div>
                 </div>
             </div>
@@ -228,7 +220,9 @@ export function Header() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {notification.createdAt?.seconds 
                               ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: bg })
-                              : 'Преди малко'}
+                              : (notification.createdAt && typeof notification.createdAt.toDate === 'function') 
+                                ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true, locale: bg })
+                                : 'Преди малко'}
                           </p>
                         </div>
                       ))}
@@ -238,7 +232,7 @@ export function Header() {
                  {notifications.length > 0 && (
                     <div className="p-2 border-t text-center">
                         <Button variant="link" size="sm" onClick={() => {setIsPopoverOpen(false); router.push('/notifications')}}>
-                            Виж всички {/* This link needs a page /notifications to be created */}
+                            Виж всички
                         </Button>
                     </div>
                 )}
@@ -326,4 +320,3 @@ export function Header() {
     </header>
   );
 }
-    
