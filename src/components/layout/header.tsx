@@ -19,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 const navItems = [
   { href: '/', label: 'Салони' },
   { href: '/recommendations', label: 'AI Препоръки' },
+ { href: '/contact', label: 'Контакти' },
 ];
 
 export function Header() {
@@ -107,12 +108,6 @@ export function Header() {
     setIsPopoverOpen(false);
   };
 
-
-  const adminPanelLinkDesktop = (
-     <Button variant="ghost" asChild>
-      <Link href="/admin/dashboard">Админ панел</Link>
-    </Button>
-  )
  const businessManageLinkDesktop = (
     <Button variant="ghost" asChild>
       <Link href="/business/manage">Управление на Бизнеса</Link>
@@ -157,7 +152,6 @@ export function Header() {
               </Button>
             );
           })}
-          {isLoggedIn && userRole === 'admin' && adminPanelLinkDesktop}
           {isLoggedIn && userRole === 'business' && businessManageLinkDesktop}
         </nav>
 
@@ -220,6 +214,13 @@ export function Header() {
           )}
 
           {isLoggedIn ? (
+            <>
+              {userRole === 'admin' && (
+                <Button variant="outline" asChild>
+                 <Link href="/admin/dashboard">Админ</Link>
+               </Button>
+              )}
+
             <>
               <Button variant="outline" asChild>
                 <Link href="/account">
