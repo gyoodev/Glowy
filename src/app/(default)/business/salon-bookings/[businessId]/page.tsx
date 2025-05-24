@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp, addDoc } from 'firebase/firestore'; // Added addDoc
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp, addDoc } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Import getUserProfile and db alias for clarity
+import { auth, getUserProfile, firestore as db } from '@/lib/firebase';
 import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,7 @@ export default function SalonBookingsPage() {
   const params = useParams();
   const router = useRouter();
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-  const firestore = getFirestore(); // Keep for existing queries if preferred, or use 'db' alias
+  const firestore = getFirestore();
   const { toast } = useToast();
 
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -53,7 +53,6 @@ export default function SalonBookingsPage() {
       return;
     }
     if (!currentUser) {
-      // Wait for currentUser to be set
       return;
     }
 
@@ -91,12 +90,21 @@ export default function SalonBookingsPage() {
         
         const fetchedBookingsPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
           const data = bookingDoc.data();
-          // Client name and phone number are now directly on the booking document
+          let clientProfileData: UserProfile | null = null;
+          if (data.userId) {
+            try {
+              clientProfileData = await getUserProfile(data.userId);
+            } catch (profileError) {
+              console.warn(`Could not fetch profile for userId ${data.userId}:`, profileError);
+            }
+          }
           return {
             id: bookingDoc.id,
             ...data,
-            clientName: data.clientName || 'Клиент',
-            clientPhoneNumber: data.clientPhoneNumber || 'Няма номер',
+            clientName: clientProfileData?.name || clientProfileData?.displayName || data.clientName || 'Клиент',
+            clientPhoneNumber: clientProfileData?.phoneNumber || data.clientPhoneNumber || 'Няма номер',
+            clientEmail: clientProfileData?.email || data.clientEmail || 'Няма имейл',
+            clientProfile: clientProfileData,
           } as ExtendedBooking;
         });
 
@@ -132,13 +140,12 @@ export default function SalonBookingsPage() {
         description: `Статусът на резервацията беше успешно променен на '${statusTranslations[newStatus]}'.`,
       });
 
-      // Send notification to customer if status changed
       if (newStatus !== oldStatus && booking.userId) {
         const notificationMessage = `Статусът на Вашата резервация за '${booking.serviceName}' в '${booking.salonName}' на ${format(new Date(booking.date), 'dd.MM.yyyy', { locale: bg })} в ${booking.time} беше променен на '${statusTranslations[newStatus]}'.`;
         await addDoc(collection(db, 'notifications'), {
           userId: booking.userId,
           message: notificationMessage,
-          link: `/account`, // Link to user's account/bookings page
+          link: `/account`, 
           read: false,
           createdAt: Timestamp.fromDate(new Date()),
           type: 'booking_status_change_customer',
@@ -266,10 +273,10 @@ export default function SalonBookingsPage() {
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
                     <TableCell>
-                      {booking.clientName || 'Клиент'}
+                      {booking.clientName}
                     </TableCell>
                     <TableCell>
-                      {booking.clientPhoneNumber || 'Няма номер'}
+                      {booking.clientPhoneNumber}
                     </TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
@@ -308,3 +315,4 @@ export default function SalonBookingsPage() {
     </div>
   );
 }
+
