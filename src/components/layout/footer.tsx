@@ -1,10 +1,54 @@
 
+'use client'; // Add this line to make it a client component
+
 import { Sparkles, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { useToast } from '@/hooks/use-toast';
+import { subscribeToNewsletter } from '@/lib/firebase'; // Import the function
+import { useState } from 'react';
+
+const newsletterFormSchema = z.object({
+  email: z.string().email({ message: "Моля, въведете валиден имейл адрес." }),
+});
+
+type NewsletterFormValues = z.infer<typeof newsletterFormSchema>;
 
 export function Footer() {
+  const { toast } = useToast();
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const form = useForm<NewsletterFormValues>({
+    resolver: zodResolver(newsletterFormSchema),
+    defaultValues: {
+      email: '',
+    },
+  });
+
+  const onNewsletterSubmit: SubmitHandler<NewsletterFormValues> = async (data) => {
+    setIsSubscribing(true);
+    const result = await subscribeToNewsletter(data.email);
+    if (result.success) {
+      toast({
+        title: 'Абонаментът е успешен!',
+        description: result.message,
+      });
+      form.reset();
+    } else {
+      toast({
+        title: 'Грешка при абониране',
+        description: result.message,
+        variant: result.message.includes("вече е абониран") ? "default" : "destructive",
+      });
+    }
+    setIsSubscribing(false);
+  };
+
+
   return (
     <footer className="border-t bg-muted/40">
       <div className="container py-12 px-6">
@@ -34,18 +78,23 @@ export function Footer() {
             <p className="text-sm text-muted-foreground mb-4">
               Получавайте последните новини, оферти и съвети за красота директно във Вашата поща.
             </p>
-            <form className="flex flex-col sm:flex-row gap-2">
+            <form onSubmit={form.handleSubmit(onNewsletterSubmit)} className="flex flex-col sm:flex-row gap-2">
               <Input
                 type="email"
                 placeholder="Вашият имейл адрес"
                 className="flex-grow"
                 aria-label="Имейл за бюлетин"
+                {...form.register("email")}
+                disabled={isSubscribing}
               />
-              <Button type="submit" variant="default">
+              <Button type="submit" variant="default" disabled={isSubscribing}>
                 <Send className="mr-2 h-4 w-4" />
-                Абонирай се
+                {isSubscribing ? 'Абониране...' : 'Абонирай се'}
               </Button>
             </form>
+            {form.formState.errors.email && (
+              <p className="text-sm text-destructive mt-1">{form.formState.errors.email.message}</p>
+            )}
           </div>
         </div>
 

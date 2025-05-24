@@ -3,9 +3,9 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp } from 'firebase/firestore';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import type { UserProfile, Service, Booking, Notification } from '@/types';
+import type { UserProfile, Service, Booking, Notification, NewsletterSubscriber } from '@/types';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
@@ -39,7 +39,7 @@ if (typeof window !== 'undefined') {
 export const createBooking = async (bookingDetails: {
   salonId: string;
   salonName: string;
-  salonOwnerId?: string; // Made optional for safety, but should be provided
+  salonOwnerId?: string;
   userId: string;
   service: Service;
   date: string;
@@ -75,17 +75,16 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
-    // Create notification for salon owner
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
       await addDoc(collection(firestore, 'notifications'), {
-        userId: bookingDetails.salonOwnerId, // Notification is for the salon owner
+        userId: bookingDetails.salonOwnerId,
         message: notificationMessage,
-        link: `/business/salon-bookings/${bookingDetails.salonId}`, // Link to salon bookings page
+        link: `/business/salon-bookings/${bookingDetails.salonId}`,
         read: false,
         createdAt: Timestamp.fromDate(new Date()),
         type: 'new_booking',
-        relatedEntityId: docRef.id, // Link to the booking itself
+        relatedEntityId: docRef.id,
       });
       console.log('Notification created for salon owner:', bookingDetails.salonOwnerId);
     } else {
@@ -185,7 +184,7 @@ export const getUserNotifications = async (userId: string): Promise<Notification
       collection(firestore, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(10) // Get latest 10 notifications, for example
+      limit(10)
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((docSnap) => {
@@ -215,7 +214,7 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch = []; // Firestore batch writes are more efficient but not strictly necessary here for a few updates
+    const batch = [];
     querySnapshot.forEach((docSnap) => {
       batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
@@ -225,6 +224,46 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
     console.error("Error marking all user notifications as read:", error);
   }
 };
+
+// Newsletter functions
+export async function subscribeToNewsletter(email: string): Promise<{ success: boolean; message: string }> {
+  if (!email) {
+    return { success: false, message: 'Имейлът е задължителен.' };
+  }
+  try {
+    const subscribersRef = collection(firestore, 'newsletterSubscribers');
+    const q = query(subscribersRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return { success: false, message: 'Този имейл вече е абониран.' };
+    }
+
+    await addDoc(subscribersRef, {
+      email: email,
+      subscribedAt: serverTimestamp(),
+    });
+    return { success: true, message: 'Вие се абонирахте успешно!' };
+  } catch (error) {
+    console.error('Error subscribing to newsletter:', error);
+    return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
+  }
+}
+
+export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
+  const subscribers: NewsletterSubscriber[] = [];
+  try {
+    const subscribersRef = collection(firestore, 'newsletterSubscribers');
+    const q = query(subscribersRef, orderBy('subscribedAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((docSnap) => {
+      subscribers.push({ id: docSnap.id, ...docSnap.data() } as NewsletterSubscriber);
+    });
+  } catch (error) {
+    console.error("Error fetching newsletter subscribers:", error);
+  }
+  return subscribers;
+}
 
 
 export { app, auth, analytics, firestore };

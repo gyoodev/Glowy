@@ -108,3 +108,9 @@ export interface Notification {
   type?: NotificationType;
   relatedEntityId?: string; // e.g., bookingId, salonId
 }
+
+export interface NewsletterSubscriber {
+  id: string;
+  email: string;
+  subscribedAt: any; // Firestore Timestamp
+}

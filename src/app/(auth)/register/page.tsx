@@ -13,16 +13,16 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils'; // Added this import
+import { cn } from '@/lib/utils';
 
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
 
-import { auth } from '@/lib/firebase';
+import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribeToNewsletter
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
 
-// Define the schema for the registration form
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
@@ -30,6 +30,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
   profileType: z.enum(['customer', 'business']),
   confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
+  subscribeNewsletter: z.boolean().optional(), // Added newsletter field
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Паролите не съвпадат.',
   path: ['confirmPassword'],
@@ -54,6 +55,7 @@ export default function RegisterPage() {
       password: '',
       confirmPassword: '',
       profileType: 'customer',
+      subscribeNewsletter: true, // Default to checked
     },
   });
 
@@ -63,11 +65,6 @@ export default function RegisterPage() {
       const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
       const user = userCredential.user;
 
-      // WARNING: Client-side counter management is insecure and prone to race conditions.
-      // This should ideally be handled by a server-side mechanism like a Cloud Function
-      // triggered on Firebase Auth user creation.
-      // For demonstration purposes, it's kept here, but it's not recommended for production.
-      // A 'numericId' field is added, but its reliability is questionable.
       let numericIdForUser: number | undefined = undefined;
       try {
         const counterDocRef = doc(firestore, 'counters', 'users');
@@ -75,26 +72,34 @@ export default function RegisterPage() {
         if (counterDocSnap.exists()) {
           numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
         } else {
-          numericIdForUser = 1; // First user
+          numericIdForUser = 1;
         }
         await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
       } catch (counterError) {
          console.error("Error updating user counter:", counterError);
-         // Continue without numericId if counter fails
       }
-      // End of insecure counter logic
 
       if (user) {
         const userRef = doc(collection(firestore, 'users'), user.uid);
         await setDoc(userRef, {
+          userId: user.uid,
           email: user.email,
           displayName: data.name,
-          userId: user.uid, // Storing Firebase Auth UID
-          numericId: numericIdForUser, // Storing the insecure numeric ID (can be undefined)
+          numericId: numericIdForUser,
           phoneNumber: data.phoneNumber,
           createdAt: Timestamp.fromDate(new Date()),
-          role: data.profileType,
+          role: data.profileType === 'business' ? 'business' : 'customer', // Ensure correct role string
         });
+
+        if (data.subscribeNewsletter && user.email) {
+          const newsletterResult = await subscribeToNewsletter(user.email);
+          if (newsletterResult.success) {
+            toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
+          } else {
+            // Optionally inform user if already subscribed or error during newsletter subscription
+             toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: newsletterResult.message.includes("вече е абониран") ? "default" : "destructive" });
+          }
+        }
 
         localStorage.setItem('isUserLoggedIn', 'true');
         toast({
@@ -136,7 +141,6 @@ export default function RegisterPage() {
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
-          // WARNING: Client-side counter management is insecure. See comment above.
           let numericIdForUser: number | undefined = undefined;
           try {
             const counterDocRef = doc(firestore, 'counters', 'users');
@@ -144,24 +148,37 @@ export default function RegisterPage() {
             if (counterDocSnap.exists()) {
               numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
             } else {
-              numericIdForUser = 1; // First user
+              numericIdForUser = 1;
             }
             await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
           } catch (counterError) {
             console.error("Error updating user counter for Google sign-up:", counterError);
           }
-          // End of insecure counter logic
 
           await setDoc(userRef, {
+            userId: user.uid,
             email: user.email,
-            userId: user.uid, // Storing Firebase Auth UID
-            numericId: numericIdForUser, // Storing the insecure numeric ID
+            numericId: numericIdForUser,
             displayName: user.displayName,
             phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
             role: 'customer', 
           });
         }
+        
+        // For Google Sign-Up, we assume they consent to newsletter if it's a new user
+        // You might want to ask explicitly later or have a separate preference.
+        // For simplicity here, if user.email exists and subscribeNewsletter is checked in form (or default)
+        if (user.email && form.getValues('subscribeNewsletter')) {
+            const newsletterResult = await subscribeToNewsletter(user.email);
+             if (newsletterResult.success) {
+                toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
+            } else if (!newsletterResult.message.includes("вече е абониран")) { // Don't show error if already subscribed
+                toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: "destructive" });
+            }
+        }
+
+
         localStorage.setItem('isUserLoggedIn', 'true');
         toast({
           title: 'Регистрация с Google успешна',
@@ -324,6 +341,26 @@ export default function RegisterPage() {
                     </RadioGroup>
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="subscribeNewsletter"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      disabled={isSubmitting}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className={cn("font-normal", isSubmitting && "opacity-50")}>
+                      Абонирай се за нашия бюлетин
+                    </FormLabel>
+                  </div>
                 </FormItem>
               )}
             />

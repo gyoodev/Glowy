@@ -3,10 +3,11 @@
 
 import React, { type ReactNode, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Changed from 'next/router'
-import { auth, getUserProfile } from '@/lib/firebase'; // Changed to alias
+import { useRouter } from 'next/navigation';
+import { auth, getUserProfile } from '@/lib/firebase'; // Corrected relative path
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-// import { useToast } from '@/hooks/use-toast'; // No longer using toast here for simplicity
+// Removed toast import as it's not used after simplification
+import { PanelLeft, Users, Briefcase, CalendarCheck, Mail, Newspaper, LayoutDashboard } from 'lucide-react'; // Added Newspaper for Newsletter
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -14,7 +15,6 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  // const { toast } = useToast(); // No longer using toast here
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
 
@@ -31,24 +31,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             setIsAuthorized(true);
           } else {
             console.warn('AdminLayout: User is not admin or profile not found. Role:', profile?.role);
-            // toast({ title: 'Достъп отказан', description: 'Само администратори имат достъп до този панел.', variant: 'destructive' });
-            router.push('/'); // Redirect to homepage if not admin
+            router.push('/');
             setIsAuthorized(false);
           }
         } catch (error) {
           console.error('AdminLayout: Error fetching user profile:', error);
-          // toast({ title: 'Грешка', description: 'Грешка при проверка на правата за достъп.', variant: 'destructive' });
-          router.push('/'); // Redirect on error
+          router.push('/');
           setIsAuthorized(false);
         } finally {
           setIsLoading(false);
         }
       } else {
         console.log('AdminLayout: No user authenticated. Redirecting to login.');
-        // toast({ title: 'Необходимо е удостоверяване', description: 'Моля, влезте като администратор.', variant: 'default' });
-        router.push('/login'); // Redirect to login if not authenticated
+        router.push('/login');
         setIsAuthorized(false);
-        setIsLoading(false); // Ensure loading is false even if no user
+        setIsLoading(false);
       }
     });
 
@@ -56,22 +53,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: useEffect cleanup');
       unsubscribe();
     };
-  }, [router]); // Removed toast from dependency array
+  }, [router]);
 
   if (isLoading) {
     console.log('AdminLayout: Rendering loading state...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <p className="text-lg">Зареждане на административен панел...</p>
-        {/* You can add a spinner or skeleton loader here */}
       </div>
     );
   }
 
   if (!isAuthorized) {
     console.log('AdminLayout: Rendering unauthorized state (should have redirected)...');
-    // This state should ideally not be reached if redirects work,
-    // but it's a fallback.
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <p className="text-lg text-destructive">Нямате достъп или се пренасочвате...</p>
@@ -83,31 +77,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
     <div className="flex h-screen bg-background text-foreground">
       <aside className="w-64 bg-card p-4 shadow-md">
-        <h2 className="text-2xl font-bold mb-6 text-primary">Админ Панел</h2>
-        <nav className="space-y-2">
-          <Link href="/admin/dashboard" className="block py-2 px-3 rounded-md hover:bg-muted transition-colors">
-            Табло
+        <h2 className="text-2xl font-bold mb-6 text-primary flex items-center">
+          <PanelLeft className="mr-2 h-6 w-6" /> Админ Панел
+        </h2>
+        <nav className="space-y-1">
+          <Link href="/admin/dashboard" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <LayoutDashboard className="mr-2 h-4 w-4" /> Табло
           </Link>
-          <Link href="/admin/users" className="block py-2 px-3 rounded-md hover:bg-muted transition-colors">
-            Потребители
+          <Link href="/admin/users" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <Users className="mr-2 h-4 w-4" /> Потребители
           </Link>
-          <Link href="/admin/business" className="block py-2 px-3 rounded-md hover:bg-muted transition-colors">
-            Бизнеси (Салони)
+          <Link href="/admin/business" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <Briefcase className="mr-2 h-4 w-4" /> Бизнеси (Салони)
           </Link>
-          <Link href="/admin/bookings" className="block py-2 px-3 rounded-md hover:bg-muted transition-colors">
-            Резервации
+          <Link href="/admin/bookings" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <CalendarCheck className="mr-2 h-4 w-4" /> Резервации
           </Link>
-          <Link href="/admin/contacts" className="block py-2 px-3 rounded-md hover:bg-muted transition-colors">
-            Запитвания
+          <Link href="/admin/contacts" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <Mail className="mr-2 h-4 w-4" /> Запитвания
           </Link>
-          {/* Add other admin links here */}
+          <Link href="/admin/newsletter" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+            <Newspaper className="mr-2 h-4 w-4" /> Бюлетин
+          </Link>
         </nav>
       </aside>
       <main className="flex-1 overflow-y-auto p-6">
-        <header className="pb-4 border-b border-border mb-6">
-          {/* Dynamic header title could be set via context or page props if needed */}
-          <h1 className="text-3xl font-semibold">Административно Съдържание</h1>
-        </header>
+        {/* Header removed as it's implicit in the page content being wrapped */}
         {children}
       </main>
     </div>
