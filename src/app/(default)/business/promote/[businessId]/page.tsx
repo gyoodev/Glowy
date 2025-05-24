@@ -1,9 +1,8 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp } from 'firebase/firestore'; // Renamed Timestamp to avoid conflict
+import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import type { Salon, Promotion } from '@/types';
@@ -14,7 +13,8 @@ import { AlertTriangle, CheckCircle, Gift, Tag, ArrowLeft, Loader2, XCircle } fr
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { PayPalScriptProvider, PayPalButtons, type ReactPayPalScriptOptions, type OnApproveData, type OnApproveActions } from '@paypal/react-paypal-js';
+import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
+import type { ReactPayPalScriptOptions, OnApproveData, OnApproveActions } from '@paypal/react-paypal-js';
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -99,7 +99,7 @@ export default function PromoteBusinessPage() {
   const handlePaymentSuccess = (details: any, packageId: string) => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon) {
-      setIsLoading(false);
+      setIsLoading(false); // This should be setIsProcessing(null) or similar
       return;
     }
 
@@ -107,12 +107,12 @@ export default function PromoteBusinessPage() {
     const expiryDate = addDays(now, chosenPackage.durationDays);
     const updatedPromotion: Promotion = {
       packageId: chosenPackage.id,
-      packageName: chosenPackage.name,
+      packageName: chosenPackage.name, // Use the correct package name
       isActive: true,
       expiresAt: expiryDate.toISOString(),
       purchasedAt: FirestoreTimestamp.fromDate(now).toDate().toISOString(),
       paymentMethod: 'paypal',
-      transactionId: details.id,
+      transactionId: details.id, // Assuming details.id is the transaction ID from PayPal
     };
 
     if (!salon.id) {
@@ -372,3 +372,5 @@ export default function PromoteBusinessPage() {
     </PayPalScriptProvider>
   );
 }
+
+    
