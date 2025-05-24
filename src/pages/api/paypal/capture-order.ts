@@ -116,7 +116,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const salonRef = adminFirestore.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
       
-      console.log(\`Successfully captured PayPal order \${orderID} for business \${businessId} and package \${packageId}. Firestore updated.\`);
+      console.log(`Successfully captured PayPal order ${orderID} for business ${businessId} and package ${packageId}. Firestore updated.`);
       res.status(200).json({ success: true, message: 'Плащането е успешно и промоцията е активирана!', details: captureResult });
     } else {
       console.error(\`PayPal capture status not COMPLETED for order \${orderID}: \${captureResult.status}\`, captureResult);
