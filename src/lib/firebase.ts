@@ -64,13 +64,9 @@ export const createBooking = async (bookingDetails: {
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
+      salonAddress: bookingDetails.salonAddress,
+      salonPhoneNumber: bookingDetails.salonPhoneNumber,
     };
-    if (bookingDetails.salonAddress) {
-      bookingDataForFirestore.salonAddress = bookingDetails.salonAddress;
-    }
-    if (bookingDetails.salonPhoneNumber) {
-      bookingDataForFirestore.salonPhoneNumber = bookingDetails.salonPhoneNumber;
-    }
 
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
@@ -214,7 +210,7 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch = [];
+    const batch = []; // Firestore batch type can be imported if needed, but not strictly necessary here
     querySnapshot.forEach((docSnap) => {
       batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
@@ -263,6 +259,19 @@ export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]
     console.error("Error fetching newsletter subscribers:", error);
   }
   return subscribers;
+}
+
+export async function getNewsletterSubscriptionStatus(email: string): Promise<boolean> {
+  if (!email) return false;
+  try {
+    const subscribersRef = collection(firestore, 'newsletterSubscribers');
+    const q = query(subscribersRef, where('email', '==', email), limit(1));
+    const querySnapshot = await getDocs(q);
+    return !querySnapshot.empty;
+  } catch (error) {
+    console.error('Error checking newsletter subscription status:', error);
+    return false; // Default to false on error
+  }
 }
 
 

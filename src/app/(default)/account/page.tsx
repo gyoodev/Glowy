@@ -15,7 +15,7 @@ import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getUserProfile } from '@/lib/firebase';
+import { getUserProfile, getNewsletterSubscriptionStatus } from '@/lib/firebase'; // Added getNewsletterSubscriptionStatus
 
 interface FirebaseError extends Error {
   code?: string;
@@ -44,6 +44,7 @@ export default function AccountPage() {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
+  const [newsletterStatus, setNewsletterStatus] = useState<boolean | null>(null);
   const router = useRouter();
   const firestore = getFirestore();
 
@@ -51,6 +52,7 @@ export default function AccountPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null);
+      setNewsletterStatus(null);
       if (user && user.uid) {
         setCurrentUser(user);
         try {
@@ -69,16 +71,20 @@ export default function AccountPage() {
 
           if (profileData) {
             setUserProfile(profileData as UserProfile);
+            if (profileData.email) {
+              const subStatus = await getNewsletterSubscriptionStatus(profileData.email);
+              setNewsletterStatus(subStatus);
+            }
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave = {
+            const dataToSave: Omit<UserProfile, 'id'> = {
               name: user.displayName || 'Потребител',
               email: user.email || '',
-              userId: user.uid, // Ensure userId is stored
+              userId: user.uid,
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              createdAt: Timestamp.fromDate(new Date()),
+              // createdAt: Timestamp.fromDate(new Date()), // createdAt should be handled by Firestore serverTimestamp if it's a new field in UserProfile
               role: 'customer', // Default role
             };
             await setDoc(newUserDocRef, dataToSave);
@@ -86,6 +92,10 @@ export default function AccountPage() {
               id: user.uid,
               ...dataToSave,
             } as UserProfile);
+             if (dataToSave.email) {
+              const subStatus = await getNewsletterSubscriptionStatus(dataToSave.email);
+              setNewsletterStatus(subStatus);
+            }
           }
 
           const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
@@ -213,27 +223,27 @@ export default function AccountPage() {
       </header>
 
       <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10">
-        <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none">
-          <TabsTrigger 
-            value="profile" 
+        <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
+          <TabsTrigger
+            value="profile"
             className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
           >
             <Edit3 className="mr-2 h-5 w-5" /> Профил
           </TabsTrigger>
-          <TabsTrigger 
-            value="reviews" 
+          <TabsTrigger
+            value="reviews"
             className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
           >
             <MessageSquareText className="mr-2 h-5 w-5" /> Отзиви
           </TabsTrigger>
-          <TabsTrigger 
-            value="bookings" 
+          <TabsTrigger
+            value="bookings"
             className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
           >
             <History className="mr-2 h-5 w-5" /> Резервации
           </TabsTrigger>
         </TabsList>
-        
+
         <div className="flex-1 min-w-0"> {/* Added min-w-0 to prevent content overflow issues */}
           <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
             {isLoading ? (
@@ -254,7 +264,7 @@ export default function AccountPage() {
                 <Skeleton className="h-12 w-32 mt-4" />
               </div>
             ) : userProfile ? (
-              <UserProfileForm userProfile={userProfile} />
+              <UserProfileForm userProfile={userProfile} newsletterSubscriptionStatus={newsletterStatus} />
             ) : (
               <Card className="text-center border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto shadow-lg">
                   <CardHeader>
@@ -276,7 +286,7 @@ export default function AccountPage() {
                           </p>
                           <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all">
                           <code>
-                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Добавете правила и за други колекции, ако е необходимо\n    match /salons/{salonId} {\n      allow read: if true;\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;\n    }\n  }\n}`}
+                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Добавете правила и за други колекции, ако е необходимо\n    match /salons/{salonId} {\n      allow read: if true;\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Example admin rule\n    }\n  }\n}`}
                           </code>
                           </pre>
                           <p>Натиснете бутона <strong>Publish</strong>.</p>

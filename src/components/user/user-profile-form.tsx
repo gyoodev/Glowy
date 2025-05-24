@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart } from 'lucide-react';
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck } from 'lucide-react'; // Added MailCheck
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -36,9 +36,10 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface UserProfileFormProps {
   userProfile: UserProfile;
+  newsletterSubscriptionStatus?: boolean | null; // New prop
 }
 
-export function UserProfileForm({ userProfile }: UserProfileFormProps) {
+export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: UserProfileFormProps) {
   const { toast } = useToast();
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
@@ -77,10 +78,10 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
     try {
       const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
       const profileDataToSave: Partial<UserProfile> & { userId: string } = {
-        userId: auth.currentUser.uid, // Ensure userId is always present
+        userId: auth.currentUser.uid,
         name: data.name,
         displayName: data.name,
-        email: data.email, // Keep email from form (should be read-only)
+        email: data.email,
         preferences: {
           favoriteServices: data.favoriteServices || [],
           priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
@@ -89,7 +90,6 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
         lastUpdatedAt: new Date(),
       };
 
-      // Preserve existing role and profilePhotoUrl if they exist
       if (userProfile.role) {
         profileDataToSave.role = userProfile.role;
       }
@@ -167,8 +167,26 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
                         </FormItem>
                     )}
                     />
+                     {/* Display Newsletter Subscription Status */}
+                     {newsletterSubscriptionStatus !== null && (
+                      <FormItem className="pt-2">
+                        <FormLabel className="flex items-center">
+                          <MailCheck className="mr-2 h-4 w-4 text-muted-foreground" />
+                          Абонамент за бюлетин
+                        </FormLabel>
+                        <p className="text-sm text-foreground pt-1">
+                          {newsletterSubscriptionStatus ? 'Да, абонирани сте.' : 'Не, не сте абонирани.'}
+                        </p>
+                        <FormDescription>
+                          {newsletterSubscriptionStatus
+                            ? 'Получавате нашите последни новини и оферти.'
+                            : 'Можете да се абонирате от футъра на сайта или при регистрация.'}
+                        </FormDescription>
+                      </FormItem>
+                    )}
                 </div>
             </div>
+
 
             <div className="border-t border-border/30 pt-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
@@ -346,4 +364,3 @@ export function UserProfileForm({ userProfile }: UserProfileFormProps) {
     </Card>
   );
 }
-
