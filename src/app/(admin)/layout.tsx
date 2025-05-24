@@ -1,6 +1,7 @@
 // This is a drastically simplified layout for debugging the 404 issue.
 // It removes all authentication and client-side hooks.
 import type { ReactNode } from 'react';
+import React from 'react'; // Added explicit React import
 import Link from 'next/link';
 import { PanelLeft, Users, Briefcase, CalendarCheck, Mail, Newspaper, LayoutDashboard } from 'lucide-react';
 

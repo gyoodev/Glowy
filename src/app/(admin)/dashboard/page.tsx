@@ -1,6 +1,5 @@
-
 // src/app/(admin)/dashboard/page.tsx (Ultra-simplified for 404 debug - v2)
-import React from 'react'; // Explicitly import React
+import React from 'react'; // Added explicit React import
 
 export default function AdminDashboardPage() {
   console.log('AdminDashboardPage: ATTEMPTING TO RENDER (ULTRA-SIMPLIFIED)');
