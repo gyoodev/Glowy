@@ -7,6 +7,16 @@ import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
 
 const clientId = process.env.PAYPAL_CLIENT_ID;
+
+interface CaptureOrderPayload {
+  orderID: string;
+  // Add any other required properties
+}
+
+interface CaptureOrderResponse {
+  status: string;
+  id: string;
+}
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
 if (!clientId || !clientSecret) {
@@ -46,6 +56,31 @@ if (!getApps().length) {
 const adminFirestore = getAdminFirestore(adminApp);
 
 const promotionPackages = [
+
+
+export async function captureOrder(data: CaptureOrderPayload): Promise<CaptureOrderResponse> {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/paypal/capture-order`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to capture order: ${response.statusText}`);
+    }
+
+    const order: CaptureOrderResponse = await response.json();
+    return order;
+  } catch (error) {
+    console.error("Error in captureOrder:", error);
+    throw error;
+  }
+}
+
+/*
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5 },
   { id: '30days', name: 'Златен план', durationDays: 30, price: 15 },
   { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35 },
@@ -159,3 +194,4 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     res.status(500).json({ success: false, message: errorMessage });
   }
 }
+*/
