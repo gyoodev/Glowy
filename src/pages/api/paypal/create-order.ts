@@ -27,7 +27,8 @@ export async function createOrder(data: CreateOrderPayload): Promise<string> {
     const order: CreateOrderResponse = await response.json();
     return order.id;
   }
+ catch (error) {
     console.error("Error in createOrder:", error);
     throw error;
-  }
+ }
 }
