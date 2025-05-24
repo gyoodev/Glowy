@@ -13,15 +13,15 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Checkbox } from '@/components/ui/checkbox'; // Added Checkbox import
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
 
-import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribeToNewsletter
+import { auth, subscribeToNewsletter } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
-import { getFirestore, collection, doc, setDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore'; // Added addDoc
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
@@ -30,7 +30,7 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
   profileType: z.enum(['customer', 'business']),
   confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
-  subscribeNewsletter: z.boolean().optional(), // Added newsletter field
+  subscribeNewsletter: z.boolean().optional(),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'Паролите не съвпадат.',
   path: ['confirmPassword'],
@@ -55,9 +55,30 @@ export default function RegisterPage() {
       password: '',
       confirmPassword: '',
       profileType: 'customer',
-      subscribeNewsletter: true, // Default to checked
+      subscribeNewsletter: true,
     },
   });
+
+  const notifyAdminsOfNewUser = async (newUserEmail: string | null, newUserName: string) => {
+    // TODO: Implement fetching admin UIDs more securely, e.g., from a config or specific query
+    // For now, this part is conceptual for client-side.
+    // In a real app, a Cloud Function triggered on user creation is better.
+    console.log(`Conceptual: Notify admins about new user: ${newUserName} (${newUserEmail})`);
+    // Example:
+    // const adminUsersQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
+    // const adminSnapshot = await getDocs(adminUsersQuery);
+    // adminSnapshot.forEach(async (adminDoc) => {
+    //   await addDoc(collection(firestore, 'notifications'), {
+    //     userId: adminDoc.id,
+    //     message: `Нов потребител се регистрира: ${newUserName} (${newUserEmail}).`,
+    //     link: `/admin/users`, // Link to user management
+    //     read: false,
+    //     createdAt: Timestamp.fromDate(new Date()),
+    //     type: 'new_user_admin',
+    //   });
+    // });
+  };
+
 
   const onSubmit: SubmitHandler<RegisterFormValues> = async (data) => {
     setIsSubmitting(true);
@@ -85,18 +106,22 @@ export default function RegisterPage() {
           userId: user.uid,
           email: user.email,
           displayName: data.name,
+          name: data.name, // Also set name field
           numericId: numericIdForUser,
           phoneNumber: data.phoneNumber,
           createdAt: Timestamp.fromDate(new Date()),
-          role: data.profileType === 'business' ? 'business' : 'customer', // Ensure correct role string
+          role: data.profileType === 'business' ? 'business' : 'customer',
         });
+
+        // Placeholder for notifying admins (better done server-side)
+        await notifyAdminsOfNewUser(user.email, data.name);
+
 
         if (data.subscribeNewsletter && user.email) {
           const newsletterResult = await subscribeToNewsletter(user.email);
           if (newsletterResult.success) {
             toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
           } else {
-            // Optionally inform user if already subscribed or error during newsletter subscription
              toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: newsletterResult.message.includes("вече е абониран") ? "default" : "destructive" });
           }
         }
@@ -140,7 +165,9 @@ export default function RegisterPage() {
         const userRef = doc(collection(firestore, 'users'), user.uid);
         const docSnap = await getDoc(userRef);
 
+        let isNewUser = false;
         if (!docSnap.exists()) {
+          isNewUser = true;
           let numericIdForUser: number | undefined = undefined;
           try {
             const counterDocRef = doc(firestore, 'counters', 'users');
@@ -160,20 +187,20 @@ export default function RegisterPage() {
             email: user.email,
             numericId: numericIdForUser,
             displayName: user.displayName,
+            name: user.displayName, // Also set name field
             phoneNumber: user.phoneNumber || '',
             createdAt: Timestamp.fromDate(new Date()),
             role: 'customer', 
           });
+          // Placeholder for notifying admins (better done server-side)
+          await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
         }
         
-        // For Google Sign-Up, we assume they consent to newsletter if it's a new user
-        // You might want to ask explicitly later or have a separate preference.
-        // For simplicity here, if user.email exists and subscribeNewsletter is checked in form (or default)
         if (user.email && form.getValues('subscribeNewsletter')) {
             const newsletterResult = await subscribeToNewsletter(user.email);
              if (newsletterResult.success) {
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
-            } else if (!newsletterResult.message.includes("вече е абониран")) { // Don't show error if already subscribed
+            } else if (!newsletterResult.message.includes("вече е абониран")) { 
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: "destructive" });
             }
         }

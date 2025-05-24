@@ -46,7 +46,7 @@ export interface Salon {
   priceRange: 'cheap' | 'moderate' | 'expensive' | '';
   photos?: string[];
   services: Service[];
-  reviews: Review[];
+  reviews: Review[]; // This might store review IDs or basic info if reviews are in a separate collection
   heroImage?: string;
   availability?: Record<string, string[]>;
   ownerId?: string;
@@ -76,6 +76,7 @@ export interface UserProfile {
   userId: string; // Firebase Auth UID
   displayName?: string;
   phoneNumber?: string;
+  numericId?: number;
 }
 
 export interface Booking {
@@ -96,7 +97,15 @@ export interface Booking {
   salonPhoneNumber?: string;
 }
 
-export type NotificationType = 'new_booking' | 'booking_status_change' | 'admin_alert' | 'review_reminder' | 'generic';
+export type NotificationType = 
+  | 'new_booking_business' 
+  | 'booking_status_change_customer'
+  | 'new_review_business'
+  | 'new_user_admin'
+  | 'new_salon_admin'
+  | 'new_payment_admin'
+  | 'review_reminder' 
+  | 'generic';
 
 export interface Notification {
   id: string;
@@ -106,7 +115,7 @@ export interface Notification {
   read: boolean;
   createdAt: any; // Firestore Timestamp
   type?: NotificationType;
-  relatedEntityId?: string; // e.g., bookingId, salonId
+  relatedEntityId?: string; // e.g., bookingId, salonId, userId
 }
 
 export interface NewsletterSubscriber {

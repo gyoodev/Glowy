@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
 import { initializeApp, getApps, cert, type App as AdminApp } from 'firebase-admin/app';
-import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
+import { getFirestore as getAdminFirestore, Timestamp as AdminTimestamp, FieldValue } from 'firebase-admin/firestore'; // Added FieldValue
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
 
@@ -81,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const purchaseUnit = orderDetails.purchase_units && orderDetails.purchase_units[0];
       const packageId = purchaseUnit?.custom_id;
-      const businessId = purchaseUnit?.reference_id;
+      const businessId = purchaseUnit?.reference_id; // This is the salonId
       const transactionId = captureResult.id;
 
       if (!businessId || !packageId) {
@@ -109,6 +109,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const salonRef = adminFirestore.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
+
+      // Notify admins about the new payment
+      const adminUsersQuery = adminFirestore.collection('users').where('role', '==', 'admin');
+      const adminUsersSnapshot = await adminUsersQuery.get();
+      
+      if (!adminUsersSnapshot.empty) {
+        const salonDoc = await salonRef.get();
+        const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
+        const notificationMessage = `Ново плащане за промоция '${chosenPackage.name}' (${chosenPackage.price} EUR) за салон '${salonName}' (ID: ${businessId}).`;
+        
+        const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
+          return adminFirestore.collection('notifications').add({
+            userId: adminDoc.id,
+            message: notificationMessage,
+            link: `/admin/business`, // Or a more specific link to payments/salons
+            read: false,
+            createdAt: FieldValue.serverTimestamp(),
+            type: 'new_payment_admin',
+            relatedEntityId: businessId, // salonId
+          });
+        });
+        await Promise.all(adminNotificationsPromises);
+        console.log(`Sent new payment notifications to ${adminUsersSnapshot.size} admin(s).`);
+      } else {
+        console.warn("No admin users found to send new payment notification.");
+      }
+
 
       console.log('Successfully captured PayPal order ' + orderID + ' for business ' + businessId + ' and package ' + packageId + '. Firestore updated.');
       res.status(200).json({ success: true, message: 'Плащането е успешно и промоцията е активирана!', details: captureResult });

@@ -13,11 +13,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore'; // Added Timestamp
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { allBulgarianCities, mockServices } from '@/lib/mock-data'; // Import mockServices
+import { allBulgarianCities, mockServices } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the schema for the form
@@ -32,6 +32,7 @@ const createBusinessSchema = z.object({
   services: z.array(
     z.object({
       name: z.string().min(1, "Името на услугата е задължително."),
+      description: z.string().optional(),
       price: z.coerce.number({ invalid_type_error: "Цената трябва да е число."}).min(0, "Цената трябва да е положително число."),
       duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
     })
@@ -66,7 +67,7 @@ export default function CreateBusinessPage() {
       address: '',
       city: '',
       priceRange: 'moderate',
-      services: [{ name: '', price: 0, duration: 30 }],
+      services: [{ name: '', description: '', price: 0, duration: 30 }],
       atmosphereForAi: '',
       targetCustomerForAi: '',
       uniqueSellingPointsForAi: '',
@@ -97,6 +98,25 @@ export default function CreateBusinessPage() {
     });
     return () => unsubscribe();
   }, [router, toast, firestore]);
+
+  const notifyAdminsOfNewSalon = async (salonName: string) => {
+    // TODO: Implement fetching admin UIDs more securely.
+    // For now, this part is conceptual.
+    console.log(`Conceptual: Notify admins about new salon: ${salonName}`);
+    // Example:
+    // const adminUsersQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
+    // const adminSnapshot = await getDocs(adminUsersQuery);
+    // adminSnapshot.forEach(async (adminDoc) => {
+    //   await addDoc(collection(firestore, 'notifications'), {
+    //     userId: adminDoc.id,
+    //     message: `Нов салон е регистриран: ${salonName}.`,
+    //     link: `/admin/business`, // Link to business/salon management
+    //     read: false,
+    //     createdAt: Timestamp.fromDate(new Date()),
+    //     type: 'new_salon_admin',
+    //   });
+    // });
+  };
 
   const handleGenerateDescription = async () => {
     const formValues = form.getValues();
@@ -138,11 +158,11 @@ export default function CreateBusinessPage() {
         form.setValue('description', result.salonDescription, { shouldValidate: true });
         toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
       } else {
-        toast({ title: 'Грешка при генериране', description: 'AI не успя да генерира описание.', variant: 'destructive' });
+        toast({ title: 'Грешка при генериране', description: result.error || 'AI не успя да генерира описание.', variant: 'destructive' });
       }
     } catch (error) {
       console.error('Error generating salon description:', error);
-      toast({ title: 'Грешка при AI генериране', description: 'Възникна грешка. Моля, опитайте отново.', variant: 'destructive' });
+      toast({ title: 'Грешка при AI генериране', description: (error as Error).message || 'Възникна грешка. Моля, опитайте отново.', variant: 'destructive' });
     } finally {
       setIsAiGenerating(false);
     }
@@ -161,11 +181,11 @@ export default function CreateBusinessPage() {
         city: data.city,
         priceRange: data.priceRange,
         services: data.services.map(s => ({ 
+            id: mockServices.find(ms => ms.name === s.name)?.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: s.name,
+            description: s.description || mockServices.find(ms => ms.name === s.name)?.description || '', 
             price: Number(s.price), 
             duration: Number(s.duration), 
-            description: mockServices.find(ms => ms.name === s.name)?.description || '', // Add description from mockServices
-            id: mockServices.find(ms => ms.name === s.name)?.id || Math.random().toString(36).substr(2, 9) // Use ID from mockServices or generate
         })),
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
@@ -173,18 +193,21 @@ export default function CreateBusinessPage() {
         ownerId: auth.currentUser.uid,
         rating: 0, 
         reviews: [], 
-        photos: ['https://placehold.co/600x400.png'], 
-        heroImage: 'https://placehold.co/1200x400.png', 
+        photos: ['https://placehold.co/600x400.png?text=Photo+1'], 
+        heroImage: 'https://placehold.co/1200x400.png?text=Hero+Image', 
         availability: {}, 
         createdAt: serverTimestamp(),
     };
 
     try {
-      await addDoc(collection(firestore, 'salons'), salonDataToSave);
+      const docRef = await addDoc(collection(firestore, 'salons'), salonDataToSave);
       toast({
         title: 'Бизнесът е създаден успешно!',
         description: `${data.name} беше добавен към Вашия списък.`,
       });
+      // Placeholder for notifying admins (better done server-side)
+      await notifyAdminsOfNewSalon(data.name);
+
       router.push('/business/manage');
     } catch (error: any) {
       console.error('Error creating business:', error);
@@ -200,6 +223,7 @@ export default function CreateBusinessPage() {
     return <div className="container mx-auto py-10 px-6 text-center">Зареждане на данни...</div>;
   }
   if (!isBusinessUser) {
+    // This message might not be seen if redirect happens too fast, but good for debugging
     return <div className="container mx-auto py-10 px-6 text-center">Неоторизиран достъп. Пренасочване...</div>;
   }
 
@@ -233,14 +257,25 @@ export default function CreateBusinessPage() {
               <div className="space-y-4 border p-4 rounded-md">
                 <FormLabel className="text-lg font-medium">Услуги</FormLabel>
                 {serviceFields.map((item, index) => (
-                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-8 gap-2 items-end border-b pb-3 last:border-b-0">
+                  <div key={item.id} className="grid grid-cols-1 md:grid-cols-10 gap-3 items-end border-b pb-4 last:border-b-0">
                     <FormField
                       control={form.control}
                       name={`services.${index}.name`}
                       render={({ field }) => (
                         <FormItem className="md:col-span-3">
                           <FormLabel className="text-xs">Име на услугата</FormLabel>
-                           <Select onValueChange={field.onChange} defaultValue={field.value}>
+                           <Select 
+                             onValueChange={(value) => {
+                               field.onChange(value);
+                               const selectedMockService = mockServices.find(s => s.name === value);
+                               if (selectedMockService) {
+                                 form.setValue(`services.${index}.description`, selectedMockService.description || '', {shouldValidate: true});
+                                 form.setValue(`services.${index}.price`, selectedMockService.price, {shouldValidate: true});
+                                 form.setValue(`services.${index}.duration`, selectedMockService.duration, {shouldValidate: true});
+                               }
+                             }} 
+                             defaultValue={field.value}
+                           >
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Изберете услуга" />
@@ -258,14 +293,27 @@ export default function CreateBusinessPage() {
                         </FormItem>
                       )}
                     />
+                     <FormField
+                      control={form.control}
+                      name={`services.${index}.description`}
+                      render={({ field }) => (
+                        <FormItem className="md:col-span-3">
+                          <FormLabel className="text-xs">Описание (по избор)</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Кратко описание..." {...field} rows={1} className="text-xs min-h-[2.25rem] py-1.5"/>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <FormField
                       control={form.control}
                       name={`services.${index}.price`}
                       render={({ field }) => (
-                        <FormItem className="md:col-span-2">
+                        <FormItem className="md:col-span-1">
                           <FormLabel className="text-xs">Цена (лв.)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="50" {...field} />
+                            <Input type="number" placeholder="50" {...field} className="text-xs min-h-[2.25rem] py-1.5"/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -278,7 +326,7 @@ export default function CreateBusinessPage() {
                         <FormItem className="md:col-span-2">
                           <FormLabel className="text-xs">Продълж. (мин.)</FormLabel>
                           <FormControl>
-                            <Input type="number" placeholder="60" {...field} />
+                            <Input type="number" placeholder="60" {...field} className="text-xs min-h-[2.25rem] py-1.5"/>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -299,7 +347,7 @@ export default function CreateBusinessPage() {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => appendService({ name: "", price: 0, duration: 30 })}
+                  onClick={() => appendService({ name: "", description: "", price: 0, duration: 30 })}
                   className="mt-2"
                 >
                   <PlusCircle className="mr-2 h-4 w-4" />
@@ -461,6 +509,3 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
-    
-
-    

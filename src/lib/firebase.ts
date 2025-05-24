@@ -71,6 +71,7 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
+    // Notify salon owner about the new booking
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
       await addDoc(collection(firestore, 'notifications'), {
@@ -79,7 +80,7 @@ export const createBooking = async (bookingDetails: {
         link: `/business/salon-bookings/${bookingDetails.salonId}`,
         read: false,
         createdAt: Timestamp.fromDate(new Date()),
-        type: 'new_booking',
+        type: 'new_booking_business',
         relatedEntityId: docRef.id,
       });
       console.log('Notification created for salon owner:', bookingDetails.salonOwnerId);
@@ -144,6 +145,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
         userId: data.userId || userId,
         profilePhotoUrl: data.profilePhotoUrl,
         phoneNumber: data.phoneNumber,
+        numericId: data.numericId,
         preferences: {
           favoriteServices: data.preferences?.favoriteServices || [],
           priceRange: data.preferences?.priceRange || '',
@@ -180,7 +182,7 @@ export const getUserNotifications = async (userId: string): Promise<Notification
       collection(firestore, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(10)
+      limit(10) // Limit to fetching latest 10 notifications for performance
     );
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((docSnap) => {
@@ -210,12 +212,14 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch = []; // Firestore batch type can be imported if needed, but not strictly necessary here
+    const batch = []; 
     querySnapshot.forEach((docSnap) => {
       batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
-    await Promise.all(batch);
-    console.log(`Marked all unread notifications as read for user ${userId}`);
+    if (batch.length > 0) {
+      await Promise.all(batch);
+      console.log(`Marked ${batch.length} unread notifications as read for user ${userId}`);
+    }
   } catch (error) {
     console.error("Error marking all user notifications as read:", error);
   }
@@ -227,21 +231,17 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    const subscribersRef = collection(firestore, 'newsletterSubscribers');
-    const q = query(subscribersRef, where('email', '==', email));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      return { success: false, message: 'Този имейл вече е абониран.' };
-    }
-
-    await addDoc(subscribersRef, {
+    // No longer querying for existing subscriptions to avoid permission issues for non-admins.
+    // This means duplicates are possible if a user subscribes multiple times.
+    // Handling duplicates would be an admin task or require more complex rules/logic.
+    await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
-      subscribedAt: serverTimestamp(),
+      subscribedAt: serverTimestamp(), // Use serverTimestamp for consistency
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
   } catch (error) {
     console.error('Error subscribing to newsletter:', error);
+    // Consider more specific error messages if possible, e.g., by checking error.code
     return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
   }
 }
@@ -269,8 +269,10 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
   } catch (error) {
-    console.error('Error checking newsletter subscription status:', error);
-    return false; // Default to false on error
+    // If a non-admin tries this and rules prevent read, it will throw an error.
+    // Log the error but return false as they effectively aren't confirmed as subscribed.
+    console.warn('Could not check newsletter subscription status (might be due to permissions):', error);
+    return false; 
   }
 }
 

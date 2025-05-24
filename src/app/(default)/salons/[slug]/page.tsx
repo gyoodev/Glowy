@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking, auth, getUserProfile } from '@/lib/firebase';
+import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Added db alias
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -105,7 +105,7 @@ export default function SalonProfilePage() {
 
           salonData.services = salonData.services || [];
           salonData.photos = salonData.photos || [];
-          salonData.reviews = salonData.reviews || [];
+          // Reviews are fetched separately
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
           salonData.address = salonData.address || 'Няма предоставен адрес';
           salonData.city = salonData.city || 'Не е посочен град';
@@ -172,6 +172,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slugParam, firestore, toast]);
 
   useEffect(() => {
@@ -213,6 +214,9 @@ export default function SalonProfilePage() {
         if (reviewsData.length > 0) {
             const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
             const newAverageRating = totalRating / reviewsData.length;
+            // Update the salon document in Firestore with the new average rating
+            const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
+            await updateDoc(salonDocRefToUpdate, { rating: newAverageRating });
             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
         } else {
              setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0 }) : null);
@@ -229,6 +233,7 @@ export default function SalonProfilePage() {
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, firestore]);
 
   const fetchUserReviews = async () => {
@@ -259,6 +264,7 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, auth.currentUser?.uid, firestore, showReviewForm]);
 
   const handleBookService = (serviceId: string) => {
@@ -309,22 +315,23 @@ export default function SalonProfilePage() {
     const bookingTime = selectedBookingTime;
     const localSelectedService = selectedService;
 
+    let clientName = auth.currentUser.displayName || 'Клиент';
+    let clientEmail = auth.currentUser.email || 'Няма имейл';
+    let clientPhoneNumber = 'Няма номер';
+
     try {
       const userId = auth.currentUser.uid;
-      let clientName = auth.currentUser.displayName || 'Клиент';
-      const clientEmail = auth.currentUser.email || 'Няма имейл';
-      let clientPhoneNumber = 'Няма номер';
-
       const userProfileData = await getUserProfile(userId);
       if (userProfileData) {
         clientName = userProfileData.name || userProfileData.displayName || clientName;
+        clientEmail = userProfileData.email || clientEmail; // Ensure email is also fetched from profile if available
         clientPhoneNumber = userProfileData.phoneNumber || clientPhoneNumber;
       }
 
       await createBooking({
         salonId: salon.id,
         salonName: bookingSalonName,
-        salonOwnerId: salon.ownerId, // Pass salon owner ID for notification
+        salonOwnerId: salon.ownerId, 
         userId: userId,
         service: {
             id: localSelectedService.id,
@@ -351,7 +358,7 @@ export default function SalonProfilePage() {
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour after booking
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -370,7 +377,7 @@ export default function SalonProfilePage() {
             if(reminderResult.success) {
                  toast({
                     title: "Покана за отзив изпратена",
-                    description: `Напомнянето за отзив е изпратено.`,
+                    description: reminderResult.message,
                     variant: "default",
                     duration: 7000,
                 });
@@ -378,7 +385,7 @@ export default function SalonProfilePage() {
                 console.warn("Reminder email not sent:", reminderResult.message);
                  toast({
                     title: "Проблем с изпращане на покана",
-                    description: "Възникна проблем при изпращането на покана за отзив.",
+                    description: reminderResult.message,
                     variant: "default",
                 });
             }
@@ -433,7 +440,7 @@ export default function SalonProfilePage() {
         reviewerName = auth.currentUser.displayName;
       }
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
-        reviewerName = userProfileData.name || userProfileData.displayName || reviewerName;
+        reviewerName = userProfileData.name || userProfileData.displayName || null;
       }
       reviewerName = reviewerName || 'Анонимен потребител';
       const userAvatarUrl = auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
@@ -451,19 +458,37 @@ export default function SalonProfilePage() {
       const docRef = await addDoc(collection(firestore, 'reviews'), newReviewData);
       const newReviewWithId = { ...newReviewData, id: docRef.id } as Review;
 
-      const updatedReviews = [...displayedReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setDisplayedReviews(updatedReviews);
+      // Optimistically update displayed reviews
+      const updatedDisplayedReviews = [newReviewWithId, ...displayedReviews].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setDisplayedReviews(updatedDisplayedReviews);
 
+      // Update user's own reviews if they are the one submitting
       if(userId === auth.currentUser.uid) {
-          setUserReviews(prevUserReviews => [...prevUserReviews, newReviewWithId].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+          setUserReviews(prevUserReviews => [newReviewWithId, ...prevUserReviews].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
 
-      if (updatedReviews.length > 0) {
-        const totalRating = updatedReviews.reduce((acc, rev) => acc + rev.rating, 0);
-        const newAverageRating = totalRating / updatedReviews.length;
+      // Recalculate and update salon rating in Firestore
+      if (updatedDisplayedReviews.length > 0) {
+        const totalRating = updatedDisplayedReviews.reduce((acc, rev) => acc + rev.rating, 0);
+        const newAverageRating = totalRating / updatedDisplayedReviews.length;
         const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
         await updateDoc(salonDocRefToUpdate, { rating: newAverageRating });
+        // Update local salon state for rating
         setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating }) : null);
+      }
+
+      // Notify salon owner about the new review
+      if (salon.ownerId) {
+        const notificationMessage = `${reviewerName} остави нов отзив за Вашия салон ${salon.name}.`;
+        await addDoc(collection(db, 'notifications'), {
+          userId: salon.ownerId,
+          message: notificationMessage,
+          link: `/salons/${salon.name.replace(/\s+/g, '_')}#reviews`, // Link to the reviews section of the salon
+          read: false,
+          createdAt: Timestamp.fromDate(new Date()),
+          type: 'new_review_business',
+          relatedEntityId: docRef.id, // review ID
+        });
       }
 
       setShowReviewForm(false);

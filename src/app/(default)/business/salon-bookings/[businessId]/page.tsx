@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp, addDoc } from 'firebase/firestore'; // Added addDoc
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { auth, getUserProfile } from '@/lib/firebase'; // Import getUserProfile
+import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Import getUserProfile and db alias for clarity
 import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -25,7 +25,7 @@ export default function SalonBookingsPage() {
   const params = useParams();
   const router = useRouter();
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-  const firestore = getFirestore();
+  const firestore = getFirestore(); // Keep for existing queries if preferred, or use 'db' alias
   const { toast } = useToast();
 
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -53,7 +53,7 @@ export default function SalonBookingsPage() {
       return;
     }
     if (!currentUser) {
-      if (!businessId) setIsLoading(false);
+      // Wait for currentUser to be set
       return;
     }
 
@@ -91,25 +91,12 @@ export default function SalonBookingsPage() {
         
         const fetchedBookingsPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
           const data = bookingDoc.data();
-          let clientProfile: UserProfile | null = null;
-          if (data.userId) {
-            clientProfile = await getUserProfile(data.userId);
-          }
+          // Client name and phone number are now directly on the booking document
           return {
             id: bookingDoc.id,
-            salonId: data.salonId,
-            salonName: data.salonName,
-            serviceId: data.serviceId,
-            serviceName: data.serviceName,
-            userId: data.userId,
-            date: data.date,
-            time: data.time,
-            status: data.status as Booking['status'],
-            createdAt: data.createdAt,
-            clientName: data.clientName && String(data.clientName).trim() !== '' ? String(data.clientName) : 'Клиент',
-            clientEmail: data.clientEmail && String(data.clientEmail).trim() !== '' ? String(data.clientEmail) : 'Няма имейл',
-            clientPhoneNumber: data.clientPhoneNumber && String(data.clientPhoneNumber).trim() !== '' ? String(data.clientPhoneNumber) : 'Няма номер',
-            clientProfile: clientProfile,
+            ...data,
+            clientName: data.clientName || 'Клиент',
+            clientPhoneNumber: data.clientPhoneNumber || 'Няма номер',
           } as ExtendedBooking;
         });
 
@@ -130,8 +117,9 @@ export default function SalonBookingsPage() {
     fetchSalonAndBookings();
   }, [currentUser, businessId, firestore]);
 
-  const handleStatusChange = async (bookingId: string, newStatus: Booking['status']) => {
+  const handleStatusChange = async (bookingId: string, newStatus: Booking['status'], booking: ExtendedBooking) => {
     setIsUpdatingStatusFor(bookingId);
+    const oldStatus = booking.status;
     try {
       const bookingRef = doc(firestore, 'bookings', bookingId);
       await updateDoc(bookingRef, { status: newStatus });
@@ -143,6 +131,21 @@ export default function SalonBookingsPage() {
         title: 'Статусът е актуализиран',
         description: `Статусът на резервацията беше успешно променен на '${statusTranslations[newStatus]}'.`,
       });
+
+      // Send notification to customer if status changed
+      if (newStatus !== oldStatus && booking.userId) {
+        const notificationMessage = `Статусът на Вашата резервация за '${booking.serviceName}' в '${booking.salonName}' на ${format(new Date(booking.date), 'dd.MM.yyyy', { locale: bg })} в ${booking.time} беше променен на '${statusTranslations[newStatus]}'.`;
+        await addDoc(collection(db, 'notifications'), {
+          userId: booking.userId,
+          message: notificationMessage,
+          link: `/account`, // Link to user's account/bookings page
+          read: false,
+          createdAt: Timestamp.fromDate(new Date()),
+          type: 'booking_status_change_customer',
+          relatedEntityId: bookingId,
+        });
+      }
+
     } catch (err) {
       console.error("Error updating booking status:", err);
       toast({
@@ -263,10 +266,10 @@ export default function SalonBookingsPage() {
                     <TableCell>{format(new Date(booking.date), 'PPP', { locale: bg })}</TableCell>
                     <TableCell>{booking.time}</TableCell>
                     <TableCell>
-                      {booking.clientProfile?.name || booking.clientProfile?.displayName || booking.clientName || 'Клиент'}
+                      {booking.clientName || 'Клиент'}
                     </TableCell>
                     <TableCell>
-                      {booking.clientProfile?.phoneNumber || booking.clientPhoneNumber || 'Няма номер'}
+                      {booking.clientPhoneNumber || 'Няма номер'}
                     </TableCell>
                     <TableCell>
                       {isUpdatingStatusFor === booking.id ? (
@@ -274,7 +277,7 @@ export default function SalonBookingsPage() {
                       ) : (
                         <Select
                           value={booking.status}
-                          onValueChange={(newStatus) => handleStatusChange(booking.id, newStatus as Booking['status'])}
+                          onValueChange={(newStatus) => handleStatusChange(booking.id, newStatus as Booking['status'], booking)}
                           disabled={isUpdatingStatusFor === booking.id}
                         >
                           <SelectTrigger className="w-[150px]">
