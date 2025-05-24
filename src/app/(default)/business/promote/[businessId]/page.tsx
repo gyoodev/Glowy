@@ -14,7 +14,20 @@ import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import type {} from "@paypal/react-paypal-js"; // Changed import source
+
+interface OnApproveData {
+  orderID: string;
+  payerID: string;
+  subscriptionID?: string;
+}
+
+interface OnApproveActions {
+  order?: {
+    capture: () => Promise<any>;
+    get: () => Promise<any>;
+    patch: () => Promise<any>;
+  };
+}
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -174,7 +187,7 @@ export default function PromoteBusinessPage() {
     }
   };
 
-  const onApprove = async (data, actions, packageId: string) => {
+  const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string) => {
     if (!actions.order) {
       toast({ title: "Грешка", description: "PayPal actions.order е неопределен.", variant: "destructive" });
       setIsProcessing(null);
