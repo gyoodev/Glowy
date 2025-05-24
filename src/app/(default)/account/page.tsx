@@ -12,10 +12,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { ReviewCard } from '@/components/salon/review-card';
 import { auth } from '@/lib/firebase';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getUserProfile, getNewsletterSubscriptionStatus } from '@/lib/firebase'; // Added getNewsletterSubscriptionStatus
+import { getUserProfile, getNewsletterSubscriptionStatus } from '@/lib/firebase';
 
 interface FirebaseError extends Error {
   code?: string;
@@ -48,6 +48,15 @@ export default function AccountPage() {
   const router = useRouter();
   const firestore = getFirestore();
 
+  const fetchNewsletterStatus = async (email: string | undefined | null) => {
+    if (email) {
+      const subStatus = await getNewsletterSubscriptionStatus(email);
+      setNewsletterStatus(subStatus);
+    } else {
+      setNewsletterStatus(false); // Assume not subscribed if no email
+    }
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
@@ -71,10 +80,7 @@ export default function AccountPage() {
 
           if (profileData) {
             setUserProfile(profileData as UserProfile);
-            if (profileData.email) {
-              const subStatus = await getNewsletterSubscriptionStatus(profileData.email);
-              setNewsletterStatus(subStatus);
-            }
+            await fetchNewsletterStatus(profileData.email);
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
@@ -84,21 +90,18 @@ export default function AccountPage() {
               userId: user.uid,
               profilePhotoUrl: user.photoURL || '',
               preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
-              // createdAt: Timestamp.fromDate(new Date()), // createdAt should be handled by Firestore serverTimestamp if it's a new field in UserProfile
-              role: 'customer', // Default role
+              role: 'customer', 
             };
             await setDoc(newUserDocRef, dataToSave);
-            setUserProfile({
+            const newProfile = {
               id: user.uid,
               ...dataToSave,
-            } as UserProfile);
-             if (dataToSave.email) {
-              const subStatus = await getNewsletterSubscriptionStatus(dataToSave.email);
-              setNewsletterStatus(subStatus);
-            }
+            } as UserProfile;
+            setUserProfile(newProfile);
+            await fetchNewsletterStatus(newProfile.email);
           }
 
-          const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid));
+          const bookingsQuery = query(collection(firestore, 'bookings'), where('userId', '==', user.uid), orderBy('createdAt', 'desc'));
           const bookingSnapshot = await getDocs(bookingsQuery);
           const fetchedBookings: Booking[] = [];
           bookingSnapshot.forEach((doc) => {
@@ -167,7 +170,7 @@ export default function AccountPage() {
       try {
         let reviewsQuery;
         if (userProfile.role === 'customer') {
-          reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id));
+          reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id), orderBy('date', 'desc'));
         } else if (userProfile.role === 'business') {
           const salonsQuery = query(collection(firestore, 'salons'), where('ownerId', '==', userProfile.id));
           const salonSnapshot = await getDocs(salonsQuery);
@@ -178,7 +181,7 @@ export default function AccountPage() {
             setIsLoadingReviews(false);
             return;
           }
-          reviewsQuery = query(reviewsCollectionRef, where('salonId', 'in', salonIds));
+          reviewsQuery = query(reviewsCollectionRef, where('salonId', 'in', salonIds), orderBy('date', 'desc'));
         } else {
           setIsLoadingReviews(false);
           return;
@@ -200,6 +203,12 @@ export default function AccountPage() {
       fetchReviews();
     }
   }, [userProfile, firestore]);
+
+  const handleNewsletterSubscriptionChange = () => {
+    if (userProfile && userProfile.email) {
+      fetchNewsletterStatus(userProfile.email);
+    }
+  };
 
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -264,7 +273,11 @@ export default function AccountPage() {
                 <Skeleton className="h-12 w-32 mt-4" />
               </div>
             ) : userProfile ? (
-              <UserProfileForm userProfile={userProfile} newsletterSubscriptionStatus={newsletterStatus} />
+              <UserProfileForm
+                userProfile={userProfile}
+                newsletterSubscriptionStatus={newsletterStatus}
+                onNewsletterSubscriptionChange={handleNewsletterSubscriptionChange}
+              />
             ) : (
               <Card className="text-center border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto shadow-lg">
                   <CardHeader>
@@ -274,7 +287,7 @@ export default function AccountPage() {
                       <CardTitle className="text-xl font-semibold text-destructive mt-3">Грешка при достъп до данни</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-destructive-foreground">
-                    {fetchError?.customMessage && fetchError.customMessage.includes("Firebase Console") ? (
+                    {fetchError?.code === 'permission-denied' ? (
                       <div className="text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md mt-4">
                           <p className="font-bold text-base">ГРЕШКА: Липсват права за достъп до Firestore!</p>
                           <p>
@@ -282,11 +295,11 @@ export default function AccountPage() {
                           Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong>.
                           </p>
                           <p>
-                          <strong>Моля, влезте във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>, изберете проект <code>glowy-gyoodev</code>, отидете на Firestore Database &gt; Rules и ги заменете със следните:</strong>
+                          <strong>Моля, влезте във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>, изберете проект <code>{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'glowy-gyoodev'}</code>, отидете на Firestore Database &gt; Rules и ги заменете със следните:</strong>
                           </p>
                           <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all">
                           <code>
-                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Добавете правила и за други колекции, ако е необходимо\n    match /salons/{salonId} {\n      allow read: if true;\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Example admin rule\n    }\n  }\n}`}
+                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    // Example for other collections if needed\n    match /salons/{salonId} {\n      allow read: if true;\n      // Add write rules if business users or admins should write\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null;\n    }\n    match /bookings/{bookingId} {\n      allow read: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;\n      // Add update/delete rules as needed, e.g., for salon owners or admins\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      // Allow read/list only for admins\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /notifications/{notificationId} {\n      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null; // Be more specific in production\n      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n  }\n}`}
                           </code>
                           </pre>
                           <p>Натиснете бутона <strong>Publish</strong>.</p>
@@ -373,3 +386,4 @@ export default function AccountPage() {
     </div>
   );
 }
+

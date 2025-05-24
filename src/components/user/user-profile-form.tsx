@@ -11,14 +11,14 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck } from 'lucide-react'; // Added MailCheck
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2 } from 'lucide-react'; // Added MailCheck, Loader2
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { useState, useEffect } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribeToNewsletter
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -36,13 +36,15 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 
 interface UserProfileFormProps {
   userProfile: UserProfile;
-  newsletterSubscriptionStatus?: boolean | null; // New prop
+  newsletterSubscriptionStatus?: boolean | null;
+  onNewsletterSubscriptionChange?: () => void; // New prop to refresh status
 }
 
-export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: UserProfileFormProps) {
+export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onNewsletterSubscriptionChange }: UserProfileFormProps) {
   const { toast } = useToast();
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
+  const [isSubscribingToNewsletter, setIsSubscribingToNewsletter] = useState(false);
   const firestore = getFirestore();
 
   const form = useForm<ProfileFormValues>({
@@ -78,10 +80,10 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
     try {
       const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
       const profileDataToSave: Partial<UserProfile> & { userId: string } = {
-        userId: auth.currentUser.uid,
+        userId: auth.currentUser.uid, // Ensure userId is always set
         name: data.name,
-        displayName: data.name,
-        email: data.email,
+        displayName: data.name, // Keep displayName in sync with name
+        email: data.email, // Email is read-only but include it
         preferences: {
           favoriteServices: data.favoriteServices || [],
           priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
@@ -90,6 +92,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
         lastUpdatedAt: new Date(),
       };
 
+      // Preserve existing fields not in the form
       if (userProfile.role) {
         profileDataToSave.role = userProfile.role;
       }
@@ -114,6 +117,31 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
     }
   };
 
+  const handleSubscribeToNewsletter = async () => {
+    if (!userProfile.email) {
+      toast({ title: 'Липсва имейл', description: 'Не може да се абонирате без имейл адрес.', variant: 'destructive' });
+      return;
+    }
+    setIsSubscribingToNewsletter(true);
+    const result = await subscribeToNewsletter(userProfile.email);
+    if (result.success) {
+      toast({
+        title: 'Абонаментът е успешен!',
+        description: result.message,
+      });
+      if (onNewsletterSubscriptionChange) {
+        onNewsletterSubscriptionChange(); // Notify parent to refresh status
+      }
+    } else {
+      toast({
+        title: 'Грешка при абониране',
+        description: result.message,
+        variant: result.message.includes("вече е абониран") ? "default" : "destructive",
+      });
+    }
+    setIsSubscribingToNewsletter(false);
+  };
+
   return (
     <Card className="shadow-lg max-w-2xl mx-auto border-border/50">
       <Form {...form}>
@@ -121,7 +149,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
           <CardHeader className="border-b border-border/30 pb-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-20 w-20 border-2 border-primary/50">
-                <AvatarImage src={userProfile.profilePhotoUrl} alt={userProfile.name} data-ai-hint="person avatar" />
+                <AvatarImage src={userProfile.profilePhotoUrl} alt={userProfile.name || 'User Avatar'} data-ai-hint="person avatar" />
                 <AvatarFallback className="bg-primary/10 text-primary">
                   {userProfile.name ? userProfile.name.charAt(0).toUpperCase() : <UserCircle2 className="h-10 w-10"/>}
                 </AvatarFallback>
@@ -168,22 +196,34 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
                     )}
                     />
                      {/* Display Newsletter Subscription Status */}
-                     {newsletterSubscriptionStatus !== null && (
-                      <FormItem className="pt-2">
+                     <FormItem className="pt-2">
                         <FormLabel className="flex items-center">
-                          <MailCheck className="mr-2 h-4 w-4 text-muted-foreground" />
-                          Абонамент за бюлетин
+                            <MailCheck className="mr-2 h-4 w-4 text-muted-foreground" />
+                            Абонамент за бюлетин
                         </FormLabel>
-                        <p className="text-sm text-foreground pt-1">
-                          {newsletterSubscriptionStatus ? 'Да, абонирани сте.' : 'Не, не сте абонирани.'}
-                        </p>
+                        {newsletterSubscriptionStatus === null ? (
+                            <p className="text-sm text-muted-foreground pt-1">Зареждане на статус...</p>
+                        ) : newsletterSubscriptionStatus ? (
+                            <p className="text-sm text-foreground pt-1">Да, абонирани сте.</p>
+                        ) : (
+                            <div className="pt-1">
+                                <p className="text-sm text-foreground mb-2">Не, не сте абонирани.</p>
+                                <Button
+                                    type="button"
+                                    onClick={handleSubscribeToNewsletter}
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isSubscribingToNewsletter || !userProfile.email}
+                                >
+                                    {isSubscribingToNewsletter && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Абонирай ме за бюлетина
+                                </Button>
+                            </div>
+                        )}
                         <FormDescription>
-                          {newsletterSubscriptionStatus
-                            ? 'Получавате нашите последни новини и оферти.'
-                            : 'Можете да се абонирате от футъра на сайта или при регистрация.'}
+                          {newsletterSubscriptionStatus ? 'Получавате нашите последни новини и оферти.' : 'Можете да се абонирате и от футъра на сайта или при регистрация.'}
                         </FormDescription>
                       </FormItem>
-                    )}
                 </div>
             </div>
 
@@ -204,7 +244,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
                             <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={servicePopoverOpen} className="w-full justify-between text-base">
                                 {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? 'а': 'и'} услуг${field.value.length === 1 ? 'а': 'и'}` : "Изберете услуги..."}
-                                <UserCircle2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" /> {/* Changed icon for consistency */}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -295,7 +335,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
                             <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={locationPopoverOpen} className="w-full justify-between text-base">
                                 {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? '' : 'и'} град${field.value.length === 1 ? '' : 'а'}` : "Изберете градове..."}
-                                <UserCircle2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" /> {/* Changed icon for consistency */}
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -364,3 +404,4 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus }: U
     </Card>
   );
 }
+
