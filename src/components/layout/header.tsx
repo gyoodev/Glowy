@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'; // Removed SheetClose as it's implicitly handled or part of SheetContent
 import { Menu, Sparkles as AppIcon, User, LogOut, Bell } from 'lucide-react';
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
@@ -19,7 +19,7 @@ import { Badge } from '@/components/ui/badge';
 const navItems = [
   { href: '/', label: 'Салони' },
   { href: '/recommendations', label: 'AI Препоръки' },
- { href: '/contact', label: 'Контакти' },
+  { href: '/contact', label: 'Контакти' },
 ];
 
 export function Header() {
@@ -32,16 +32,38 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
+  const fetchNotifications = async (userId: string) => {
+    if (!userId) return;
+    try {
+        const userNotifications = await getUserNotifications(userId);
+        setNotifications(userNotifications);
+        setUnreadCount(userNotifications.filter(n => !n.read).length);
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        setNotifications([]);
+        setUnreadCount(0);
+    }
+  };
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
-        const profile = await getUserProfile(user.uid);
-        setUserRole(profile?.role || null);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('isUserLoggedIn', 'true');
+        try {
+          const profile = await getUserProfile(user.uid);
+          setUserRole(profile?.role || null);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('isUserLoggedIn', 'true');
+          }
+          // Initial fetch of notifications
+          fetchNotifications(user.uid);
+        } catch (error) {
+            console.error("Error fetching user profile in Header:", error);
+            setUserRole(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('isUserLoggedIn');
+            }
         }
-        fetchNotifications(user.uid);
       } else {
         setUserRole(null);
         setNotifications([]);
@@ -54,20 +76,15 @@ export function Header() {
     });
     
     return () => unsubscribeAuth();
-  }, []);
-
-  const fetchNotifications = async (userId: string) => {
-    const userNotifications = await getUserNotifications(userId);
-    setNotifications(userNotifications);
-    setUnreadCount(userNotifications.filter(n => !n.read).length);
-  };
+  }, []); // Empty dependency array is correct for onAuthStateChanged
 
   useEffect(() => {
+    // This effect re-fetches notifications if the currentUser.uid changes
+    // (e.g., after login/logout, though logout should clear notifications anyway)
     if (currentUser?.uid) {
       fetchNotifications(currentUser.uid);
-      // Optional: Set up a Firestore listener here for real-time notifications
     }
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid]); // Dependency on currentUser.uid
 
 
   const isLoggedIn = !!currentUser;
@@ -75,9 +92,6 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('isUserLoggedIn');
-      }
       setUserRole(null); 
       setNotifications([]);
       setUnreadCount(0);
@@ -91,16 +105,29 @@ export function Header() {
 
   const handleOpenPopover = async () => {
     setIsPopoverOpen(true);
-    if (unreadCount > 0 && currentUser) {
-      await markAllUserNotificationsAsRead(currentUser.uid);
-      fetchNotifications(currentUser.uid); // Re-fetch to update UI
+    if (unreadCount > 0 && currentUser?.uid) {
+      try {
+        await markAllUserNotificationsAsRead(currentUser.uid);
+        fetchNotifications(currentUser.uid); 
+      } catch (error) {
+          console.error("Error marking notifications as read:", error);
+      }
     }
   };
 
   const handleNotificationClick = async (notification: Notification) => {
-    if (!notification.read && currentUser) {
-      await markNotificationAsRead(notification.id);
-      fetchNotifications(currentUser.uid); // Re-fetch to update UI
+    if (!currentUser?.uid) return;
+    if (!notification.read) {
+        try {
+            await markNotificationAsRead(notification.id);
+            // Optimistically update UI or re-fetch
+            setNotifications(prev => prev.map(n => n.id === notification.id ? {...n, read: true} : n));
+            setUnreadCount(prev => Math.max(0, prev -1));
+            // Optionally re-fetch for full consistency if other processes might change read status
+            // fetchNotifications(currentUser.uid); 
+        } catch (error) {
+            console.error("Error marking single notification as read:", error);
+        }
     }
     if (notification.link) {
       router.push(notification.link);
@@ -123,7 +150,6 @@ export function Header() {
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
                 </div>
                 <div className="flex-1"></div> {/* This pushes auth buttons to the right */}
-                 {/* Placeholder for auth buttons to maintain layout during loading */}
                 <div className="flex items-center space-x-2">
                     <div className="h-9 w-20 rounded-md bg-muted animate-pulse"></div>
                     <div className="h-9 w-20 rounded-md bg-muted animate-pulse"></div>
@@ -153,6 +179,11 @@ export function Header() {
             );
           })}
           {isLoggedIn && userRole === 'business' && businessManageLinkDesktop}
+           {isLoggedIn && userRole === 'admin' && (
+             <Button variant="ghost" asChild>
+               <Link href="/admin/dashboard">Админ панел</Link>
+             </Button>
+           )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-initial">
@@ -172,7 +203,7 @@ export function Header() {
                       variant="destructive"
                       className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs rounded-full"
                     >
-                      {unreadCount}
+                      {unreadCount > 9 ? '9+' : unreadCount}
                     </Badge>
                   )}
                   <span className="sr-only">Отвори известия</span>
@@ -195,7 +226,9 @@ export function Header() {
                         >
                           <p className="text-sm leading-tight">{notification.message}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: bg })}
+                            {notification.createdAt?.seconds 
+                              ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: bg })
+                              : 'Преди малко'}
                           </p>
                         </div>
                       ))}
@@ -205,7 +238,7 @@ export function Header() {
                  {notifications.length > 0 && (
                     <div className="p-2 border-t text-center">
                         <Button variant="link" size="sm" onClick={() => {setIsPopoverOpen(false); router.push('/notifications')}}>
-                            Виж всички
+                            Виж всички {/* This link needs a page /notifications to be created */}
                         </Button>
                     </div>
                 )}
@@ -214,13 +247,6 @@ export function Header() {
           )}
 
           {isLoggedIn ? (
-            <>
-              {userRole === 'admin' && (
-                <Button variant="outline" asChild>
-                 <Link href="/admin/dashboard">Админ</Link>
-               </Button>
-              )}
-
             <>
               <Button variant="outline" asChild>
                 <Link href="/account">
@@ -253,19 +279,19 @@ export function Header() {
                     return null; 
                   }
                   return (
-                    <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3">
-                      <Link href={item.href} onClick={() => setIsMobileMenuOpen(false)}>{item.label}</Link>
+                    <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Link href={item.href}>{item.label}</Link>
                     </Button>
                   );
                 })}
                 {isLoggedIn && userRole === 'business' && (
-                   <Button variant="ghost" asChild className="justify-start text-base py-3">
-                    <Link href="/business/manage" onClick={() => setIsMobileMenuOpen(false)}>Управление на Бизнеса</Link>
+                   <Button variant="ghost" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href="/business/manage">Управление на Бизнеса</Link>
                   </Button>
                 )}
                 {isLoggedIn && userRole === 'admin' && (
-                  <Button variant="ghost" asChild className="justify-start text-base py-3">
-                    <Link href="/admin/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Админ панел</Link>
+                  <Button variant="ghost" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Link href="/admin/dashboard">Админ панел</Link>
                   </Button>
                 )}
                 
@@ -273,22 +299,22 @@ export function Header() {
                 
                 {isLoggedIn ? (
                   <>
-                    <Button variant="outline" asChild className="justify-start text-base py-3">
-                        <Link href="/account" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Link href="/account">
                             <User className="mr-2 h-4 w-4" /> Профил
                         </Link>
                     </Button>
-                    <Button variant="ghost" onClick={handleLogout} className="justify-start text-base py-3 text-destructive hover:text-destructive">
+                    <Button variant="ghost" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="justify-start text-base py-3 text-destructive hover:text-destructive">
                         <LogOut className="mr-2 h-4 w-4" /> Изход
                     </Button>
                   </>
                 ) : (
                   <>
-                    <Button variant="outline" asChild className="justify-start text-base py-3">
-                        <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>Вход</Link>
+                    <Button variant="outline" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Link href="/login">Вход</Link>
                     </Button>
-                    <Button variant="default" asChild className="justify-start text-base py-3">
-                        <Link href="/register" onClick={() => setIsMobileMenuOpen(false)}>Регистрация</Link>
+                    <Button variant="default" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Link href="/register">Регистрация</Link>
                     </Button>
                   </>
                 )}
@@ -300,3 +326,4 @@ export function Header() {
     </header>
   );
 }
+    
