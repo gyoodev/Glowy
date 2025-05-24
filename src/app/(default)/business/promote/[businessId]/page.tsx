@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import type { ReactPayPalScriptOptions, OnApproveData, OnApproveActions } from '@paypal/react-paypal-js';
+import type { ReactPayPalScriptOptions, OnApproveData, OnApproveActions } from "@paypal/paypal-js"; // Changed import source
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -22,7 +22,7 @@ const promotionPackages = [
   { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
 ];
 
-const PAYPAL_CURRENCY = "EUR"; // Or your preferred currency
+const PAYPAL_CURRENCY = "EUR";
 
 export default function PromoteBusinessPage() {
   const params = useParams();
@@ -31,7 +31,7 @@ export default function PromoteBusinessPage() {
   const { toast } = useToast();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState<string | null>(null); // packageId or 'stop'
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export default function PromoteBusinessPage() {
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   const paypalScriptOptions: ReactPayPalScriptOptions = {
-    clientId: paypalClientId || "test", // Fallback to "test" if not set, but PayPalButtons will error
+    clientId: paypalClientId || "test",
     currency: PAYPAL_CURRENCY,
     intent: "capture",
   };
@@ -99,7 +99,7 @@ export default function PromoteBusinessPage() {
   const handlePaymentSuccess = (details: any, packageId: string) => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon) {
-      setIsLoading(false); // This should be setIsProcessing(null) or similar
+      setIsProcessing(null);
       return;
     }
 
@@ -107,12 +107,12 @@ export default function PromoteBusinessPage() {
     const expiryDate = addDays(now, chosenPackage.durationDays);
     const updatedPromotion: Promotion = {
       packageId: chosenPackage.id,
-      packageName: chosenPackage.name, // Use the correct package name
+      packageName: chosenPackage.name,
       isActive: true,
       expiresAt: expiryDate.toISOString(),
       purchasedAt: FirestoreTimestamp.fromDate(now).toDate().toISOString(),
       paymentMethod: 'paypal',
-      transactionId: details.id, // Assuming details.id is the transaction ID from PayPal
+      transactionId: details.id,
     };
 
     if (!salon.id) {
@@ -372,5 +372,3 @@ export default function PromoteBusinessPage() {
     </PayPalScriptProvider>
   );
 }
-
-    
