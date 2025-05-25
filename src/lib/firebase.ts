@@ -3,7 +3,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp, doc, setDoc, FieldValue } from 'firebase/firestore'; // Added FieldValue
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp, doc, setDoc, FieldValue, getDoc } from 'firebase/firestore'; // Added getDoc
 // Removed duplicate: import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { UserProfile, Service, Booking, Notification, NewsletterSubscriber } from '@/types';
 
@@ -24,14 +24,14 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const auth = getAuth(); // Relies on default app being initialized by initializeApp
-const firestore = getFirestore(); // Relies on default app being initialized by initializeApp
+const auth = getAuth(app); // Pass app instance
+const firestore = getFirestore(app); // Pass app instance
 
 let analytics;
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
-      analytics = getAnalytics(); // Relies on default app
+      analytics = getAnalytics(app); // Pass app instance
     }
   });
 }
@@ -51,7 +51,7 @@ export const createBooking = async (bookingDetails: {
   salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore: Omit<Booking, 'id'> = { // Use Omit to ensure all required Booking fields are covered
+    const bookingDataForFirestore: Omit<Booking, 'id'> = {
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
       salonOwnerId: bookingDetails.salonOwnerId,
@@ -60,8 +60,8 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'pending', // Default status
-      createdAt: serverTimestamp(), // Use serverTimestamp
+      status: 'pending',
+      createdAt: serverTimestamp(),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
@@ -103,10 +103,10 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     orderBy('createdAt', 'desc')
   );
   const querySnapshot = await getDocs(q);
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
+  querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
+    const data = docSnap.data();
     const booking: Booking = {
-      id: doc.id,
+      id: docSnap.id,
       salonId: data.salonId,
       salonName: data.salonName,
       salonOwnerId: data.salonOwnerId,
@@ -213,13 +213,13 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batchPromises: Promise<void>[] = []; // Correctly typed
+    const batch: Promise<void>[] = []; // Correctly typed
     querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
-      batchPromises.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
+      batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
-    if (batchPromises.length > 0) {
-      await Promise.all(batchPromises);
-      console.log(`Marked ${batchPromises.length} unread notifications as read for user ${userId}`);
+    if (batch.length > 0) {
+      await Promise.all(batch);
+      console.log(`Marked ${batch.length} unread notifications as read for user ${userId}`);
     }
   } catch (error) {
     console.error("Error marking all user notifications as read:", error);
@@ -231,6 +231,7 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
+    // No longer querying for existing emails to avoid permission issues for non-admins
     await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
       subscribedAt: serverTimestamp(),
