@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
-import { Toaster } from "@/components/ui/toaster";
+// Header and Footer are now provided by RootLayout
+// Toaster is also provided by RootLayout
 
 interface DefaultLayoutProps {
   children: ReactNode;
@@ -9,13 +8,13 @@ interface DefaultLayoutProps {
 
 export default function DefaultLayout({ children }: DefaultLayoutProps) {
   return (
-    <div className="flex min-h-screen flex-col">
-      <Header />
-      <main className="flex-1 bg-background">
-        {children}
-      </main>
-      <Footer />
-      <Toaster />
-    </div>
+    <>
+      {/* This layout now primarily passes children through.
+          It can be used to add wrappers or context specific to the (default) group 
+          that should appear *inside* the main Header/Footer structure. 
+          For now, it's just a pass-through.
+      */}
+      {children}
+    </>
   );
 }
