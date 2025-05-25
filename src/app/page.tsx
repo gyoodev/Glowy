@@ -1,7 +1,4 @@
 
-// This file will now contain the SalonDirectoryPage logic.
-// The original content of src/app/(default)/home/page.tsx is moved here.
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -15,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { isFuture } from 'date-fns';
-import { firestore } from '@/lib/firebase'; // Import the initialized firestore instance
+import { firestore } from '@/lib/firebase';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -46,7 +43,7 @@ export default function SalonDirectoryPage() {
     location: '--all-cities--',
     serviceType: '--all-services--',
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MAX_PRICE,
+    maxPrice: DEFAULT_MIN_PRICE,
   });
 
   const uniqueServiceTypes = Array.from(new Set(allMockServices.map(service => service.name)));
@@ -108,7 +105,7 @@ export default function SalonDirectoryPage() {
       tempSalons = tempSalons.filter(salon => (salon.rating || 0) >= filters.minRating);
     }
     
-    if (filters.maxPrice < DEFAULT_MAX_PRICE && filters.maxPrice !== DEFAULT_MIN_PRICE) {
+    if (filters.maxPrice > DEFAULT_MIN_PRICE) { // Only apply maxPrice filter if it's greater than 0
         tempSalons = tempSalons.filter(salon =>
             salon.services?.some(service => service.price <= filters.maxPrice)
         );
@@ -127,7 +124,7 @@ export default function SalonDirectoryPage() {
 
   return (
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-16 py-12 bg-gradient-to-r from-secondary via-background to-secondary relative overflow-hidden">
+      <header className="mb-16 py-12 relative overflow-hidden">
         <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
             <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
@@ -245,4 +242,3 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
-
