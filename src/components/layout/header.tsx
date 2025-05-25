@@ -17,7 +17,7 @@ import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
 const navItems = [
-  { href: '/', label: 'Салони' },
+  { href: '/home', label: 'Салони' },
   { href: '/recommendations', label: 'AI Препоръки' },
   { href: '/contact', label: 'Контакти' },
 ];
@@ -126,13 +126,8 @@ export function Header() {
       router.push(notification.link);
     }
     setIsPopoverOpen(false);
+    setIsMobileMenuOpen(false); 
   };
-
- const businessManageLinkDesktop = (
-    <Button variant="ghost" asChild>
-      <Link href="/business/manage">Управление на Бизнеса</Link>
-    </Button>
-  );
 
   if (isLoading) {
     return (
@@ -144,7 +139,7 @@ export function Header() {
                 </div>
                 <div className="flex-1"></div>
                 <div className="flex items-center space-x-2">
-                    <div className="h-9 w-20 rounded-md bg-muted animate-pulse"></div>
+                    {/* Placeholder for buttons or remove if not needed */}
                 </div>
             </div>
         </header>
@@ -154,14 +149,14 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-6">
-        <Link href="/" className="mr-6 flex items-center space-x-2">
+        <Link href="/home" className="mr-6 flex items-center space-x-2">
           <AppIcon className="h-6 w-6 text-primary" />
           <span className="font-bold sm:inline-block text-lg">Glowy</span>
         </Link>
 
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
           {navItems.map((item) => {
-            if (item.href === '/recommendations' && !isLoggedIn) {
+             if (item.href === '/recommendations' && !isLoggedIn) {
               return null; 
             }
             return (
@@ -170,7 +165,11 @@ export function Header() {
               </Button>
             );
           })}
-          {isLoggedIn && userRole === 'business' && businessManageLinkDesktop}
+          {isLoggedIn && userRole === 'business' && (
+            <Button variant="ghost" asChild>
+              <Link href="/business/manage">Управление на Бизнеса</Link>
+            </Button>
+          )}
            {isLoggedIn && userRole === 'admin' && (
              <Button variant="ghost" asChild>
                <Link href="/admin/dashboard">Админ панел</Link>
@@ -220,8 +219,8 @@ export function Header() {
                           <p className="text-xs text-muted-foreground mt-1">
                             {notification.createdAt?.seconds 
                               ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: bg })
-                              : (notification.createdAt && typeof notification.createdAt.toDate === 'function') 
-                                ? formatDistanceToNow(notification.createdAt.toDate(), { addSuffix: true, locale: bg })
+                              : (notification.createdAt && typeof (notification.createdAt as any).toDate === 'function') 
+                                ? formatDistanceToNow((notification.createdAt as any).toDate(), { addSuffix: true, locale: bg })
                                 : 'Преди малко'}
                           </p>
                         </div>
