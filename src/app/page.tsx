@@ -1,3 +1,4 @@
+
 // This file will now contain the SalonDirectoryPage logic.
 // The original content of src/app/(default)/home/page.tsx is moved here.
 
@@ -17,8 +18,8 @@ import { isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase'; // Import the initialized firestore instance
 
 const DEFAULT_MIN_RATING = 0;
-const DEFAULT_MAX_PRICE = 500; // Default max price for "any price"
-const DEFAULT_MIN_PRICE = 0; // Default min price for "any price"
+const DEFAULT_MAX_PRICE = 500;
+const DEFAULT_MIN_PRICE = 0;
 
 interface HeroImage {
   id: string;
@@ -28,6 +29,7 @@ interface HeroImage {
   priority?: boolean;
 }
 
+// Static list of 3 specific images
 const staticHeroImages: HeroImage[] = [
   { id: 'hair_studio_large', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист работещ във фризьорски салон', dataAiHint: 'hair studio', priority: true },
   { id: 'barber_small', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon' },
@@ -44,10 +46,8 @@ export default function SalonDirectoryPage() {
     location: '--all-cities--',
     serviceType: '--all-services--',
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MAX_PRICE, // This is now maxPrice, not priceRange array
+    maxPrice: DEFAULT_MAX_PRICE,
   });
-
-  // REMOVED: const firestore = getFirestore(); // This was the problematic line
 
   const uniqueServiceTypes = Array.from(new Set(allMockServices.map(service => service.name)));
 
@@ -56,7 +56,6 @@ export default function SalonDirectoryPage() {
       setIsLoading(true);
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
-        // For now, fetch all salons. Add query for promotion later if needed.
         const q = query(salonsCollectionRef, orderBy('name'));
         const salonsSnapshot = await getDocs(q);
         const salonsList = salonsSnapshot.docs.map(doc => ({
@@ -64,7 +63,6 @@ export default function SalonDirectoryPage() {
           ...doc.data(),
         })) as Salon[];
 
-        // Sort promoted salons to the top
         salonsList.sort((a, b) => {
           const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
           const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
@@ -84,7 +82,7 @@ export default function SalonDirectoryPage() {
       }
     };
     fetchSalons();
-  }, [firestore]); // firestore is passed as a dependency from the import
+  }, []); 
 
   const applyFilters = useCallback(() => {
     let tempSalons = [...salons];
@@ -110,16 +108,11 @@ export default function SalonDirectoryPage() {
       tempSalons = tempSalons.filter(salon => (salon.rating || 0) >= filters.minRating);
     }
     
-    // Updated price filter logic for single maxPrice value
-    if (filters.maxPrice < DEFAULT_MAX_PRICE && filters.maxPrice !== DEFAULT_MIN_PRICE) { // Check if not "Any Price"
+    if (filters.maxPrice < DEFAULT_MAX_PRICE && filters.maxPrice !== DEFAULT_MIN_PRICE) {
         tempSalons = tempSalons.filter(salon =>
             salon.services?.some(service => service.price <= filters.maxPrice)
         );
-    } else if (filters.maxPrice === DEFAULT_MIN_PRICE) { // Explicitly handle 0 as "Any Price" based on previous logic
-        // No price filter applied if 0 is selected and it means "Any Price"
     }
-
-
     setFilteredSalons(tempSalons);
   }, [salons, searchTerm, filters]);
 
@@ -134,7 +127,7 @@ export default function SalonDirectoryPage() {
 
   return (
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-16 py-12 bg-gradient-to-r from-secondary via-background to-secondary rounded-xl shadow-lg relative overflow-hidden">
+      <header className="mb-16 py-12 bg-gradient-to-r from-secondary via-background to-secondary relative overflow-hidden">
         <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
             <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
@@ -217,16 +210,16 @@ export default function SalonDirectoryPage() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"> {/* Changed from Card to div */}
+                 <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
                   <Skeleton className="h-48 w-full" />
-                  <div className="p-4"> {/* Changed from CardContent to div */}
+                  <div className="p-4">
                     <Skeleton className="h-6 w-3/4 mb-2" />
                     <Skeleton className="h-4 w-full mb-1" />
                     <Skeleton className="h-4 w-5/6 mb-3" />
                     <Skeleton className="h-4 w-1/2 mb-3" />
                     <Skeleton className="h-4 w-1/3" />
                   </div>
-                  <div className="p-4 pt-0"> {/* Changed from CardFooter to div */}
+                  <div className="p-4 pt-0">
                     <Skeleton className="h-10 w-full" />
                   </div>
                 </div>
@@ -252,3 +245,4 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
+
