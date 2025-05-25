@@ -32,7 +32,7 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
-  const fetchNotifications = async (userId: string) => {
+  const fetchNotificationsContent = async (userId: string) => {
     if (!userId) return;
     try {
         const userNotifications = await getUserNotifications(userId);
@@ -55,7 +55,7 @@ export function Header() {
           if (typeof window !== 'undefined') {
             localStorage.setItem('isUserLoggedIn', 'true');
           }
-          fetchNotifications(user.uid);
+          fetchNotificationsContent(user.uid); // fetch notifications
         } catch (error) {
             console.error("Error fetching user profile in Header:", error);
             setUserRole(null);
@@ -79,7 +79,7 @@ export function Header() {
 
   useEffect(() => {
     if (currentUser?.uid) {
-      fetchNotifications(currentUser.uid);
+      fetchNotificationsContent(currentUser.uid);
     }
   }, [currentUser?.uid]);
 
@@ -108,7 +108,7 @@ export function Header() {
     if (unreadCount > 0 && currentUser?.uid) {
       try {
         await markAllUserNotificationsAsRead(currentUser.uid);
-        fetchNotifications(currentUser.uid); 
+        fetchNotificationsContent(currentUser.uid); 
       } catch (error) {
           console.error("Error marking notifications as read:", error);
       }
@@ -120,7 +120,8 @@ export function Header() {
     if (!notification.read) {
         try {
             await markNotificationAsRead(notification.id);
-            // No need to call fetchNotifications here, Popover will close and on next open it will refresh
+            // Re-fetch notifications to update the list and unread count
+            fetchNotificationsContent(currentUser.uid);
         } catch (error) {
             console.error("Error marking single notification as read:", error);
         }
@@ -128,7 +129,7 @@ export function Header() {
     if (notification.link) {
       router.push(notification.link);
     }
-    setIsPopoverOpen(false); // Close popover after click
+    setIsPopoverOpen(false); 
     setIsMobileMenuOpen(false); 
   };
 
@@ -300,7 +301,7 @@ export function Header() {
                             <User className="mr-2 h-4 w-4" /> Профил
                         </Link>
                     </Button>
-                    <Button variant="ghost" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="justify-start text-base py-3 text-destructive hover:text-destructive">
+                    <Button variant="ghost" onClick={() => { handleLogout(); }} className="justify-start text-base py-3 text-destructive hover:text-destructive">
                         <LogOut className="mr-2 h-4 w-4" /> Изход
                     </Button>
                   </>
