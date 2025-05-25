@@ -1,5 +1,4 @@
-// src/app/(admin)/page.tsx (Ultra-simplified for 404 debug)
-import React from 'react';
+import React from 'react'; // Explicit import
 
 export default function AdminIndexPage() {
   console.log('AdminIndexPage (/admin) attempting to render - ultra simple version 2');

@@ -1,6 +1,5 @@
-// src/app/(admin)/layout.tsx (Ultra-simplified for 404 debug)
 import type { ReactNode } from 'react';
-import React from 'react';
+import React from 'react'; // Explicit import
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -13,8 +12,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <header style={{ padding: '1rem', backgroundColor: '#ddd', borderBottom: '1px solid #ccc' }}>
         <h1>Ultra-Simple Admin Panel Wrapper</h1>
         <nav>
-          <a href="/" style={{ marginRight: '10px' }}>Go to Main Site (Root /)</a>
-          <a href="/home" style={{ marginRight: '10px' }}>Go to Salon Directory (/home)</a>
+          {/* Updated to point to the root, which is now the salon directory */}
+          <a href="/" style={{ marginRight: '10px' }}>Go to Salon Directory (Root /)</a>
           <a href="/admin" style={{ marginRight: '10px' }}>Admin Index</a>
           <a href="/admin/users" style={{ marginRight: '10px' }}>Admin Users</a>
           <a href="/admin/bookings" style={{ marginRight: '10px' }}>Admin Bookings</a>
