@@ -1,9 +1,23 @@
 
+'use client'; // Make it a client component
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle } from 'lucide-react';
+// import { useSearchParams } from 'next/navigation'; // Not currently used, but this is how you'd get them in a Client Component
 
 export default function NotFound() {
+  // const searchParams = useSearchParams(); // Example if you needed to access searchParams
+
+  // Example of safe access if searchParams were used:
+  // React.useEffect(() => {
+  //   if (searchParams) {
+  //     searchParams.forEach((value, key) => {
+  //       console.log(`NotFound page search param - ${key}: ${value}`);
+  //     });
+  //   }
+  // }, [searchParams]);
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background text-center p-6">
       <AlertTriangle className="h-16 w-16 text-destructive mb-6" />
@@ -19,7 +33,7 @@ export default function NotFound() {
           <code>
             {`// Common checks for 404 errors:\n` +
              `// 1. Verify the URL path is correct and matches your file structure.\n` +
-             `//    (e.g., /admin corresponds to app/(admin)/page.tsx)\n` +
+             `//    (e.g., /admin/dashboard corresponds to app/(admin)/page.tsx)\n` +
              `// 2. Ensure the corresponding page file (page.tsx) exists.\n` +
              `// 3. Check deployment logs (e.g., Netlify build logs) for errors \n` +
              `//    that might prevent the page from being built.\n` +
@@ -35,3 +49,5 @@ export default function NotFound() {
     </div>
   );
 }
+
+    
