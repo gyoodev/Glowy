@@ -31,7 +31,7 @@ export interface Promotion {
   expiresAt?: string; // ISO string date
   packageId?: string; // e.g., '7days', '30days'
   packageName?: string; // e.g., "Сребърен план"
-  purchasedAt?: string; // ISO string date
+  purchasedAt?: any; // Changed from string | undefined to any for FieldValue.serverTimestamp()
   paymentMethod?: 'paypal' | 'stripe' | 'revolut' | 'other';
   transactionId?: string;
 }
@@ -95,6 +95,7 @@ export interface Booking {
   clientPhoneNumber: string;
   salonAddress?: string;
   salonPhoneNumber?: string;
+  salonOwnerId?: string; // Added for notifying salon owner
 }
 
 export type NotificationType =
@@ -105,7 +106,7 @@ export type NotificationType =
   | 'new_salon_admin'
   | 'new_payment_admin'
   | 'review_reminder'
-  | 'welcome_user' // Added welcome user type
+  | 'welcome_user'
   | 'generic';
 
 export interface Notification {
