@@ -26,7 +26,7 @@ import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from
 const registerSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
-  phoneNumber: z.string().min(9, 'Телефонният номер трябва да е поне 9 символа.').regex(/^[0-9+]*$/, 'Телефонният номер може да съдържа само цифри и знак "+".'),
+  phoneNumber: z.string().regex(/^\+359[0-9]{9}$/, 'Невалиден български телефонен номер. Трябва да е във формат +359xxxxxxxxx (9 цифри след +359).'),
   password: z.string().min(6, 'Паролата трябва да е поне 6 символа.'),
   profileType: z.enum(['customer', 'business']),
   confirmPassword: z.string().min(6, 'Потвърждението на паролата трябва да е поне 6 символа.'),
@@ -51,7 +51,7 @@ export default function RegisterPage() {
     defaultValues: {
       name: '',
       email: '',
-      phoneNumber: '',
+      phoneNumber: '+359', // Default with prefix
       password: '',
       confirmPassword: '',
       profileType: 'customer',
@@ -175,9 +175,7 @@ export default function RegisterPage() {
         const userRef = doc(collection(firestore, 'users'), user.uid);
         const docSnap = await getDoc(userRef);
 
-        let isNewUser = false;
         if (!docSnap.exists()) {
-          isNewUser = true;
           let numericIdForUser: number | undefined = undefined;
           try {
             const counterDocRef = doc(firestore, 'counters', 'users');
@@ -198,7 +196,7 @@ export default function RegisterPage() {
             numericId: numericIdForUser,
             displayName: user.displayName,
             name: user.displayName, // Also set name field
-            phoneNumber: user.phoneNumber || '',
+            phoneNumber: user.phoneNumber || '+359', // Default to +359 if no phone from Google
             createdAt: Timestamp.fromDate(new Date()),
             role: 'customer', // Default role for Google sign-up, can be changed later
           });
@@ -261,17 +259,17 @@ export default function RegisterPage() {
             <li>Лесно запазване на часове в любимите Ви салони.</li>
             <li>Достъп до ексклузивни оферти и промоции.</li>
             <li>Персонализирани препоръки за салони и услуги.</li>
- <li>Удобно управление на Вашите резервации.</li>
- </ul>
- <span className="block mt-4 mb-2">
- Предимства за бизнеси:
- </span>
- <ul className="list-disc list-inside text-left text-sm">
- <li>Възможност за създаване и управление на собствен салон профил.</li>
- <li>Достъп до инструменти за управление на резервации и клиенти.</li>
- <li>Повишена видимост и достигане до нови клиенти.</li>
- <li>Статистика и анализи за ефективността на салона.</li>
- <li>Участие в промоционални кампании.</li>
+            <li>Удобно управление на Вашите резервации.</li>
+          </ul>
+          <span className="block mt-4 mb-2">
+            Предимства за бизнеси:
+          </span>
+          <ul className="list-disc list-inside text-left text-sm">
+            <li>Възможност за създаване и управление на собствен салон профил.</li>
+            <li>Достъп до инструменти за управление на резервации и клиенти.</li>
+            <li>Повишена видимост и достигане до нови клиенти.</li>
+            <li>Статистика и анализи за ефективността на салона.</li>
+            <li>Участие в промоционални кампании.</li>
           </ul>
         </CardDescription>
       </CardHeader>
@@ -311,7 +309,32 @@ export default function RegisterPage() {
                 <FormItem>
                   <FormLabel>Телефонен номер</FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="+359 881 234 567" {...field} disabled={isSubmitting} />
+                    <Input
+                      type="tel"
+                      placeholder="881234567" // Placeholder for numbers after +359
+                      {...field}
+                      disabled={isSubmitting}
+                      onChange={(e) => {
+                        const prefix = '+359';
+                        let currentValue = e.target.value;
+
+                        if (!currentValue.startsWith(prefix)) {
+                          const numbersTyped = currentValue.replace(/[^+0-9]/g, '').replace(/^\+359/, '');
+                          currentValue = prefix + numbersTyped;
+                        }
+
+                        const numbersAfterPrefix = currentValue.substring(prefix.length).replace(/[^0-9]/g, '');
+                        const finalNumericPart = numbersAfterPrefix.substring(0, 9); 
+
+                        field.onChange(prefix + finalNumericPart);
+                      }}
+                      onBlur={(e) => { // Ensure prefix is there if user blurs with invalid short input
+                        const prefix = '+359';
+                        if (!e.target.value.startsWith(prefix) || e.target.value.length < prefix.length) {
+                          field.onChange(prefix);
+                        }
+                      }}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
