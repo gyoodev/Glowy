@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
-import { getFirestore, collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import type { Salon, Service } from '@/types';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import type { Salon } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { isFuture } from 'date-fns';
+import { firestore } from '@/lib/firebase'; // Import the initialized firestore instance
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500; // Default max price for "any price"
@@ -28,9 +29,9 @@ interface HeroImage {
 }
 
 const staticHeroImages: HeroImage[] = [
-  { id: 'barber', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon', priority: true },
-  { id: 'hair_studio', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист работещ във фризьорски салон', dataAiHint: 'hair studio' },
-  { id: 'nail_studio', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на инструменти в студио за маникюр', dataAiHint: 'nail salon' },
+  { id: 'hair_studio_large', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист работещ във фризьорски салон', dataAiHint: 'hair studio', priority: true },
+  { id: 'barber_small', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon' },
+  { id: 'nail_studio_small', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на инструменти в студио за маникюр', dataAiHint: 'nail salon' },
 ];
 
 
@@ -43,10 +44,10 @@ export default function SalonDirectoryPage() {
     location: '--all-cities--',
     serviceType: '--all-services--',
     minRating: DEFAULT_MIN_RATING,
-    maxPrice: DEFAULT_MAX_PRICE,
+    maxPrice: DEFAULT_MAX_PRICE, // This is now maxPrice, not priceRange array
   });
 
-  const firestore = getFirestore();
+  // REMOVED: const firestore = getFirestore(); // This was the problematic line
 
   const uniqueServiceTypes = Array.from(new Set(allMockServices.map(service => service.name)));
 
@@ -69,28 +70,25 @@ export default function SalonDirectoryPage() {
           const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
           if (aIsPromoted && !bIsPromoted) return -1;
           if (!aIsPromoted && bIsPromoted) return 1;
-          // Optional: secondary sort by rating or name if both/neither are promoted
           if (a.rating !== undefined && b.rating !== undefined) {
-            return b.rating - a.rating; // Higher rating first
+            return b.rating - a.rating;
           }
-          return a.name.localeCompare(b.name); // Then by name
+          return a.name.localeCompare(b.name);
         });
         
         setSalons(salonsList);
       } catch (error) {
         console.error("Error fetching salons:", error);
-        // Handle error (e.g., show toast message)
       } finally {
         setIsLoading(false);
       }
     };
     fetchSalons();
-  }, [firestore]);
+  }, [firestore]); // firestore is passed as a dependency from the import
 
   const applyFilters = useCallback(() => {
     let tempSalons = [...salons];
 
-    // Filter by search term (name or description)
     if (searchTerm) {
       tempSalons = tempSalons.filter(salon =>
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,29 +96,29 @@ export default function SalonDirectoryPage() {
       );
     }
 
-    // Filter by location
     if (filters.location !== '--all-cities--') {
       tempSalons = tempSalons.filter(salon => salon.city === filters.location);
     }
 
-    // Filter by service type
     if (filters.serviceType !== '--all-services--') {
       tempSalons = tempSalons.filter(salon =>
         salon.services?.some(service => service.name === filters.serviceType)
       );
     }
 
-    // Filter by rating
     if (filters.minRating > DEFAULT_MIN_RATING) {
       tempSalons = tempSalons.filter(salon => (salon.rating || 0) >= filters.minRating);
     }
     
-    // Filter by max price
-    if (filters.maxPrice < DEFAULT_MAX_PRICE) {
+    // Updated price filter logic for single maxPrice value
+    if (filters.maxPrice < DEFAULT_MAX_PRICE && filters.maxPrice !== DEFAULT_MIN_PRICE) { // Check if not "Any Price"
         tempSalons = tempSalons.filter(salon =>
             salon.services?.some(service => service.price <= filters.maxPrice)
         );
+    } else if (filters.maxPrice === DEFAULT_MIN_PRICE) { // Explicitly handle 0 as "Any Price" based on previous logic
+        // No price filter applied if 0 is selected and it means "Any Price"
     }
+
 
     setFilteredSalons(tempSalons);
   }, [salons, searchTerm, filters]);
@@ -137,8 +135,7 @@ export default function SalonDirectoryPage() {
   return (
     <div className="container mx-auto py-10 px-6">
       <header className="mb-16 py-12 bg-gradient-to-r from-secondary via-background to-secondary rounded-xl shadow-lg relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 opacity-30">
-            {/* Decorative Shapes */}
+        <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
             <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
             <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/50 rounded-lg filter blur-xl animate-ping-slow delay-100 transform -rotate-45"></div>
@@ -220,21 +217,19 @@ export default function SalonDirectoryPage() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                <Card key={i} className="overflow-hidden">
-                  <CardHeader className="p-0">
-                    <Skeleton className="h-48 w-full" />
-                  </CardHeader>
-                  <CardContent className="p-4">
+                <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden"> {/* Changed from Card to div */}
+                  <Skeleton className="h-48 w-full" />
+                  <div className="p-4"> {/* Changed from CardContent to div */}
                     <Skeleton className="h-6 w-3/4 mb-2" />
                     <Skeleton className="h-4 w-full mb-1" />
                     <Skeleton className="h-4 w-5/6 mb-3" />
                     <Skeleton className="h-4 w-1/2 mb-3" />
                     <Skeleton className="h-4 w-1/3" />
-                  </CardContent>
-                  <CardFooter className="p-4 pt-0">
+                  </div>
+                  <div className="p-4 pt-0"> {/* Changed from CardFooter to div */}
                     <Skeleton className="h-10 w-full" />
-                  </CardFooter>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           ) : filteredSalons.length > 0 ? (
