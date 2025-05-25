@@ -2,6 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
 import { initializeApp, getApps, cert, type App as AdminApp } from 'firebase-admin/app';
+// FieldValue is a special type from firebase-admin
 import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
@@ -105,8 +106,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const newPromotion: Promotion = {
         isActive: true,
         packageId: chosenPackage.id,
-        packageName: chosenPackage.name,
-        purchasedAt: FieldValue.serverTimestamp(), // Use serverTimestamp for Firestore
+        packageName: chosenPackage.name, // TODO: This is a temporary fix. The type of 'purchasedAt' in Promotion should be properly typed
+        // Cast to any to bypass type check for FieldValue.serverTimestamp()
+        purchasedAt: FieldValue.serverTimestamp() as any, // Use serverTimestamp for Firestore
         expiresAt: expiryDate.toISOString(),
         paymentMethod: 'paypal',
         transactionId: transactionId,
