@@ -172,7 +172,7 @@ export function Header() {
           )}
            {isLoggedIn && userRole === 'admin' && (
              <Button variant="ghost" asChild>
-               <Link href="/admin/dashboard">Админ панел</Link>
+               <Link href="/admin">Админ панел</Link>
              </Button>
            )}
         </nav>
@@ -284,7 +284,7 @@ export function Header() {
                 )}
                 {isLoggedIn && userRole === 'admin' && (
                   <Button variant="ghost" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Link href="/admin/dashboard">Админ панел</Link>
+                    <Link href="/admin">Админ панел</Link>
                   </Button>
                 )}
                 

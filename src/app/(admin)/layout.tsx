@@ -19,7 +19,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           <PanelLeft className="mr-2 h-6 w-6" /> Админ Панел (Debug)
         </h2>
         <nav className="space-y-1">
-          <Link href="/admin/dashboard" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
+          <Link href="/admin" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">
             <LayoutDashboard className="mr-2 h-4 w-4" /> Табло
           </Link>
           <Link href="/admin/users" className="flex items-center py-2.5 px-3 rounded-md hover:bg-muted transition-colors text-sm">

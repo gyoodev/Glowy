@@ -19,7 +19,7 @@ export default function NotFound() {
           <code>
             {`// Common checks for 404 errors:\n` +
              `// 1. Verify the URL path is correct and matches your file structure.\n` +
-             `//    (e.g., /admin/dashboard corresponds to app/(admin)/dashboard/page.tsx)\n` +
+             `//    (e.g., /admin corresponds to app/(admin)/page.tsx)\n` +
              `// 2. Ensure the corresponding page file (page.tsx) exists.\n` +
              `// 3. Check deployment logs (e.g., Netlify build logs) for errors \n` +
              `//    that might prevent the page from being built.\n` +
