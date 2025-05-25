@@ -7,7 +7,7 @@ export default function AdminIndexPage() {
     <div style={{ border: '2px solid blue', padding: '10px' }}>
       <h1>Admin Panel Index - Ultra Simple</h1>
       <p>If you are seeing this, the /admin route and its basic layout/page are rendering.</p>
-      <p>The 404 issue likely stems from the build process on Netlify or a routing misconfiguration there.</p>
+      <p>The 404 issue likely stems from the build process on Netlify or a routing misconfiguration there, or an error in a higher-level layout.</p>
     </div>
   );
 }
