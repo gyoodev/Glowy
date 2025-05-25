@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Sparkles as AppIcon, User, LogOut, Bell } from 'lucide-react';
+import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn } from 'lucide-react';
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import type { Notification } from '@/types';
@@ -94,6 +94,9 @@ export function Header() {
       setUnreadCount(0);
       setIsMobileMenuOpen(false);
       setIsPopoverOpen(false);
+      if (typeof window !== 'undefined') {
+          localStorage.removeItem('isUserLoggedIn');
+      }
       router.push('/login');
     } catch (error) {
       console.error("Error signing out: ", error);
@@ -117,7 +120,7 @@ export function Header() {
     if (!notification.read) {
         try {
             await markNotificationAsRead(notification.id);
-            fetchNotifications(currentUser.uid); 
+            // No need to call fetchNotifications here, Popover will close and on next open it will refresh
         } catch (error) {
             console.error("Error marking single notification as read:", error);
         }
@@ -125,7 +128,7 @@ export function Header() {
     if (notification.link) {
       router.push(notification.link);
     }
-    setIsPopoverOpen(false);
+    setIsPopoverOpen(false); // Close popover after click
     setIsMobileMenuOpen(false); 
   };
 
@@ -250,7 +253,7 @@ export function Header() {
           ) : (
             <>
               <Button variant="outline" asChild>
-                <Link href="/login">Вход</Link>
+                <Link href="/login"><LogIn className="mr-2 h-4 w-4" />Вход</Link>
               </Button>
               <Button variant="default" asChild className="hidden sm:inline-flex">
                 <Link href="/register">Регистрация</Link>
@@ -304,7 +307,7 @@ export function Header() {
                 ) : (
                   <>
                     <Button variant="outline" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Link href="/login">Вход</Link>
+                        <Link href="/login"><LogIn className="mr-2 h-4 w-4" />Вход</Link>
                     </Button>
                     <Button variant="default" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
                         <Link href="/register">Регистрация</Link>
