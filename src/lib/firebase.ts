@@ -3,8 +3,8 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp } from 'firebase/firestore';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp, doc, setDoc, FieldValue } from 'firebase/firestore'; // Added FieldValue
+// Removed duplicate: import { doc, getDoc, setDoc } from 'firebase/firestore';
 import type { UserProfile, Service, Booking, Notification, NewsletterSubscriber } from '@/types';
 
 const firebaseConfig = {
@@ -24,14 +24,14 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const auth = getAuth(app);
-const firestore = getFirestore(app);
+const auth = getAuth(); // Relies on default app being initialized by initializeApp
+const firestore = getFirestore(); // Relies on default app being initialized by initializeApp
 
 let analytics;
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
-      analytics = getAnalytics(app);
+      analytics = getAnalytics(); // Relies on default app
     }
   });
 }
@@ -51,16 +51,17 @@ export const createBooking = async (bookingDetails: {
   salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore: Partial<Booking> = {
+    const bookingDataForFirestore: Omit<Booking, 'id'> = { // Use Omit to ensure all required Booking fields are covered
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
+      salonOwnerId: bookingDetails.salonOwnerId,
       userId: bookingDetails.userId,
       serviceId: bookingDetails.service.id,
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
       status: 'pending', // Default status
-      createdAt: Timestamp.fromDate(new Date()),
+      createdAt: serverTimestamp(), // Use serverTimestamp
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
@@ -71,7 +72,6 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
-    // Notify salon owner about the new booking
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
       await addDoc(collection(firestore, 'notifications'), {
@@ -79,7 +79,7 @@ export const createBooking = async (bookingDetails: {
         message: notificationMessage,
         link: `/business/salon-bookings/${bookingDetails.salonId}`,
         read: false,
-        createdAt: Timestamp.fromDate(new Date()),
+        createdAt: serverTimestamp(),
         type: 'new_booking_business',
         relatedEntityId: docRef.id,
       });
@@ -109,6 +109,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       id: doc.id,
       salonId: data.salonId,
       salonName: data.salonName,
+      salonOwnerId: data.salonOwnerId,
       serviceId: data.serviceId,
       serviceName: data.serviceName,
       userId: data.userId,
@@ -118,7 +119,7 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
       clientName: data.clientName,
       clientEmail: data.clientEmail,
       clientPhoneNumber: data.clientPhoneNumber,
-      createdAt: data.createdAt, // Ensure this is handled as Timestamp if needed
+      createdAt: data.createdAt,
       salonAddress: data.salonAddress,
       salonPhoneNumber: data.salonPhoneNumber,
     };
@@ -142,7 +143,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
         name: data.name || data.displayName || '',
         email: data.email || '',
         role: data.role,
-        userId: data.userId || userId,
+        userId: data.userId || userId, // Ensure userId is populated
         profilePhotoUrl: data.profilePhotoUrl,
         phoneNumber: data.phoneNumber,
         numericId: data.numericId,
@@ -151,6 +152,7 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
           priceRange: data.preferences?.priceRange || '',
           preferredLocations: data.preferences?.preferredLocations || [],
         },
+        // lastUpdatedAt: data.lastUpdatedAt ? (data.lastUpdatedAt as Timestamp).toDate() : undefined,
       } as UserProfile;
     } else {
       console.log(`No profile found for UID: ${userId} in getUserProfile.`);
@@ -173,7 +175,6 @@ export const updateUserRole = async (userId: string, role: string) => {
   }
 };
 
-// Notification functions
 export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
   if (!userId) return [];
   const notifications: Notification[] = [];
@@ -182,10 +183,10 @@ export const getUserNotifications = async (userId: string): Promise<Notification
       collection(firestore, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(10) // Limit to fetching latest 10 notifications for performance
+      limit(10)
     );
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => {
+    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
       notifications.push({ id: docSnap.id, ...docSnap.data() } as Notification);
     });
   } catch (error) {
@@ -212,41 +213,34 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch: Promise<void>[] = [];
-    querySnapshot.forEach((docSnap) => {
-      batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
+    const batchPromises: Promise<void>[] = []; // Correctly typed
+    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
+      batchPromises.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
-    if (batch.length > 0) {
-      await Promise.all(batch);
-      console.log(`Marked ${batch.length} unread notifications as read for user ${userId}`);
+    if (batchPromises.length > 0) {
+      await Promise.all(batchPromises);
+      console.log(`Marked ${batchPromises.length} unread notifications as read for user ${userId}`);
     }
   } catch (error) {
     console.error("Error marking all user notifications as read:", error);
   }
 };
 
-// Newsletter functions
 export async function subscribeToNewsletter(email: string): Promise<{ success: boolean; message: string }> {
   if (!email) {
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    // Directly add the document. If duplicates are a concern, it's better handled by Firestore rules
-    // (e.g., using email as document ID if uniqueness is critical and you want to prevent duplicates at write time)
-    // or by periodic cleanup if occasional duplicates are acceptable.
-    // The current Firestore rules allow anyone to create, which simplifies client-side logic.
     await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
-      subscribedAt: serverTimestamp(), // Use serverTimestamp for reliability
+      subscribedAt: serverTimestamp(),
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
   } catch (error: any) {
     console.error('Error subscribing to newsletter:', error);
-    // Basic error message. Could be more specific if you check error.code for Firestore errors.
     return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
   }
 }
-
 
 export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
   const subscribers: NewsletterSubscriber[] = [];
@@ -254,7 +248,7 @@ export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]
     const subscribersRef = collection(firestore, 'newsletterSubscribers');
     const q = query(subscribersRef, orderBy('subscribedAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => {
+    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
       subscribers.push({ id: docSnap.id, ...docSnap.data() } as NewsletterSubscriber);
     });
   } catch (error) {
@@ -270,11 +264,10 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     const q = query(subscribersRef, where('email', '==', email), limit(1));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
-  } catch (error) {
-    console.warn('Could not check newsletter subscription status (might be due to permissions):', error);
+  } catch (error: any) { // Catching 'any' as Firestore errors can vary
+    console.warn('Could not check newsletter subscription status:', error.message || error);
     return false;
   }
 }
 
-
-export { app, auth, analytics, firestore };
+export { app, auth, analytics, firestore, FieldValue }; // Export FieldValue
