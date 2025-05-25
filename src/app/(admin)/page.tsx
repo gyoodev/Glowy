@@ -1,10 +1,10 @@
 // src/app/(admin)/page.tsx (Formerly /admin/dashboard/page.tsx)
-'use client';
-import React from 'react'; // Added explicit React import
+import React from 'react';
 
-// This page now assumes AdminLayout has already verified the user is an admin.
+// This page now assumes AdminLayout has already verified the user is an admin
+// in a real scenario. For debugging 404s, AdminLayout is also ultra-simplified.
 export default function AdminIndexPage() {
-  console.log('AdminIndexPage: ATTEMPTING TO RENDER (ULTRA-SIMPLIFIED)');
+  console.log('AdminIndexPage: ATTEMPTING TO RENDER (ULTRA-SIMPLIFIED, Server Component)');
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Минимално Табло - Админ Начало</h1>
