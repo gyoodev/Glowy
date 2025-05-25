@@ -30,7 +30,7 @@ export default function NotFound() {
       </div>
 
       <Button asChild className="mt-8 text-lg py-3 px-6">
-        <Link href="/home">Обратно към Началната страница</Link>
+        <Link href="/">Обратно към Началната страница</Link>
       </Button>
     </div>
   );
