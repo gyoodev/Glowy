@@ -127,6 +127,11 @@ export function Header() {
         }
     }
     if (notification.link) {
+      // NOTE: A Firebase Cloud Function is needed to listen for new contacts
+      // and create notifications of type 'new_contact_admin' for admin users.
+      if (notification.type === 'new_contact_admin') {
+ notification.link = '/admin/contacts';
+      }
       router.push(notification.link);
     }
     setIsPopoverOpen(false); 
