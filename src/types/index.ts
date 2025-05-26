@@ -15,14 +15,14 @@ export interface Service {
   categoryIcon?: React.ElementType;
 }
 
-export interface Review { // Added export here
+export type Review = {
   id: string;
   userName: string;
   userAvatar?: string;
   rating: number; // 1-5
   comment: string;
   date: string; // ISO date string
-  userId?: string;
+  userId: string;
   salonId?: string;
 }
 
