@@ -60,6 +60,24 @@ export default function AdminIndexPage() {
       href: '/admin/payments', // New section href
       icon: DollarSign, // New section icon
     },
+    {
+      title: 'Нови Потребители (Месечно)',
+      description: 'Графика на нови потребители по месеци.',
+      href: '/admin/users#monthly-chart',
+      icon: Users,
+    },
+    {
+      title: 'Нови Салони (Месечно)',
+      description: 'Графика на нови салони по месеци.',
+      href: '/admin/business#monthly-chart',
+      icon: Briefcase,
+    },
+    {
+      title: 'Плащания (Месечно)',
+      description: 'Графика на плащания от промоции по месеци.',
+      href: '/admin/payments#monthly-chart',
+      icon: DollarSign,
+    },
   ];
 
   return (
@@ -95,19 +113,31 @@ export default function AdminIndexPage() {
         ))}
       </div>
 
-      <div className="mt-12 p-6 border border-dashed border-primary/50 rounded-lg bg-primary/5 text-primary">
-        <h3 className="text-lg font-semibold mb-2">
-          Напомняне за Отстраняване на Грешки (404)
-        </h3>
-        <p className="text-sm">
-          Ако тази страница (или други администраторски страници) все още
-          връщат 404 грешка, моля, проверете обстойно Вашите Netlify билд
-          логове за евентуални грешки. Уверете се, че `next.config.ts` не
-          игнорира билд грешките. Също така, изчистете кеша на Netlify билда.
-          Локалната проверка включва изтриване на `.next` папката и рестарт на
-          сървъра.
-        </p>
-      </div>
+      {/* Statistics Charts Section */}
+      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Месечни нови потребители</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Monthly chart for New Users will be placed here */}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Месечни нови салони</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Monthly chart for New Salons will be placed here */}
+          </CardContent>
+        </Card>
+         <Card className="lg:col-span-2"> {/* This card spans two columns on large screens */}
+          <CardHeader>
+            <CardTitle>Месечни плащания от промоции</CardTitle>
+          </CardHeader>
+          <CardContent>{/* Monthly chart for Payments will be placed here */}</CardContent>
+        </Card>
+      </div> {/* End of Statistics Charts Section */}
     </div>
   );
 }
