@@ -185,7 +185,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <>
       <h1 className="text-3xl font-bold mb-6">Управление на потребители</h1>
 
       {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Грешка</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
