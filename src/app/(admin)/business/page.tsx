@@ -6,20 +6,24 @@ import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/fire
 import { auth } from '@/lib/firebase'; // Changed to alias
 import type { Salon } from '@/types'; // Changed to alias
 import Link from 'next/link';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertTriangle, List } from 'lucide-react';
 
 export default function AdminBusinessPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const firestoreInstance = getFirestore(auth.app);
 
   useEffect(() => {
     const fetchSalons = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const db = getFirestore(auth.app);
-        // Ensure you are querying the 'salons' collection, not 'businesses'
-        const salonsCollectionRef = collection(db, 'salons');
+        const salonsCollectionRef = collection(firestoreInstance, 'salons');
         const q = query(salonsCollectionRef, orderBy('name', 'asc'));
         const salonsSnapshot = await getDocs(q);
         const salonsList = salonsSnapshot.docs.map(doc => ({
@@ -36,56 +40,103 @@ export default function AdminBusinessPage() {
     };
 
     fetchSalons();
-  }, []);
+  }, [firestoreInstance]);
 
   if (isLoading) {
-    return <div className="container mx-auto py-10">Зареждане на салони...</div>;
+    return (
+      <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
+        <Skeleton className="h-8 w-1/3 mb-2" />
+        <Skeleton className="h-6 w-1/2 mb-6" />
+        <Card>
+          <CardContent className="pt-6">
+             <Table>
+              <TableHeader>
+                <TableRow>
+                  {[...Array(6)].map((_, i) => <TableHead key={i}><Skeleton className="h-5 w-full" /></TableHead>)}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {[...Array(5)].map((_, i) => (
+                  <TableRow key={i}>
+                    {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="container mx-auto py-10 text-destructive">Грешка: {error}</div>;
+     return (
+      <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 text-center">
+        <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-2xl font-semibold text-destructive mb-2">Грешка при зареждане на бизнеси</h2>
+        <p className="text-muted-foreground mb-6">{error}</p>
+        <Button onClick={() => window.location.reload()}>Опитай отново</Button>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1>
 
       {salons.length === 0 ? (
-        <p>Няма намерени салони.</p>
+         <Card className="text-center py-12">
+           <CardHeader>
+            <List className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+            <CardTitle className="text-2xl font-semibold">Няма намерени салони</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CardDescription className="text-muted-foreground">
+             Все още няма регистрирани салони в системата.
+            </CardDescription>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="p-6 bg-card rounded-lg shadow">
-          <h2 className="text-2xl font-semibold mb-4">Списък със салони ({salons.length})</h2>
+        <Card className="shadow-md">
+          <CardHeader>
+            <CardTitle>Списък със салони</CardTitle>
+            <CardDescription>Общо {salons.length} салона.</CardDescription>
+          </CardHeader>
+          <CardContent>
            <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-border">
-              <thead className="bg-muted/50">
-                <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Име на Салона</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Град</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Адрес</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Рейтинг</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Собственик ID</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</th>
-                </tr>
-              </thead>
-              <tbody className="bg-card divide-y divide-border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Име на Салона</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Град</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Адрес</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Рейтинг</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Собственик ID</TableHead>
+                  <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody className="bg-card divide-y divide-border">
                 {salons.map(salon => (
-                  <tr key={salon.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{salon.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.city || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.address || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link href={`/business/edit/${salon.id}`} className="text-primary hover:underline">
-                        Редактирай
-                      </Link>
-                    </td>
-                  </tr>
+                  <TableRow key={salon.id}>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{salon.name}</TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.city || 'N/A'}</TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.address || 'N/A'}</TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</TableCell>
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Button variant="outline" size="sm" asChild>
+                        <Link href={`/business/edit/${salon.id}`}>
+                          Редактирай
+                        </Link>
+                      </Button>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

@@ -2,14 +2,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getNewsletterSubscribers } from '@/lib/firebase';
-import type { NewsletterSubscriber } from '@/types';
+import { getNewsletterSubscribers } from '@/lib/firebase'; // Changed to alias
+import type { NewsletterSubscriber } from '@/types'; // Changed to alias
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Changed to alias
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Newspaper, Send, Loader2, Users } from 'lucide-react';
@@ -30,12 +30,22 @@ export default function AdminNewsletterPage() {
   useEffect(() => {
     const fetchSubscribers = async () => {
       setIsLoadingSubscribers(true);
-      const fetchedSubscribers = await getNewsletterSubscribers();
-      setSubscribers(fetchedSubscribers);
-      setIsLoadingSubscribers(false);
+      try {
+        const fetchedSubscribers = await getNewsletterSubscribers();
+        setSubscribers(fetchedSubscribers);
+      } catch (error) {
+        console.error("Error fetching subscribers:", error);
+        toast({
+          title: "Грешка",
+          description: "Неуспешно зареждане на абонатите.",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoadingSubscribers(false);
+      }
     };
     fetchSubscribers();
-  }, []);
+  }, [toast]);
 
   const handleEmailFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setEmailForm({ ...emailForm, [e.target.name]: e.target.value });
@@ -73,7 +83,7 @@ export default function AdminNewsletterPage() {
   };
 
   return (
-    <div className="container mx-auto py-10 px-6">
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center">
           <Newspaper className="mr-3 h-8 w-8 text-primary" />
@@ -97,7 +107,7 @@ export default function AdminNewsletterPage() {
                 <div className="space-y-2">
                   {[...Array(5)].map((_, i) => (
                     <div key={i} className="flex justify-between items-center p-2 border-b">
-                      <Skeleton className="h-5 w-2/5" />
+                      <Skeleton className="h-5 w-3/5" />
                       <Skeleton className="h-5 w-1/5" />
                     </div>
                   ))}
