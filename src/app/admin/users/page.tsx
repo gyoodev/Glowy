@@ -81,7 +81,7 @@ export default function AdminUsersPage() {
  toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
     }
   };
-  
+
   const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'business' | 'admin') => {
     setIsSubmitting(true); // Use general submitting state for now
     setError(null);
