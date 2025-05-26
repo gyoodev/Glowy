@@ -112,32 +112,6 @@ export default function AdminIndexPage() {
           </Link>
         ))}
       </div>
-
-      {/* Statistics Charts Section */}
-      <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Месечни нови потребители</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Monthly chart for New Users will be placed here */}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Месечни нови салони</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Monthly chart for New Salons will be placed here */}
-          </CardContent>
-        </Card>
-         <Card className="lg:col-span-2"> {/* This card spans two columns on large screens */}
-          <CardHeader>
-            <CardTitle>Месечни плащания от промоции</CardTitle>
-          </CardHeader>
-          <CardContent>{/* Monthly chart for Payments will be placed here */}</CardContent>
-        </Card>
-      </div> {/* End of Statistics Charts Section */}
     </div>
   );
 }
