@@ -4,9 +4,9 @@
 import React, { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, getUserProfile } from '@/lib/firebase'; // Changed to alias
+import { useToast } from '@/hooks/use-toast'; // Changed to alias
 import { Home, Users, Briefcase, Mail, LogOut, Newspaper, CalendarCheck } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -30,56 +30,51 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             console.log('AdminLayout: User profile fetched:', profile);
             if (profile.role === 'admin') {
               console.log('AdminLayout: User is admin. Authorizing access.');
-              toast({
-                title: 'Достъп разрешен',
-                description: 'Вие сте влезли като администратор.',
-                variant: 'default',
-              });
+              // toast({ // Temporarily commented out for debugging 404
+              //   title: 'Достъп разрешен',
+              //   description: 'Вие сте влезли като администратор.',
+              //   variant: 'default',
+              // });
               setIsAuthorized(true);
             } else {
               const roleDetected = profile.role || 'неопределена';
               console.log('AdminLayout: User is NOT admin. Role:', roleDetected, 'Redirecting to home.');
-              toast({
-                title: 'Достъп отказан',
-                description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
-                variant: 'destructive',
-              });
+              // toast({ // Temporarily commented out
+              //   title: 'Достъп отказан',
+              //   description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
+              //   variant: 'destructive',
+              // });
               router.push('/');
-              setIsAuthorized(false);
             }
           } else {
             console.error('AdminLayout: User profile not found in Firestore for UID:', user.uid, 'Redirecting to home.');
-            toast({
-              title: 'Грешка при проверка на права',
-              description: 'Потребителският Ви профил не беше намерен в базата данни или нямате зададена роля.',
-              variant: 'destructive',
-            });
+            // toast({ // Temporarily commented out
+            //   title: 'Грешка при проверка на права',
+            //   description: 'Потребителският Ви профил не беше намерен в базата данни или нямате зададена роля.',
+            //   variant: 'destructive',
+            // });
             router.push('/');
-            setIsAuthorized(false);
           }
         } catch (error: any) {
           console.error('AdminLayout: Error fetching user profile:', error);
-          toast({
-            title: 'Грешка при проверка на права',
-            description: `Неуспешно извличане на потребителски данни: ${error.message}`,
-            variant: 'destructive',
-          });
+          // toast({ // Temporarily commented out
+          //   title: 'Грешка при проверка на права',
+          //   description: `Неуспешно извличане на потребителски данни: ${error.message}`,
+          //   variant: 'destructive',
+          // });
           router.push('/');
-          setIsAuthorized(false);
         } finally {
           console.log('AdminLayout: Setting isLoading to false in auth success/role check path.');
           setIsLoading(false);
         }
       } else {
         console.log('AdminLayout: User is not authenticated. Redirecting to login.');
-        toast({
-          title: 'Необходимо е удостоверяване',
-          description: 'Моля, влезте, за да достъпите административния панел.',
-        });
+        // toast({ // Temporarily commented out
+        //   title: 'Необходимо е удостоверяване',
+        //   description: 'Моля, влезте, за да достъпите административния панел.',
+        // });
         router.push('/login');
-        setIsAuthorized(false); // Explicitly set isAuthorized to false
-        console.log('AdminLayout: Setting isLoading to false in no user path.');
-        setIsLoading(false);
+        setIsLoading(false); // Ensure isLoading is set false
       }
     });
 
@@ -87,16 +82,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
-  }, [router, toast]);
+  }, [router]); // Removed toast from dependencies
 
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      toast({ title: 'Успешен изход', description: 'Излязохте от системата.' });
+      // toast({ title: 'Успешен изход', description: 'Излязохте от системата.' }); // Temporarily commented out
+      console.log('AdminLayout: User signed out.');
       router.push('/login');
     } catch (error) {
       console.error('AdminLayout: Error signing out:', error);
-      toast({ title: 'Грешка при изход', variant: 'destructive' });
+      // toast({ title: 'Грешка при изход', variant: 'destructive' }); // Temporarily commented out
     }
   };
 
@@ -110,9 +106,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
+    console.log('AdminLayout: Rendering unauthorized state (should be redirecting or access denied)...');
     // This state should ideally not be reached for long if redirects are working.
     // It serves as a fallback or if there's a delay in redirect.
-    console.log('AdminLayout: Rendering unauthorized state (should be redirecting or access denied)...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-destructive">
         <p className="text-lg">Нямате достъп до тази страница или се пренасочвате...</p>
