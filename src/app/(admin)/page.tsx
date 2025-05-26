@@ -64,8 +64,8 @@ export default function AdminIndexPage() {
         const usersByMonth: Record<string, number> = {};
         usersSnapshot.forEach(doc => {
           const data = doc.data() as UserProfile;
-          if (data.createdAt && data.createdAt.seconds) {
-            const date = new Date(data.createdAt.seconds * 1000);
+          if (data.createdAt && (data.createdAt as any).seconds) {
+            const date = new Date((data.createdAt as any).seconds * 1000);
             const monthYear = format(date, 'LLL yyyy', { locale: bg });
             usersByMonth[monthYear] = (usersByMonth[monthYear] || 0) + 1;
           }
@@ -81,8 +81,8 @@ export default function AdminIndexPage() {
         const salonsByMonth: Record<string, number> = {};
         salonsSnapshot.forEach(doc => {
           const data = doc.data() as Salon;
-           if (data.createdAt && data.createdAt.seconds) {
-            const date = new Date(data.createdAt.seconds * 1000);
+           if (data.createdAt && (data.createdAt as any).seconds) {
+            const date = new Date((data.createdAt as any).seconds * 1000);
             const monthYear = format(date, 'LLL yyyy', { locale: bg });
             salonsByMonth[monthYear] = (salonsByMonth[monthYear] || 0) + 1;
           }
@@ -98,8 +98,8 @@ export default function AdminIndexPage() {
         const paymentsByMonth: Record<string, number> = {};
         paymentsSnapshot.forEach(doc => {
           const data = doc.data(); // Assuming Payment type with amount and createdAt
-          if (data.createdAt && data.createdAt.seconds && typeof data.amount === 'number') {
-            const date = new Date(data.createdAt.seconds * 1000);
+          if (data.createdAt && (data.createdAt as any).seconds && typeof data.amount === 'number') {
+            const date = new Date((data.createdAt as any).seconds * 1000);
             const monthYear = format(date, 'LLL yyyy', { locale: bg });
             paymentsByMonth[monthYear] = (paymentsByMonth[monthYear] || 0) + data.amount;
           }
@@ -171,7 +171,9 @@ export default function AdminIndexPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Monthly New Users Chart */}
         <Card className="lg:col-span-1">
-          
+          <CardHeader>
+            <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary"/> Месечни нови потребители</CardTitle>
+          </CardHeader>
           <CardContent className="pt-6">
             {loadingCharts ? (
               <p>Зареждане на данни за потребители...</p>
@@ -205,10 +207,8 @@ export default function AdminIndexPage() {
 
         {/* Monthly New Salons Chart */}
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary"/> Месечни нови салони</CardTitle>
-          </CardHeader>
-          <CardContent>
+          
+          <CardContent className="pt-6">
             {loadingCharts ? (
               <p>Зареждане на данни за салони...</p>
             ) : monthlySalonData.length > 0 ? (
@@ -244,7 +244,7 @@ export default function AdminIndexPage() {
           <CardHeader>
             <CardTitle className="flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary"/> Месечни плащания от промоции</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             {loadingCharts ? (
               <p>Зареждане на данни за плащания...</p>
             ) : monthlyPaymentData.length > 0 ? (
