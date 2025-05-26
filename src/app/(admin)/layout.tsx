@@ -7,14 +7,10 @@ import { onAuthStateChanged, type User } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Home, Users, Briefcase, Mail, LogOut, Newspaper, CalendarCheck } from 'lucide-react';
+import { type UserProfile } from '@/types';
 
 interface AdminLayoutProps {
   children: ReactNode;
-}
-
-interface UserProfile {
-  role: string;
-  [key: string]: any;
 }
 
 // Constants for better maintainability
@@ -110,7 +106,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           variant: 'default',
         });
       } else {
-        const roleDetected = profile.role || 'неопределена';
+        const roleDetected = profile.role ?? 'неопределена';
         toast({
           title: MESSAGES.ACCESS_DENIED_TITLE,
           description: `${MESSAGES.ACCESS_DENIED_DESC} Вашата роля е: ${roleDetected}.`,
