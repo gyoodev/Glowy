@@ -16,27 +16,25 @@ import {
   Mail,
   Newspaper,
   DollarSign,
-  BarChart3,
-  LineChart,
-  AreaChart,
 } from 'lucide-react';
-import { getFirestore, collection, getDocs, query, orderBy, Timestamp, where } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import type { UserProfile, Salon } from '@/types'; 
+import type { UserProfile, Salon } from '@/types';
 
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
-import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'; 
-import { format, getMonth, getYear, startOfMonth } from 'date-fns';
+import { Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart as RechartsBarChart } from 'recharts';
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
+import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
 
 interface MonthlyData {
-  month: string; 
+  month: string;
   users?: number;
   salons?: number;
   payments?: number;
 }
 
+// This page assumes AdminLayout has already verified the user is an admin.
 export default function AdminIndexPage() {
   const adminSections = [
     { title: 'Управление на Потребители', description: 'Преглед и управление на потребителски акаунти.', href: '/admin/users', icon: Users },
@@ -91,13 +89,13 @@ export default function AdminIndexPage() {
           .map(([month, count]) => ({ month, salons: count }))
           .sort((a,b) => new Date(a.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(a.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() - new Date(b.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(b.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() );
         setMonthlySalonData(salonChartData);
-        
+
         // Fetch Payments
         const paymentsQuery = query(collection(firestore, 'promotionsPayments'), orderBy('createdAt', 'asc'));
         const paymentsSnapshot = await getDocs(paymentsQuery);
         const paymentsByMonth: Record<string, number> = {};
         paymentsSnapshot.forEach(doc => {
-          const data = doc.data(); 
+          const data = doc.data();
           if (data.createdAt && (data.createdAt as any).seconds && typeof data.amount === 'number') {
             const date = new Date((data.createdAt as any).seconds * 1000);
             const monthYear = format(date, 'LLL yyyy', { locale: bg });
@@ -165,8 +163,95 @@ export default function AdminIndexPage() {
           </Link>
         ))}
       </div>
-      
-      {/* Chart section has been removed as per request */}
+
+      {/* Charts Section */}
+      <div className="mt-12 space-y-8">
+        {chartError && <p className="text-destructive text-center">{chartError}</p>}
+        {loadingCharts && <p className="text-muted-foreground text-center">Зареждане на графики...</p>}
+
+        {!loadingCharts && !chartError && (
+          <>
+            {/* New Users Chart */}
+            {monthlyUserData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary" />Месечни нови потребители</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={userChartConfig} className="h-[300px] w-full">
+                    <RechartsBarChart accessibilityLayer data={monthlyUserData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <YAxis allowDecimals={false} />
+                      <ChartTooltipContent />
+                      <Legend />
+                      <Bar dataKey="users" fill="var(--color-users)" radius={4} />
+                    </RechartsBarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* New Salons Chart */}
+            {monthlySalonData.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><Briefcase className="mr-2 h-5 w-5 text-primary" />Месечни нови салони</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={salonChartConfig} className="h-[300px] w-full">
+                    <RechartsBarChart accessibilityLayer data={monthlySalonData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <YAxis allowDecimals={false} />
+                      <ChartTooltipContent />
+                      <Legend />
+                      <Bar dataKey="salons" fill="var(--color-salons)" radius={4} />
+                    </RechartsBarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Monthly Payments Chart */}
+            {monthlyPaymentData.length > 0 && (
+               <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary" />Месечни плащания от промоции</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={paymentChartConfig} className="h-[300px] w-full">
+                    <RechartsBarChart accessibilityLayer data={monthlyPaymentData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                      <CartesianGrid vertical={false} />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        tickMargin={10}
+                        axisLine={false}
+                      />
+                      <YAxis />
+                      <ChartTooltipContent formatter={(value) => `${Number(value).toFixed(2)} лв.`} />
+                      <Legend />
+                      <Bar dataKey="payments" fill="var(--color-payments)" radius={4} name="Плащания (лв.)" />
+                    </RechartsBarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            )}
+          </>
+        )}
+      </div>
+
 
       <Card className="mt-12">
         <CardHeader>
