@@ -7,8 +7,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '../../lib/firebase'; // Corrected relative path
-import { Button } from '@/components/ui/button'; // Assuming Button is in ui, adjust if not
-import { Home, Users, Briefcase, CalendarCheck, MessageSquare, Newspaper, LogOut, LayoutDashboard } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Home, Users, Briefcase, CalendarCheck, MessageSquare, Newspaper, LogOut, LayoutDashboard, Menu } from 'lucide-react'; // Added Menu
+import { useToast } from '../../hooks/use-toast';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -18,6 +19,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const router = useRouter();
+  const { toast } = useToast(); // useToast hook
 
   useEffect(() => {
     console.log('AdminLayout: useEffect for auth check triggered.');
@@ -29,26 +31,32 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           if (profile && profile.role === 'admin') {
             console.log('AdminLayout: User is authorized as admin.');
             setIsAuthorized(true);
+            // toast({ title: 'Достъп разрешен', description: 'Вие сте в административния панел.' });
           } else {
             console.log('AdminLayout: User is not an admin or profile not found. Role:', profile?.role);
-            setIsAuthorized(false);
+            toast({ title: 'Достъп отказан', description: 'Нямате необходимите права. Пренасочване...', variant: 'destructive' });
             router.push('/'); // Redirect to homepage if not admin
+            setIsAuthorized(false);
           }
         } catch (error) {
           console.error('AdminLayout: Error fetching user profile:', error);
-          setIsAuthorized(false);
+          toast({ title: 'Грешка при проверка на профила', description: 'Възникна грешка. Пренасочване...', variant: 'destructive' });
           router.push('/'); // Redirect on error
+          setIsAuthorized(false);
+        } finally {
+          setIsLoading(false);
         }
       } else {
         console.log('AdminLayout: No user authenticated. Redirecting to login.');
-        setIsAuthorized(false);
+        toast({ title: 'Необходимо е удостоверяване', description: 'Пренасочване към страницата за вход...', variant: 'default' });
         router.push('/login');
+        setIsAuthorized(false);
+        setIsLoading(false); // Make sure loading is set to false here too
       }
-      setIsLoading(false);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, toast]); // Added toast to dependency array
 
   if (isLoading) {
     return (
@@ -63,6 +71,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
+    // This state should ideally not be reached for long if redirects are working,
+    // but it's a fallback. Or, it can be a brief screen before redirect.
     return (
       <div className="flex items-center justify-center min-h-screen bg-destructive/10 text-destructive-foreground">
         <div className="text-center p-8 max-w-md">
@@ -128,9 +138,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <Home className="mr-2 h-5 w-5" /> Към сайта
             </Link>
           </Button>
-           {/* <Button variant="ghost" className="w-full justify-start mt-2 text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => auth.signOut().then(() => router.push('/login'))}>
+           <Button variant="ghost" className="w-full justify-start mt-2 text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => auth.signOut().then(() => router.push('/login'))}>
             <LogOut className="mr-2 h-5 w-5" /> Изход
-          </Button> */}
+          </Button>
         </div>
       </aside>
       <main className="flex-1 p-6 md:p-10 overflow-y-auto">
