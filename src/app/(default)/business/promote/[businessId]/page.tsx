@@ -15,7 +15,8 @@ import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import type { ReactPayPalScriptOptions, OnApproveData, OnApproveActions } from '@paypal/react-paypal-js';
+import type { ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
+import type { OnApproveData, OnApproveActions } from '@paypal/paypal-js';
 
 
 const promotionPackages = [

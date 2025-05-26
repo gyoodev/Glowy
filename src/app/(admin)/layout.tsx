@@ -20,10 +20,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    console.log('AdminLayout: useEffect triggered for auth check.');
+    console.log('AdminLayout useEffect: component mounted, starting auth check.');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('AdminLayout onAuthStateChanged: auth state changed. User:', user ? user.uid : 'null');
       if (user) {
         console.log('AdminLayout: User is authenticated. UID:', user.uid);
+        console.log('AdminLayout: Calling getUserProfile...');
         try {
           const profile = await getUserProfile(user.uid);
           if (profile) {
@@ -32,6 +34,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               console.log('AdminLayout: User is admin. Authorizing access.');
               // toast({ // Temporarily commented out for debugging 404
               //   title: 'Достъп разрешен',
+              console.log('AdminLayout: Setting isAuthorized to true.');
               //   description: 'Вие сте влезли като администратор.',
               //   variant: 'default',
               // });
@@ -70,6 +73,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       } else {
         console.log('AdminLayout: User is not authenticated. Redirecting to login.');
         // toast({ // Temporarily commented out
+        console.log('AdminLayout: Setting isAuthorized to false.');
         //   title: 'Необходимо е удостоверяване',
         //   description: 'Моля, влезте, за да достъпите административния панел.',
         // });
@@ -79,7 +83,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     });
 
     return () => {
-      console.log('AdminLayout: Unsubscribing from onAuthStateChanged.');
+      console.log('AdminLayout useEffect cleanup: Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
   }, [router]); // Removed toast from dependencies
