@@ -36,11 +36,6 @@ body {
     --input: 270 20% 97%; /* Very light lavender gray for input backgrounds */
     --ring: 250 70% 65%; /* Slightly darker periwinkle for rings */
     
-    --chart-1: 250 70% 70%; /* Periwinkle/Lavender-Blue for charts */
-    --chart-2: 330 85% 75%;
-    --chart-3: 0 80% 70%;
-    --chart-4: 210 60% 65%;
-    --chart-5: 40 90% 70%;
 
     --radius: 0.5rem;
 
@@ -83,12 +78,6 @@ body {
     --border: 270 20% 25%;
     --input: 270 20% 22%;
     --ring: 250 70% 55%;
-    
-    --chart-1: 250 65% 60%; /* Periwinkle/Lavender-Blue for charts */
-    --chart-2: 330 80% 70%;
-    --chart-3: 0 70% 60%;
-    --chart-4: 210 55% 60%;
-    --chart-5: 40 85% 65%;
     
     --sidebar-background: 240 10% 13%;
     --sidebar-foreground: 0 0% 90%;

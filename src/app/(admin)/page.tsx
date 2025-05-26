@@ -21,12 +21,6 @@ import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from 'fi
 import { firestore } from '@/lib/firebase';
 import type { UserProfile, Salon } from '@/types';
 
-import { Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart as RechartsBarChart } from 'recharts';
-import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart';
-import { format } from 'date-fns';
-import { bg } from 'date-fns/locale';
-
-
 interface MonthlyData {
   month: string;
   users?: number;
@@ -44,92 +38,6 @@ export default function AdminIndexPage() {
     { title: 'Бюлетин', description: 'Управление на абонати и изпращане на бюлетини.', href: '/admin/newsletter', icon: Newspaper },
     { title: 'Управление на Плащания', description: 'Преглед на плащания от промоции.', href: '/admin/payments', icon: DollarSign },
   ];
-
-  const [monthlyUserData, setMonthlyUserData] = useState<MonthlyData[]>([]);
-  const [monthlySalonData, setMonthlySalonData] = useState<MonthlyData[]>([]);
-  const [monthlyPaymentData, setMonthlyPaymentData] = useState<MonthlyData[]>([]);
-  const [loadingCharts, setLoadingCharts] = useState(true);
-  const [chartError, setChartError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchDataForCharts = async () => {
-      setLoadingCharts(true);
-      setChartError(null);
-      try {
-        // Fetch Users
-        const usersQuery = query(collection(firestore, 'users'), orderBy('createdAt', 'asc'));
-        const usersSnapshot = await getDocs(usersQuery);
-        const usersByMonth: Record<string, number> = {};
-        usersSnapshot.forEach(doc => {
-          const data = doc.data() as UserProfile;
-          if (data.createdAt && (data.createdAt as any).seconds) {
-            const date = new Date((data.createdAt as any).seconds * 1000);
-            const monthYear = format(date, 'LLL yyyy', { locale: bg });
-            usersByMonth[monthYear] = (usersByMonth[monthYear] || 0) + 1;
-          }
-        });
-        const userChartData = Object.entries(usersByMonth)
-          .map(([month, count]) => ({ month, users: count }))
-          .sort((a,b) => new Date(a.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(a.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() - new Date(b.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(b.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() );
-        setMonthlyUserData(userChartData);
-
-        // Fetch Salons
-        const salonsQuery = query(collection(firestore, 'salons'), orderBy('createdAt', 'asc'));
-        const salonsSnapshot = await getDocs(salonsQuery);
-        const salonsByMonth: Record<string, number> = {};
-        salonsSnapshot.forEach(doc => {
-          const data = doc.data() as Salon;
-           if (data.createdAt && (data.createdAt as any).seconds) {
-            const date = new Date((data.createdAt as any).seconds * 1000);
-            const monthYear = format(date, 'LLL yyyy', { locale: bg });
-            salonsByMonth[monthYear] = (salonsByMonth[monthYear] || 0) + 1;
-          }
-        });
-        const salonChartData = Object.entries(salonsByMonth)
-          .map(([month, count]) => ({ month, salons: count }))
-          .sort((a,b) => new Date(a.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(a.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() - new Date(b.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(b.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() );
-        setMonthlySalonData(salonChartData);
-
-        // Fetch Payments
-        const paymentsQuery = query(collection(firestore, 'promotionsPayments'), orderBy('createdAt', 'asc'));
-        const paymentsSnapshot = await getDocs(paymentsQuery);
-        const paymentsByMonth: Record<string, number> = {};
-        paymentsSnapshot.forEach(doc => {
-          const data = doc.data();
-          if (data.createdAt && (data.createdAt as any).seconds && typeof data.amount === 'number') {
-            const date = new Date((data.createdAt as any).seconds * 1000);
-            const monthYear = format(date, 'LLL yyyy', { locale: bg });
-            paymentsByMonth[monthYear] = (paymentsByMonth[monthYear] || 0) + data.amount;
-          }
-        });
-         const paymentChartData = Object.entries(paymentsByMonth)
-          .map(([month, sum]) => ({ month, payments: sum }))
-          .sort((a,b) => new Date(a.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(a.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() - new Date(b.month.split(' ')[1], Object.keys(bg.localize!.month).findIndex(m => m.startsWith(b.month.split(' ')[0].toLowerCase().substring(0,3))) ).getTime() );
-        setMonthlyPaymentData(paymentChartData);
-
-      } catch (error) {
-        console.error("Error fetching data for admin charts:", error);
-        setChartError("Неуспешно зареждане на данните за графиките.");
-      } finally {
-        setLoadingCharts(false);
-      }
-    };
-
-    fetchDataForCharts();
-  }, []);
-
-  const userChartConfig = {
-    users: { label: "Нови потребители", color: "hsl(var(--chart-1))" },
-  } satisfies ChartConfig;
-
-  const salonChartConfig = {
-    salons: { label: "Нови салони", color: "hsl(var(--chart-2))" },
-  } satisfies ChartConfig;
-
-  const paymentChartConfig = {
-    payments: { label: "Плащания (лв.)", color: "hsl(var(--chart-3))" },
-  } satisfies ChartConfig;
-
 
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
