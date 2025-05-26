@@ -75,12 +75,14 @@ export default function AdminUsersPage() {
     try {
       setIsSubmitting(true); // Use general submitting state for now
  await deleteUserAdminFunction({ uid: userId });
+ fetchUsers(); // Refresh list
       toast({ title: "Успех", description: "Потребителят е изтрит." });
     //   toast({ title: "Успех", description: "Потребителят е изтрит." });
     //   fetchUsers(); // Refresh list
-    // } catch (err: any) {
-    //   toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
-    // }
+    } catch (err: any) {
+      //   toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
+      // }
+    };
   };
 
   const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'business' | 'admin') => {
@@ -350,4 +352,4 @@ export default function AdminUsersPage() {
       </Card>
     </div>
   );
-}
+
