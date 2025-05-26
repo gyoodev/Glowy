@@ -14,9 +14,8 @@ import { AlertTriangle, CheckCircle, Gift, Loader2, ArrowLeft, XCircle } from 'l
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
-import type { ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
-import type { OnApproveData, OnApproveActions } from '@paypal/paypal-js';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+import type { ReactPayPalScriptOptions, OnApproveData, OnApproveActions } from '@paypal/paypal-js';
 
 
 const promotionPackages = [
@@ -43,7 +42,7 @@ export default function PromoteBusinessPage() {
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
   const paypalScriptOptions: ReactPayPalScriptOptions = {
-    clientId: paypalClientId || "test",
+    clientId: paypalClientId || "test", // Fallback to "test" if not set, though UI will show error
     currency: PAYPAL_CURRENCY,
     intent: "capture",
   };
@@ -108,12 +107,15 @@ export default function PromoteBusinessPage() {
 
     const now = new Date();
     const expiryDate = addDays(now, chosenPackage.durationDays);
-    const updatedPromotion: Promotion = {
+    
+    // Use a structure that matches Firestore's Timestamp for server-side writing,
+    // but for client-side state, use ISO string or Date object.
+    const updatedPromotionClientState: Promotion = {
       packageId: chosenPackage.id,
       packageName: chosenPackage.name,
       isActive: true,
       expiresAt: expiryDate.toISOString(),
-      purchasedAt: FirestoreTimestamp.fromDate(now).toDate().toISOString(),
+      purchasedAt: now.toISOString(), // For client-side display
       paymentMethod: 'paypal',
       transactionId: details.id,
     };
@@ -123,26 +125,14 @@ export default function PromoteBusinessPage() {
         setIsProcessing(null);
         return;
     }
-    const salonRef = doc(firestore, 'salons', salon.id);
-    updateDoc(salonRef, { promotion: updatedPromotion })
-      .then(() => {
-        setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotion } : null);
-        toast({
-          title: 'Успешна покупка',
-          description: `Промоцията "${chosenPackage.name}" за ${salon.name} е активирана!`,
-        });
-      })
-      .catch(err => {
-        console.error("Error updating Firestore after payment:", err);
-        toast({
-          title: 'Грешка при актуализация',
-          description: 'Плащането е успешно, но възникна грешка при активиране на промоцията в системата.',
-          variant: 'destructive',
-        });
-      })
-      .finally(() => {
-        setIsProcessing(null);
-      });
+    // Firestore update is handled by the capture-order API route.
+    // Here we just update the client state.
+    setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotionClientState } : null);
+    toast({
+      title: 'Успешна покупка',
+      description: 'Промоцията "' + chosenPackage.name + '" за ' + salon.name + ' е активирана!',
+    });
+    setIsProcessing(null);
   };
 
   const createOrder = async (packageId: string): Promise<string> => {
@@ -164,8 +154,15 @@ export default function PromoteBusinessPage() {
           description: 'Промоция: ' + chosenPackage.name + ' за салон ID ' + businessId,
         }),
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("PayPal createOrder server error response:", errorText);
+        throw new Error('Грешка при създаване на PayPal поръчка. Сървърът отговори с: ' + response.status + '. Детайли: ' + errorText.substring(0, 200));
+      }
+
       const data = await response.json();
-      if (!response.ok || !data.success) {
+      if (!data.success) {
         throw new Error(data.message || 'Грешка при създаване на PayPal поръчка.');
       }
       return data.orderID;
@@ -189,9 +186,16 @@ export default function PromoteBusinessPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderID: data.orderID }),
       });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("PayPal captureOrder server error response:", errorText);
+        throw new Error('Грешка при финализиране на PayPal плащането. Сървърът отговори с: ' + response.status + '. Детайли: ' + errorText.substring(0, 200) );
+      }
+
       const captureData = await response.json();
 
-      if (!response.ok || !captureData.success) {
+      if (!captureData.success) {
         throw new Error(captureData.message || 'Грешка при финализиране на PayPal плащането.');
       }
 
@@ -199,8 +203,8 @@ export default function PromoteBusinessPage() {
     } catch (err: any) {
       console.error("PayPal onApprove error:", err);
       toast({ title: "Грешка при плащане", description: err.message || "Възникна грешка при обработка на плащането.", variant: "destructive" });
-      setIsProcessing(null); // Ensure processing is reset on error
-      throw err; // Rethrow to be caught by PayPalButtons onError
+      setIsProcessing(null); 
+      throw err; 
     }
   };
 
@@ -210,10 +214,15 @@ export default function PromoteBusinessPage() {
     setIsProcessing('stop');
     setError(null);
     try {
-      const updatedPromotion: Promotion = { ...salon.promotion, isActive: false };
+      const updatedPromotionClientState: Promotion = { ...salon.promotion, isActive: false };
       const salonRef = doc(firestore, 'salons', salon.id);
-      await updateDoc(salonRef, { promotion: updatedPromotion });
-      setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotion } : null);
+      // We assume promotion object is flat and simple, not containing serverTimestamps for this client-side update.
+      // For a more robust 'stop' mechanism, it might be better to call an API route.
+      await updateDoc(salonRef, { 
+        'promotion.isActive': false,
+        // Optionally, update a 'stoppedAt' field or similar
+      });
+      setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotionClientState } : null);
       toast({
         title: 'Промоцията е спряна',
         description: 'Промоцията за ' + salon.name + ' беше деактивирана.',
@@ -243,22 +252,6 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (error && (!salon || !isOwner)) {
-    return (
-      <div className="container mx-auto py-10 px-6">
-        <header className="mb-8">
-          <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
-          </Button>
-        </header>
-        <div className="border border-red-400 rounded-md bg-red-50 p-4">
-          <h4 className="text-lg font-semibold text-red-700 flex items-center"><XCircle className="mr-2 h-6 w-6" /> Грешка</h4>
-          <p className="text-sm text-red-600 mt-2">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
   if (!paypalClientId) {
     return (
       <div className="container mx-auto py-10 px-6">
@@ -270,6 +263,22 @@ export default function PromoteBusinessPage() {
         <div className="border border-yellow-400 rounded-md bg-yellow-50 p-4">
           <h4 className="text-lg font-semibold text-yellow-700 flex items-center"><AlertTriangle className="mr-2 h-6 w-6" /> Конфигурационна грешка</h4>
           <p className="text-sm text-yellow-600 mt-2">PayPal Client ID не е конфигуриран. Моля, настройте NEXT_PUBLIC_PAYPAL_CLIENT_ID environment variable.</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error && (!salon || !isOwner)) {
+    return (
+      <div className="container mx-auto py-10 px-6">
+        <header className="mb-8">
+          <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
+          </Button>
+        </header>
+        <div className="border border-red-400 rounded-md bg-red-50 p-4">
+          <h4 className="text-lg font-semibold text-red-700 flex items-center"><XCircle className="mr-2 h-6 w-6" /> Грешка</h4>
+          <p className="text-sm text-red-600 mt-2">{error}</p>
         </div>
       </div>
     );
@@ -342,7 +351,7 @@ export default function PromoteBusinessPage() {
                       <CardFooter className="flex-col items-stretch">
                         {isProcessing === pkg.id && <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto my-2" />}
                         <PayPalButtons
-                          key={`${pkg.id}-${salon.id}`}
+                          key={`${pkg.id}-${salon.id || 'new'}`} // Ensure key changes if salon.id is not yet available
                           style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
                           disabled={!!isProcessing || isProcessing === pkg.id}
                           createOrder={() => createOrder(pkg.id)}
@@ -373,5 +382,6 @@ export default function PromoteBusinessPage() {
     </PayPalScriptProvider>
   );
 }
+    
 
     
