@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, type ReactNode } from 'react';
@@ -6,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { Home, Users, Briefcase, Mail, LogOut, Newspaper, CalendarCheck, FileText, Clock, Image as ImageIcon, Gift, Sparkles, MapPin, Phone, Star, MessageSquareText, Edit3, Eye, List } from 'lucide-react'; // Added more icons for sidebar
+import { Home, Users, Briefcase, Mail, LogOut, Newspaper, CalendarCheck } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -17,12 +18,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  // const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null); // CurrentUser state might not be needed if only used in effect
 
   useEffect(() => {
     console.log('AdminLayout: useEffect triggered for auth check.');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // setCurrentUser(user); // Update currentUser state
       if (user) {
         console.log('AdminLayout: User is authenticated. UID:', user.uid);
         try {
@@ -30,15 +29,21 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           console.log('AdminLayout: User profile fetched:', profile);
           if (profile && profile.role === 'admin') {
             console.log('AdminLayout: User is admin. Authorizing access.');
+            toast({
+              title: 'Достъп разрешен',
+              description: 'Вие сте влезли като администратор.',
+              variant: 'default',
+            });
             setIsAuthorized(true);
           } else {
-            console.log('AdminLayout: User is NOT admin or profile missing. Role:', profile?.role, 'Redirecting to home.');
+            const roleDetected = profile ? profile.role : 'няма профил';
+            console.log('AdminLayout: User is NOT admin or profile missing. Role:', roleDetected, 'Redirecting to home.');
             toast({
               title: 'Достъп отказан',
-              description: 'Нямате права за достъп до административния панел.',
+              description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
               variant: 'destructive',
             });
-            router.push('/'); // Redirect to public homepage
+            router.push('/');
             setIsAuthorized(false);
           }
         } catch (error) {
@@ -48,10 +53,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             description: 'Неуспешно извличане на потребителски данни.',
             variant: 'destructive',
           });
-          router.push('/'); // Redirect to public homepage on error
+          router.push('/');
           setIsAuthorized(false);
         } finally {
-          console.log('AdminLayout: Setting isLoading to false.');
+          console.log('AdminLayout: Setting isLoading to false in auth success/role check path.');
           setIsLoading(false);
         }
       } else {
@@ -62,6 +67,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         });
         router.push('/login');
         setIsAuthorized(false);
+        console.log('AdminLayout: Setting isLoading to false in no user path.');
         setIsLoading(false);
       }
     });
@@ -70,7 +76,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
-  }, [router, toast]);
+  }, [router, toast]); // Added toast to dependency array as it's used in the effect
 
   const handleLogout = async () => {
     try {
@@ -84,6 +90,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   if (isLoading) {
+    console.log('AdminLayout: Rendering loading state...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <p className="text-lg">Зареждане на административен панел...</p>
@@ -92,8 +99,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
-    // This state should ideally not be reached for long if redirects work.
-    // It's a fallback or if user somehow bypasses initial redirect logic.
+    console.log('AdminLayout: Rendering unauthorized state (should be redirecting)...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-destructive">
         <p className="text-lg">Нямате достъп до тази страница или се пренасочвате...</p>
@@ -101,6 +107,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
+  console.log('AdminLayout: Rendering authorized admin content.');
   return (
     <div className="flex h-screen bg-card text-card-foreground">
       <aside className="w-64 bg-muted/40 p-5 shadow-md flex flex-col justify-between">
@@ -133,7 +140,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <Newspaper size={20} />
               <span>Бюлетин</span>
             </Link>
-            {/* Add more links as needed */}
           </nav>
         </div>
         <button

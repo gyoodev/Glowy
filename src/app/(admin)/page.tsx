@@ -1,3 +1,4 @@
+
 'use client';
 import React from 'react';
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { Users, Briefcase, CalendarCheck, Mail, Newspaper } from 'lucide-react';
 
 // This page now assumes AdminLayout has already verified the user is an admin.
 export default function AdminIndexPage() {
-  console.log('AdminIndexPage (/admin/page.tsx): Rendering dashboard structure.');
+  console.log('AdminIndexPage (/admin/page.tsx) CLIENT COMPONENT: Attempting to render...');
 
   const adminSections = [
     { title: 'Управление на Потребители', description: 'Преглед и управление на потребителски акаунти.', href: '/admin/users', icon: Users },
