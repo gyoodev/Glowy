@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -30,6 +30,7 @@ export default function AdminUsersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const { toast } = useToast();
   const firestoreInstance = getFirestore(auth.app);
 
@@ -67,24 +68,41 @@ export default function AdminUsersPage() {
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребител ${userEmail || userId}? Тази операция е необратима и ще изтрие потребителя от Firebase Authentication и неговия документ от Firestore.`)) {
       return;
     }
-    // Placeholder: Real deletion requires a Firebase Function that uses the Admin SDK
-    // to delete the user from Firebase Authentication and then their Firestore document.
-    console.log(`Attempting to delete user: ${userId}`);
-    toast({
-      title: "Симулация на изтриване",
-      description: `Изтриването на потребител ${userId} трябва да се извърши чрез Firebase Function.`,
-      variant: "default"
-    });
-    // Example of how you might call a function (this function needs to be deployed):
-    // const functions = getFunctions();
-    // const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
-    // try {
-    //   await deleteUserAdminFunction({ uid: userId });
+
+    const functions = getFunctions();
+    const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
+
+    try {
+      setIsSubmitting(true); // Use general submitting state for now
+ await deleteUserAdminFunction({ uid: userId });
+      toast({ title: "Успех", description: "Потребителят е изтрит." });
     //   toast({ title: "Успех", description: "Потребителят е изтрит." });
     //   fetchUsers(); // Refresh list
     // } catch (err: any) {
     //   toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
     // }
+  };
+
+  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'business' | 'admin') => {
+    setIsSubmitting(true); // Use general submitting state for now
+    setError(null);
+    const functions = getFunctions();
+    // This function would need to be implemented on the backend using Firebase Admin SDK
+    // to update the custom claims for the user and optionally update the Firestore document.
+    const updateUserRoleAdminFunction = httpsCallable(functions, 'updateUserRoleAdmin');
+
+    try {
+      await updateUserRoleAdminFunction({ uid: userId, role: newRole });
+      toast({ title: "Успех", description: `Ролята на потребител ${userId} е актуализирана.` });
+      setEditingUserId(null); // Exit editing mode
+      await fetchUsers(); // Refresh list to show updated role
+    } catch (err: any) {
+      console.error('Error updating user role via function:', err);
+      setError('Грешка при актуализация на ролята: ' + err.message + '. Уверете се, че Cloud Function "updateUserRoleAdmin" е deploy-ната и работи коректно.');
+      toast({ title: 'Грешка при актуализация на ролята', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -287,14 +305,40 @@ export default function AdminUsersPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.phoneNumber || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setEditingUserId(editingUserId === user.id ? null : user.id)}
+                            className="mr-2"
+                            disabled={isSubmitting}
+                          >
+                           {editingUserId === user.id ? 'Отмени' : 'Редактирай Роля'}
+                          </Button>
+                           {editingUserId === user.id && (
+                            <div className="flex items-center space-x-2 mt-2">
+                               <Select
+                                  value={user.role || 'user'}
+                                  onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
+                                  disabled={isSubmitting}
+                               >
+                                <SelectTrigger className="w-[120px]">
+                                  <SelectValue placeholder="Избери роля" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="user">Потребител</SelectItem>
+                                  <SelectItem value="business">Бизнес</SelectItem>
+                                  <SelectItem value="admin">Админ</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                         <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDeleteUser(user.id, user.email)}
+ disabled={isSubmitting}
                         >
-                            <Trash2 className="mr-1 h-4 w-4" />
-                            Изтрий (Симулация)
-                        </Button>
-                        {/* TODO: Add Edit button/functionality here if needed, likely to change role */}
+                           {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
+ </Button>
                         </TableCell>
                     </TableRow>
                     ))}

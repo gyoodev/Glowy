@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc, deleteDoc } from 'firebase/firestore';
 import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Changed to alias
 import type { Booking, UserProfile } from '@/types'; // Changed to alias
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { AlertTriangle, CalendarX2, Info, Loader2 } from 'lucide-react';
+import { AlertTriangle, CalendarX2, Info, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExtendedBooking extends Booking {
@@ -118,6 +118,28 @@ export default function AdminBookingManagementPage() {
     }
   };
 
+  const handleDeleteBooking = async (bookingId: string) => {
+    if (!window.confirm(`Сигурни ли сте, че искате да изтриете резервация ${bookingId}? Тази операция е необратима.`)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true); // Or a specific loading state for deletion if preferred
+      const bookingRef = doc(firestoreInstance, 'bookings', bookingId);
+      await deleteDoc(bookingRef);
+
+      setBookings(prevBookings => prevBookings.filter(booking => booking.id !== bookingId));
+      toast({
+        title: 'Резервацията е изтрита',
+        description: `Резервация ${bookingId} беше успешно изтрита.`,
+      });
+    } catch (err: any) {
+      console.error('Error deleting booking:', err);
+      toast({ title: 'Грешка при изтриване', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsLoading(false); // Reset loading state
+    }
+  };
 
   if (isLoading) {
     return (
@@ -185,6 +207,7 @@ export default function AdminBookingManagementPage() {
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Клиент</TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Телефон</TableHead>
                 <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Статус</TableHead>
+                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody className="bg-card divide-y divide-border">

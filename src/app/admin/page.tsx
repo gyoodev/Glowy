@@ -14,6 +14,7 @@ import {
   CalendarCheck,
   Mail,
   Newspaper,
+  DollarSign, // Import DollarSign icon
 } from 'lucide-react';
 
 // Тази страница приема, че AdminLayout вече е валидирал, че потребителят е админ
@@ -52,6 +53,12 @@ export default function AdminIndexPage() {
       description: 'Управление на абонати и изпращане на бюлетини.',
       href: '/admin/newsletter',
       icon: Newspaper,
+    },
+    {
+      title: 'Управление на Плащания', // New section title
+      description: 'Преглед на плащания от промоции.', // New section description
+      href: '/admin/payments', // New section href
+      icon: DollarSign, // New section icon
     },
   ];
 

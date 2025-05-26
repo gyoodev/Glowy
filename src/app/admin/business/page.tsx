@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { auth } from '@/lib/firebase'; // Changed to alias
 import type { Salon } from '@/types'; // Changed to alias
 import Link from 'next/link';
@@ -11,10 +11,20 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, List } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 
+interface NewBusinessFormState {
+  name: string;
+  city: string;
+  address: string;
+  ownerId: string;
+}
 export default function AdminBusinessPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firestoreInstance = getFirestore(auth.app);
 
@@ -41,6 +51,54 @@ export default function AdminBusinessPage() {
 
     fetchSalons();
   }, [firestoreInstance]);
+
+  const [newBusiness, setNewBusiness] = useState<NewBusinessFormState>({
+    name: '',
+    city: '',
+    address: '',
+    ownerId: '',
+  });
+  const { toast } = useToast();
+
+  const handleCreateBusiness = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const salonsCollectionRef = collection(firestoreInstance, 'salons');
+      const docRef = await addDoc(salonsCollectionRef, {
+        ...newBusiness,
+        createdAt: new Date(), // Add a timestamp
+      });
+      toast({
+        title: 'Бизнесът е създаден',
+        description: `Нов салон "${newBusiness.name}" е добавен с ID: ${docRef.id}`,
+      });
+      setNewBusiness({ name: '', city: '', address: '', ownerId: '' });
+      fetchSalons(); // Refresh the list
+    } catch (err: any) {
+      console.error('Error creating business:', err);
+      setError('Неуспешно създаване на бизнес.');
+      toast({ title: 'Грешка', description: 'Неуспешно създаване на бизнес.', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteBusiness = async (businessId: string, businessName: string) => {
+    if (!window.confirm(`Сигурни ли сте, че искате да изтриете бизнес "${businessName}"? Тази операция е необратима.`)) {
+      return;
+    }
+    try {
+      const businessDocRef = doc(firestoreInstance, 'salons', businessId);
+      await deleteDoc(businessDocRef);
+      toast({ title: 'Бизнесът е изтрит', description: `Бизнесът "${businessName}" беше успешно изтрит.` });
+      fetchSalons(); // Refresh the list
+    } catch (err: any) {
+      console.error('Error deleting business:', err);
+      toast({ title: 'Грешка', description: 'Неуспешно изтриване на бизнеса.', variant: 'destructive' });
+    }
+  };
 
   if (isLoading) {
     return (
