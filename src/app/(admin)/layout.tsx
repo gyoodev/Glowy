@@ -1,271 +1,152 @@
+// src/app/(admin)/page.tsx
 'use client';
 
-import React, { useEffect, useState, useRef, type ReactNode } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, type User } from 'firebase/auth';
-import { auth, getUserProfile } from '@/lib/firebase';
-import { useToast } from '@/hooks/use-toast';
-import { Home, Users, Briefcase, Mail, LogOut, Newspaper, CalendarCheck } from 'lucide-react';
-import { type UserProfile } from '@/types';
+import React from 'react';
+import { Users, Briefcase, Mail, CalendarCheck, TrendingUp, Activity } from 'lucide-react';
 
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-
-// Constants for better maintainability
-const MESSAGES = {
-  LOADING: 'Зареждане на административен панел...',
-  ACCESS_DENIED: 'Нямате достъп до тази страница.',
-  ACCESS_GRANTED: 'Достъп разрешен',
-  ACCESS_GRANTED_DESC: 'Вие сте влезли като администратор.',
-  ACCESS_DENIED_TITLE: 'Достъп отказан',
-  ACCESS_DENIED_DESC: 'Нямате права за достъп до административния панел.',
-  AUTH_REQUIRED: 'Необходимо е удостоверяване',
-  AUTH_REQUIRED_DESC: 'Моля, влезте, за да достъпите административния панел.',
-  PROFILE_ERROR: 'Грешка при проверка на права',
-  PROFILE_NOT_FOUND: 'Потребителският Ви профил не беше намерен в базата данни.',
-  LOGOUT_SUCCESS: 'Успешен изход',
-  LOGOUT_SUCCESS_DESC: 'Излязохте от системата.',
-  LOGOUT_ERROR: 'Грешка при изход'
-} as const;
-
-const MIN_LOADING_TIME = 500; // Prevent loading flicker
-
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  const router = useRouter();
-  const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthorized, setIsAuthorized] = useState(false);
-  const isMountedRef = useRef(true);
-  const loadingStartTime = useRef(Date.now());
-
-  const setLoadingWithMinTime = async (loading: boolean) => {
-    if (!loading) {
-      const elapsed = Date.now() - loadingStartTime.current;
-      if (elapsed < MIN_LOADING_TIME) {
-        await new Promise(resolve => setTimeout(resolve, MIN_LOADING_TIME - elapsed));
-      }
-    }
-    if (isMountedRef.current) {
-      setIsLoading(loading);
-    }
+export default function AdminDashboard() {
+  // Mock data - replace with real data fetching
+  const stats = {
+    totalUsers: 1247,
+    totalBusinesses: 89,
+    totalBookings: 342,
+    pendingContacts: 12,
+    monthlyGrowth: 12.5,
+    activeToday: 156
   };
 
-  const handleAuthError = (message: string, error?: Error) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('AdminLayout Auth Error:', message, error);
-    }
-    
-    if (isMountedRef.current) {
-      toast({
-        title: MESSAGES.PROFILE_ERROR,
-        description: message,
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const redirectToHome = () => {
-    try {
-      router.push('/');
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('AdminLayout: Error redirecting to home:', error);
-      }
-    }
-  };
-
-  const redirectToLogin = () => {
-    try {
-      router.push('/login');
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('AdminLayout: Error redirecting to login:', error);
-      }
-    }
-  };
-
-  const checkUserAuthorization = async (user: User): Promise<void> => {
-    try {
-      const profile: UserProfile | null = await getUserProfile(user.uid);
-      
-      if (!isMountedRef.current) return;
-
-      if (!profile) {
-        handleAuthError(MESSAGES.PROFILE_NOT_FOUND);
-        redirectToHome();
-        return;
-      }
-
-      if (profile.role === 'admin') {
-        setIsAuthorized(true);
-        toast({
-          title: MESSAGES.ACCESS_GRANTED,
-          description: MESSAGES.ACCESS_GRANTED_DESC,
-          variant: 'default',
-        });
-      } else {
-        const roleDetected = profile.role ?? 'неопределена';
-        toast({
-          title: MESSAGES.ACCESS_DENIED_TITLE,
-          description: `${MESSAGES.ACCESS_DENIED_DESC} Вашата роля е: ${roleDetected}.`,
-          variant: 'destructive',
-        });
-        redirectToHome();
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Неизвестна грешка';
-      handleAuthError(`Неуспешно извличане на потребителски данни: ${errorMessage}`, error as Error);
-      redirectToHome();
-    }
-  };
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    loadingStartTime.current = Date.now();
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('AdminLayout: Starting auth check');
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!isMountedRef.current) return;
-
-      if (user) {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('AdminLayout: User authenticated, checking authorization');
-        }
-        await checkUserAuthorization(user);
-      } else {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('AdminLayout: User not authenticated, redirecting to login');
-        }
-        toast({
-          title: MESSAGES.AUTH_REQUIRED,
-          description: MESSAGES.AUTH_REQUIRED_DESC,
-        });
-        redirectToLogin();
-      }
-
-      await setLoadingWithMinTime(false);
-    });
-
-    return () => {
-      isMountedRef.current = false;
-      unsubscribe();
-    };
-  }, [router, toast]);
-
-  const handleLogout = async (): Promise<void> => {
-    try {
-      await auth.signOut();
-      toast({ 
-        title: MESSAGES.LOGOUT_SUCCESS, 
-        description: MESSAGES.LOGOUT_SUCCESS_DESC 
-      });
-      redirectToLogin();
-    } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('AdminLayout: Error signing out:', error);
-      }
-      toast({ 
-        title: MESSAGES.LOGOUT_ERROR, 
-        variant: 'destructive' 
-      });
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          <p className="text-lg">{MESSAGES.LOADING}</p>
+  const StatCard = ({ 
+    title, 
+    value, 
+    icon: Icon, 
+    trend, 
+    color = "text-primary" 
+  }: {
+    title: string;
+    value: string | number;
+    icon: React.ElementType;
+    trend?: string;
+    color?: string;
+  }) => (
+    <div className="bg-card p-6 rounded-lg shadow-sm border">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-2xl font-bold mt-2">{value}</p>
+          {trend && (
+            <p className="text-sm text-green-600 mt-1">
+              <TrendingUp className="inline w-4 h-4 mr-1" />
+              {trend}
+            </p>
+          )}
         </div>
+        <Icon className={`w-8 h-8 ${color}`} />
       </div>
-    );
-  }
+    </div>
+  );
 
-  if (!isAuthorized) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background text-destructive">
-        <div className="text-center">
-          <p className="text-lg mb-4">{MESSAGES.ACCESS_DENIED}</p>
-          <button 
-            onClick={redirectToHome}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-          >
-            Към началната страница
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="border-b pb-4">
+        <h1 className="text-3xl font-bold text-foreground">
+          Административно табло
+        </h1>
+        <p className="text-muted-foreground mt-2">
+          Преглед на статистиките и управление на системата
+        </p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatCard
+          title="Общо потребители"
+          value={stats.totalUsers.toLocaleString('bg-BG')}
+          icon={Users}
+          trend="+12% този месец"
+          color="text-blue-600"
+        />
+        <StatCard
+          title="Регистрирани бизнеси"
+          value={stats.totalBusinesses}
+          icon={Briefcase}
+          trend="+8% този месец"
+          color="text-green-600"
+        />
+        <StatCard
+          title="Общо резервации"
+          value={stats.totalBookings.toLocaleString('bg-BG')}
+          icon={CalendarCheck}
+          trend="+23% този месец"
+          color="text-purple-600"
+        />
+        <StatCard
+          title="Чакащи запитвания"
+          value={stats.pendingContacts}
+          icon={Mail}
+          color="text-orange-600"
+        />
+        <StatCard
+          title="Месечен растеж"
+          value={`${stats.monthlyGrowth}%`}
+          icon={TrendingUp}
+          color="text-emerald-600"
+        />
+        <StatCard
+          title="Активни днес"
+          value={stats.activeToday}
+          icon={Activity}
+          color="text-indigo-600"
+        />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-card p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold mb-4">Бързи действия</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button className="flex items-center space-x-2 p-3 bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors">
+            <Users className="w-5 h-5 text-primary" />
+            <span className="text-sm font-medium">Управление на потребители</span>
+          </button>
+          <button className="flex items-center space-x-2 p-3 bg-green-100 hover:bg-green-200 rounded-lg transition-colors">
+            <Briefcase className="w-5 h-5 text-green-600" />
+            <span className="text-sm font-medium">Одобри бизнес</span>
+          </button>
+          <button className="flex items-center space-x-2 p-3 bg-purple-100 hover:bg-purple-200 rounded-lg transition-colors">
+            <CalendarCheck className="w-5 h-5 text-purple-600" />
+            <span className="text-sm font-medium">Преглед резервации</span>
+          </button>
+          <button className="flex items-center space-x-2 p-3 bg-orange-100 hover:bg-orange-200 rounded-lg transition-colors">
+            <Mail className="w-5 h-5 text-orange-600" />
+            <span className="text-sm font-medium">Отговори на запитвания</span>
           </button>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="flex h-screen bg-card text-card-foreground">
-      <aside className="w-64 bg-muted/40 p-5 shadow-md flex flex-col justify-between">
-        <div>
-          <h1 className="text-2xl font-bold mb-10 text-primary text-center">
-            Glowy Админ
-          </h1>
-          <nav className="space-y-2">
-            <Link 
-              href="/admin" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <Home size={20} />
-              <span>Табло</span>
-            </Link>
-            <Link 
-              href="/admin/users" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <Users size={20} />
-              <span>Потребители</span>
-            </Link>
-            <Link 
-              href="/admin/business" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <Briefcase size={20} />
-              <span>Бизнеси</span>
-            </Link>
-            <Link 
-              href="/admin/bookings" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <CalendarCheck size={20} />
-              <span>Резервации</span>
-            </Link>
-            <Link 
-              href="/admin/contacts" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <Mail size={20} />
-              <span>Запитвания</span>
-            </Link>
-            <Link 
-              href="/admin/newsletter" 
-              className="flex items-center space-x-3 p-3 rounded-lg hover:bg-primary/10 hover:text-primary transition-colors font-medium"
-            >
-              <Newspaper size={20} />
-              <span>Бюлетин</span>
-            </Link>
-          </nav>
+      {/* Recent Activity */}
+      <div className="bg-card p-6 rounded-lg shadow-sm border">
+        <h2 className="text-xl font-semibold mb-4">Последна активност</h2>
+        <div className="space-y-3">
+          {[
+            { action: "Нов потребител се регистрира", time: "преди 5 минути", type: "user" },
+            { action: "Бизнес подаде заявка за одобрение", time: "преди 15 минути", type: "business" },
+            { action: "Направена е нова резервация", time: "преди 30 минути", type: "booking" },
+            { action: "Получено е ново запитване", time: "преди 1 час", type: "contact" },
+          ].map((activity, index) => (
+            <div key={index} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+              <div className={`w-2 h-2 rounded-full ${
+                activity.type === 'user' ? 'bg-blue-500' :
+                activity.type === 'business' ? 'bg-green-500' :
+                activity.type === 'booking' ? 'bg-purple-500' : 'bg-orange-500'
+              }`} />
+              <div className="flex-1">
+                <p className="font-medium text-sm">{activity.action}</p>
+                <p className="text-xs text-muted-foreground">{activity.time}</p>
+              </div>
+            </div>
+          ))}
         </div>
-        <button
-          onClick={handleLogout}
-          className="flex items-center space-x-3 p-3 rounded-lg w-full text-left hover:bg-destructive/80 hover:text-destructive-foreground transition-colors font-medium mt-auto"
-        >
-          <LogOut size={20} />
-          <span>Изход</span>
-        </button>
-      </aside>
-      <main className="flex-1 p-6 sm:p-8 lg:p-10 overflow-y-auto bg-background text-foreground">
-        {children}
-      </main>
+      </div>
     </div>
   );
 }
