@@ -22,16 +22,16 @@ import {
 } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp, where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import type { UserProfile, Salon } from '@/types'; // Assuming Payment type might be needed if you have one.
+import type { UserProfile, Salon } from '@/types'; 
 
 import { Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart } from 'recharts';
-import { ChartContainer, ChartTooltipContent } from '@/components/ui/chart'; // Assuming ChartConfig is handled or not needed for basic charts
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'; 
 import { format, getMonth, getYear, startOfMonth } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
 
 interface MonthlyData {
-  month: string; // e.g., "Яну 2024"
+  month: string; 
   users?: number;
   salons?: number;
   payments?: number;
@@ -97,7 +97,7 @@ export default function AdminIndexPage() {
         const paymentsSnapshot = await getDocs(paymentsQuery);
         const paymentsByMonth: Record<string, number> = {};
         paymentsSnapshot.forEach(doc => {
-          const data = doc.data(); // Assuming Payment type with amount and createdAt
+          const data = doc.data(); 
           if (data.createdAt && (data.createdAt as any).seconds && typeof data.amount === 'number') {
             const date = new Date((data.createdAt as any).seconds * 1000);
             const monthYear = format(date, 'LLL yyyy', { locale: bg });
@@ -122,15 +122,15 @@ export default function AdminIndexPage() {
 
   const userChartConfig = {
     users: { label: "Нови потребители", color: "hsl(var(--chart-1))" },
-  } satisfies Record<string, { label: string; color: string }>;
+  } satisfies ChartConfig;
 
   const salonChartConfig = {
     salons: { label: "Нови салони", color: "hsl(var(--chart-2))" },
-  } satisfies Record<string, { label: string; color: string }>;
+  } satisfies ChartConfig;
 
   const paymentChartConfig = {
     payments: { label: "Плащания (лв.)", color: "hsl(var(--chart-3))" },
-  } satisfies Record<string, { label: string; color: string }>;
+  } satisfies ChartConfig;
 
 
   return (
@@ -166,115 +166,7 @@ export default function AdminIndexPage() {
         ))}
       </div>
       
-      {chartError && <p className="text-destructive text-center mb-4">{chartError}</p>}
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Monthly New Users Chart */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center"><Users className="mr-2 h-5 w-5 text-primary"/> Месечни нови потребители</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {loadingCharts ? (
-              <p>Зареждане на данни за потребители...</p>
-            ) : monthlyUserData.length > 0 ? (
-              <ChartContainer config={userChartConfig} className="h-[250px] w-full">
-                <BarChart accessibilityLayer data={monthlyUserData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
-                  />
-                  <YAxis 
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    allowDecimals={false}
-                  />
-                  <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                  <Legend />
-                  <Bar dataKey="users" fill="var(--color-users)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-center text-muted-foreground py-10">Няма данни за нови потребители.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Monthly New Salons Chart */}
-        <Card className="lg:col-span-1">
-          
-          <CardContent className="pt-6">
-            {loadingCharts ? (
-              <p>Зареждане на данни за салони...</p>
-            ) : monthlySalonData.length > 0 ? (
-               <ChartContainer config={salonChartConfig} className="h-[250px] w-full">
-                <BarChart accessibilityLayer data={monthlySalonData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
-                  />
-                  <YAxis 
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    allowDecimals={false}
-                  />
-                  <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                  <Legend />
-                  <Bar dataKey="salons" fill="var(--color-salons)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-center text-muted-foreground py-10">Няма данни за нови салони.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Monthly Payments Chart */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center"><DollarSign className="mr-2 h-5 w-5 text-primary"/> Месечни плащания от промоции</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-6">
-            {loadingCharts ? (
-              <p>Зареждане на данни за плащания...</p>
-            ) : monthlyPaymentData.length > 0 ? (
-              <ChartContainer config={paymentChartConfig} className="h-[250px] w-full">
-                <BarChart accessibilityLayer data={monthlyPaymentData} margin={{ top: 5, right: 20, left: -5, bottom: 5 }}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => value.slice(0, 3)}
-                  />
-                  <YAxis 
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={8}
-                    tickFormatter={(value) => `${value} лв.`}
-                  />
-                  <RechartsTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                  <Legend />
-                  <Bar dataKey="payments" fill="var(--color-payments)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-center text-muted-foreground py-10">Няма данни за плащания.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Chart section has been removed as per request */}
 
       <Card className="mt-12">
         <CardHeader>
