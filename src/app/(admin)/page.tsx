@@ -19,15 +19,6 @@ import {
 } from 'lucide-react';
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import type { UserProfile } from '@/types';
-
-interface MonthlyData {
-  month: string;
-  users?: number;
-  salons?: number;
-  payments?: number;
-}
-
 // This page assumes AdminLayout has already verified the user is an admin.
 export default function AdminIndexPage() {
   const adminSections = [
