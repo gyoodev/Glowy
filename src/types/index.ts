@@ -36,7 +36,7 @@ export interface Promotion {
   transactionId?: string;
 }
 
-export interface Salon {
+export interface Salon { // Added export here
   id: string;
   name: string;
   description: string;
