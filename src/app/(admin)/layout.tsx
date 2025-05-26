@@ -26,31 +26,42 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         console.log('AdminLayout: User is authenticated. UID:', user.uid);
         try {
           const profile = await getUserProfile(user.uid);
-          console.log('AdminLayout: User profile fetched:', profile);
-          if (profile && profile.role === 'admin') {
-            console.log('AdminLayout: User is admin. Authorizing access.');
-            toast({
-              title: 'Достъп разрешен',
-              description: 'Вие сте влезли като администратор.',
-              variant: 'default',
-            });
-            setIsAuthorized(true);
+          if (profile) {
+            console.log('AdminLayout: User profile fetched:', profile);
+            if (profile.role === 'admin') {
+              console.log('AdminLayout: User is admin. Authorizing access.');
+              toast({
+                title: 'Достъп разрешен',
+                description: 'Вие сте влезли като администратор.',
+                variant: 'default',
+              });
+              setIsAuthorized(true);
+            } else {
+              const roleDetected = profile.role || 'неопределена';
+              console.log('AdminLayout: User is NOT admin. Role:', roleDetected, 'Redirecting to home.');
+              toast({
+                title: 'Достъп отказан',
+                description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
+                variant: 'destructive',
+              });
+              router.push('/');
+              setIsAuthorized(false);
+            }
           } else {
-            const roleDetected = profile ? profile.role : 'няма профил';
-            console.log('AdminLayout: User is NOT admin or profile missing. Role:', roleDetected, 'Redirecting to home.');
+            console.error('AdminLayout: User profile not found in Firestore for UID:', user.uid, 'Redirecting to home.');
             toast({
-              title: 'Достъп отказан',
-              description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
+              title: 'Грешка при проверка на права',
+              description: 'Потребителският Ви профил не беше намерен в базата данни или нямате зададена роля.',
               variant: 'destructive',
             });
             router.push('/');
             setIsAuthorized(false);
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('AdminLayout: Error fetching user profile:', error);
           toast({
             title: 'Грешка при проверка на права',
-            description: 'Неуспешно извличане на потребителски данни.',
+            description: `Неуспешно извличане на потребителски данни: ${error.message}`,
             variant: 'destructive',
           });
           router.push('/');
@@ -66,7 +77,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           description: 'Моля, влезте, за да достъпите административния панел.',
         });
         router.push('/login');
-        setIsAuthorized(false);
+        setIsAuthorized(false); // Explicitly set isAuthorized to false
         console.log('AdminLayout: Setting isLoading to false in no user path.');
         setIsLoading(false);
       }
@@ -76,7 +87,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
-  }, [router, toast]); // Added toast to dependency array as it's used in the effect
+  }, [router, toast]);
 
   const handleLogout = async () => {
     try {
@@ -99,7 +110,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
-    console.log('AdminLayout: Rendering unauthorized state (should be redirecting)...');
+    // This state should ideally not be reached for long if redirects are working.
+    // It serves as a fallback or if there's a delay in redirect.
+    console.log('AdminLayout: Rendering unauthorized state (should be redirecting or access denied)...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-destructive">
         <p className="text-lg">Нямате достъп до тази страница или се пренасочвате...</p>

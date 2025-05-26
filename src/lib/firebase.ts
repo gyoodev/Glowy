@@ -4,8 +4,7 @@ import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp, doc, setDoc, FieldValue, getDoc } from 'firebase/firestore'; // Added getDoc
-// Removed duplicate: import { doc, getDoc, setDoc } from 'firebase/firestore';
-import type { UserProfile, Service, Booking, Notification, NewsletterSubscriber } from '@/types';
+import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
@@ -24,14 +23,14 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const auth = getAuth(app); // Pass app instance
-const firestore = getFirestore(app); // Pass app instance
+const auth = getAuth(app);
+const firestore = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
   isSupported().then((supported) => {
     if (supported) {
-      analytics = getAnalytics(app); // Pass app instance
+      analytics = getAnalytics(app);
     }
   });
 }
@@ -60,7 +59,7 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'pending',
+      status: 'pending', // Default status
       createdAt: serverTimestamp(),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
@@ -72,6 +71,7 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
+    // Notify salon owner
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
       await addDoc(collection(firestore, 'notifications'), {
@@ -80,12 +80,12 @@ export const createBooking = async (bookingDetails: {
         link: `/business/salon-bookings/${bookingDetails.salonId}`,
         read: false,
         createdAt: serverTimestamp(),
-        type: 'new_booking_business',
+        type: 'new_booking_business' as NotificationType,
         relatedEntityId: docRef.id,
       });
       console.log('Notification created for salon owner:', bookingDetails.salonOwnerId);
     } else {
-      console.warn('Salon owner ID not provided for booking, notification not created.');
+      console.warn('Salon owner ID not provided for booking, notification to owner not created.');
     }
 
     return docRef.id;
@@ -97,34 +97,39 @@ export const createBooking = async (bookingDetails: {
 
 export const getUserBookings = async (userId: string): Promise<Booking[]> => {
   const bookings: Booking[] = [];
-  const q = query(
-    collection(firestore, 'bookings'),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'desc')
-  );
-  const querySnapshot = await getDocs(q);
-  querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
-    const data = docSnap.data();
-    const booking: Booking = {
-      id: docSnap.id,
-      salonId: data.salonId,
-      salonName: data.salonName,
-      salonOwnerId: data.salonOwnerId,
-      serviceId: data.serviceId,
-      serviceName: data.serviceName,
-      userId: data.userId,
-      date: data.date,
-      time: data.time,
-      status: data.status as Booking['status'],
-      clientName: data.clientName,
-      clientEmail: data.clientEmail,
-      clientPhoneNumber: data.clientPhoneNumber,
-      createdAt: data.createdAt,
-      salonAddress: data.salonAddress,
-      salonPhoneNumber: data.salonPhoneNumber,
-    };
-    bookings.push(booking);
-  });
+  if (!userId) return bookings;
+  try {
+    const q = query(
+      collection(firestore, 'bookings'),
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const querySnapshot = await getDocs(q);
+    querySnapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      const booking: Booking = {
+        id: docSnap.id,
+        salonId: data.salonId,
+        salonName: data.salonName,
+        salonOwnerId: data.salonOwnerId,
+        serviceId: data.serviceId,
+        serviceName: data.serviceName,
+        userId: data.userId,
+        date: data.date,
+        time: data.time,
+        status: data.status as Booking['status'],
+        clientName: data.clientName, // Should be populated on creation
+        clientEmail: data.clientEmail, // Should be populated on creation
+        clientPhoneNumber: data.clientPhoneNumber, // Should be populated on creation
+        createdAt: data.createdAt,
+        salonAddress: data.salonAddress,
+        salonPhoneNumber: data.salonPhoneNumber,
+      };
+      bookings.push(booking);
+    });
+  } catch (error) {
+    console.error(`Error fetching bookings for user ${userId}:`, error);
+  }
   return bookings;
 };
 
@@ -140,10 +145,11 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       const data = userDocSnap.data();
       return {
         id: userDocSnap.id,
+        userId: data.userId || userId,
         name: data.name || data.displayName || '',
+        displayName: data.displayName || data.name || '',
         email: data.email || '',
         role: data.role,
-        userId: data.userId || userId, // Ensure userId is populated
         profilePhotoUrl: data.profilePhotoUrl,
         phoneNumber: data.phoneNumber,
         numericId: data.numericId,
@@ -155,12 +161,15 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
         // lastUpdatedAt: data.lastUpdatedAt ? (data.lastUpdatedAt as Timestamp).toDate() : undefined,
       } as UserProfile;
     } else {
-      console.log(`No profile found for UID: ${userId} in getUserProfile.`);
+      console.log(`No Firestore profile found for UID: ${userId} in getUserProfile.`);
       return null;
     }
-  } catch (error) {
-    console.error('Error fetching user profile by UID (getUserProfile):', error);
-    return null;
+  } catch (error: any) {
+    console.error(`Error fetching user profile for UID ${userId}:`, error);
+    if (error.code === 'permission-denied') {
+      console.error(`Firestore permission denied when fetching profile for user ${userId}. Check Firestore rules for /users/{userId}.`);
+    }
+    return null; // Return null on any error to allow graceful handling
   }
 };
 
@@ -183,24 +192,31 @@ export const getUserNotifications = async (userId: string): Promise<Notification
       collection(firestore, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(10)
+      limit(20) // Increased limit slightly
     );
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
+    querySnapshot.forEach((docSnap) => {
       notifications.push({ id: docSnap.id, ...docSnap.data() } as Notification);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching user notifications:", error);
+    if (error.code === 'permission-denied') {
+      console.error(`Firestore permission denied when fetching notifications for user ${userId}. Check Firestore rules for /notifications collection for read access where userId matches.`);
+    }
   }
   return notifications;
 };
 
 export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
+  if (!notificationId) return;
   try {
     const notificationRef = doc(firestore, 'notifications', notificationId);
     await updateDoc(notificationRef, { read: true });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error marking notification as read:", error);
+     if (error.code === 'permission-denied') {
+      console.error(`Firestore permission denied when marking notification ${notificationId} as read. Check Firestore rules for /notifications/{notificationId} for update access where userId matches.`);
+    }
   }
 };
 
@@ -213,16 +229,19 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
-    const batch: Promise<void>[] = []; // Correctly typed
-    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
-      batch.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
+    const batchPromises: Promise<void>[] = [];
+    querySnapshot.forEach((docSnap) => {
+      batchPromises.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
     });
-    if (batch.length > 0) {
-      await Promise.all(batch);
-      console.log(`Marked ${batch.length} unread notifications as read for user ${userId}`);
+    if (batchPromises.length > 0) {
+      await Promise.all(batchPromises);
+      console.log(`Marked ${batchPromises.length} unread notifications as read for user ${userId}`);
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error marking all user notifications as read:", error);
+    if (error.code === 'permission-denied') {
+      console.error(`Firestore permission denied when marking all notifications as read for user ${userId}. Check Firestore rules for batch updates or individual updates on /notifications.`);
+    }
   }
 };
 
@@ -231,7 +250,6 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    // No longer querying for existing emails to avoid permission issues for non-admins
     await addDoc(collection(firestore, 'newsletterSubscribers'), {
       email: email,
       subscribedAt: serverTimestamp(),
@@ -239,6 +257,9 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: true, message: 'Вие се абонирахте успешно!' };
   } catch (error: any) {
     console.error('Error subscribing to newsletter:', error);
+    if (error.code === 'permission-denied') {
+      return { success: false, message: 'Грешка: Нямате права да извършите тази операция.' };
+    }
     return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
   }
 }
@@ -249,11 +270,14 @@ export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]
     const subscribersRef = collection(firestore, 'newsletterSubscribers');
     const q = query(subscribersRef, orderBy('subscribedAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap
+    querySnapshot.forEach((docSnap) => {
       subscribers.push({ id: docSnap.id, ...docSnap.data() } as NewsletterSubscriber);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching newsletter subscribers:", error);
+    if (error.code === 'permission-denied') {
+      console.error('Firestore permission denied when fetching newsletter subscribers. Ensure admin has read/list access to newsletterSubscribers collection.');
+    }
   }
   return subscribers;
 }
@@ -265,10 +289,18 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     const q = query(subscribersRef, where('email', '==', email), limit(1));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
-  } catch (error: any) { // Catching 'any' as Firestore errors can vary
-    console.warn('Could not check newsletter subscription status:', error.message || error);
+  } catch (error: any) {
+    // This function is called by non-admins on their profile page.
+    // Rules usually restrict non-admins from querying newsletterSubscribers.
+    // So, an error (likely permission-denied) is expected here for non-admins.
+    // We log it but return false, as the user effectively isn't confirmed as subscribed if we can't check.
+    if (error.code === 'permission-denied') {
+      // console.warn(`Permission denied for user to check newsletter status for email: ${email}. This is expected if user is not admin.`);
+    } else {
+      console.error('Could not check newsletter subscription status:', error.message || error);
+    }
     return false;
   }
 }
 
-export { app, auth, analytics, firestore, FieldValue }; // Export FieldValue
+export { app, auth, analytics, firestore, FieldValue };
