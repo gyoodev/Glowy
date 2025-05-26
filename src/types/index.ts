@@ -15,7 +15,7 @@ export interface Service {
   categoryIcon?: React.ElementType;
 }
 
-export interface Review {
+export interface Review { // Added export here
   id: string;
   userName: string;
   userAvatar?: string;
@@ -36,7 +36,7 @@ export interface Promotion {
   transactionId?: string;
 }
 
-export interface Salon { // Added export here
+export interface Salon {
   id: string;
   name: string;
   description: string;
