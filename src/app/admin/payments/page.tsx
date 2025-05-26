@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -84,7 +85,8 @@ export default function AdminPaymentsPage() {
                   <TableRow key={i}>
                     {[...Array(6)].map((_, j) => <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>)}
                   </TableRow>
-                ))}\n              </TableBody>
+                ))}
+              </TableBody>
             </Table>
           </CardContent>
         </Card>
@@ -151,10 +153,12 @@ export default function AdminPaymentsPage() {
                     {/* Basic status display, could be enhanced with colors/badges */}
                     {payment.status === 'completed' && <span className="text-green-600 font-semibold">Завършено</span>}
                     {payment.status === 'failed' && <span className="text-red-600 font-semibold">Неуспешно</span>}
+                    {payment.status === 'pending' && <span className="text-yellow-600 font-semibold">Чакащо</span>}
                      {!['completed', 'pending', 'failed'].includes(payment.status) && <span>{payment.status}</span>} {/* Display unknown statuses */}
                   </TableCell>
                 </TableRow>
-              ))}\n            </TableBody>
+              ))}
+            </TableBody>
           </Table>
         </div>
       )}
