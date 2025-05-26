@@ -55,7 +55,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const order = await client.execute(request);
     res.status(200).json({ success: true, orderID: order.result.id });
   } catch (error: any) {
-    console.error('PayPal Create Order Error:', error);
+    console.error('PayPal Create Order Error:', JSON.stringify(error, null, 2)); // Log the entire error object
      let errorMessage = 'Failed to create PayPal order.';
      // Attempt to extract more specific error from PayPal API response
      if (error.statusCode && error.message) {
