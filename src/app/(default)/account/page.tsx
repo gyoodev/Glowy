@@ -109,8 +109,8 @@ export default function AccountPage() {
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
- startTime: booking.startTime, // Should be Timestamp
- endTime: Timestamp.fromDate(new Date(booking.endTime)), // Convert string to Timestamp
+            startTime: booking.startTime, // Should be Timestamp
+            endTime: booking.endTime, // Should be Timestamp
             // Provide default values or handle missing properties gracefully
             salonName: booking.salonName || 'N/A',
             serviceName: booking.serviceName || 'N/A',
@@ -124,7 +124,7 @@ export default function AccountPage() {
             salonAddress: booking.salonAddress || 'N/A',
             salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
             salonOwnerId: booking.salonOwnerId || 'N/A',
-            service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
+            service: booking.service as Service || { id: '', name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
           }));
           setBookings(mappedBookings as Booking[]); // Cast to Booking[] to ensure type correctness
 

@@ -85,12 +85,13 @@ export interface Booking {
   serviceId: string; // ID of the booked service
   serviceName: string; // Name of the booked service
   userId: string; // ID of the user who made the booking
-  startTime: Timestamp; // Start time of the booking
-  endTime: string; // End time of the booking (e.g., ISO string or specific format)
-  date: string; // Date of the booking (ISO date string)
+  startTime: Timestamp; // Start time of the booking (e.g., ISO string or specific format)
+  endTime: Timestamp; // End time of the booking
+ date: string; // Date of the booking (ISO date string)
   time: string; // Time of the booking ("HH:mm")
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed'; // Current status of the booking
   createdAt?: any; // For Firestore Timestamp
+  service: Service;
   clientName?: string; // Name of the client (optional)
   clientEmail?: string; // Email of the client (optional)
   clientPhoneNumber?: string; // Phone number of the client (optional)
