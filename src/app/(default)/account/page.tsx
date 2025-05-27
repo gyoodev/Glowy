@@ -58,6 +58,7 @@ export default function AccountPage() {
   };
 
   useEffect(() => {
+    // Added comment to try and bust cache
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null);
@@ -112,7 +113,8 @@ export default function AccountPage() {
             serviceId: booking.serviceId, // Assuming serviceId is always present
             startTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
             endTime: booking.time, // Assign time string directly to endTime as per type
-            status: booking.status as Booking['status'], // Explicitly cast status            salonName: booking.salonName || 'N/A', // Provide default if missing
+            status: booking.status as Booking['status'], // Explicitly cast status
+            salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
             time: booking.time || 'N/A', // Provide default or handle missing
