@@ -79,7 +79,7 @@ export interface UserProfile {
 export interface Booking {
   id: string;
   salonId: string;
-  salonName: string;
+  salonName: string; // Explicitly define salonName as a string
   serviceId: string;
   serviceName: string;
   userId: string;
