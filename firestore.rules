@@ -94,20 +94,14 @@ service cloud.firestore {
       allow read, write: if request.auth != null;
     }
 
-    // PromotionsPayments collection - NEW RULES for admin payments page
+    // promotionsPayments collection - NEW RULE
     match /promotionsPayments/{paymentId} {
-      // Admins can read and list all payment records.
+      // Admins can read payment records for dashboard and payment management.
       allow get, list: if isAdmin();
-      // Writing payments should ideally be handled by a secure server-side process (e.g., PayPal webhook handler).
-      // For now, disallow client-side create/update/delete unless specifically needed by an admin function not yet implemented.
-      allow create, update, delete: if false; // Or restrict to isAdmin() if admins need to manage these directly
-    }
-
-    // Notifications collection
-    match /notifications/{notificationId} {
-      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null;
-      allow delete: if isAdmin();
+      // Creation of payment records should be handled by a secure server-side process
+      // (e.g., your PayPal capture API route using Firebase Admin SDK).
+      // Client-side creation/update/delete of payment records is generally not allowed.
+      allow create, update, delete: if false; // Or if isAdmin() for manual admin adjustments, carefully consider.
     }
   }
 }
