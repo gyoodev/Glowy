@@ -10,6 +10,14 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
   Users,
   Briefcase,
   CalendarCheck,
@@ -20,6 +28,9 @@ import {
   UserPlus,
   Building,
   CreditCard,
+  PieChart as PieChartIcon, // Renamed to avoid conflict if a PieChart component is imported
+  TrendingUp,
+  TrendingDown,
 } from 'lucide-react';
 import {
   BarChart,
@@ -32,13 +43,18 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
+import { getFirestore, collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
+import { auth } from '@/lib/firebase'; // Assuming auth is exported for db initialization
+import type { UserProfile, Salon } from '@/types';
+import { format } from 'date-fns';
+import { bg } from 'date-fns/locale';
 
-// Placeholder data for stats
+// Placeholder data for stats (can be replaced with dynamic data later)
 const placeholderStats = [
-  { title: 'Общо Потребители', value: '1,234', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-  { title: 'Общо Салони', value: '56', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-green-500/10' },
-  { title: 'Активни Резервации', value: '102', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-  { title: 'Приходи (демо)', value: '12,345 лв.', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
+  { title: 'Общо Потребители', value: '1,234', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10', trend: '+5% от миналия месец' },
+  { title: 'Общо Салони', value: '56', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-green-500/10', trend: '+2 нови този месец' },
+  { title: 'Активни Резервации', value: '102', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10', trend: 'стабилно' },
+  { title: 'Приходи (демо)', value: '12,345 лв.', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-orange-500/10', trend: '+10% от миналия месец' },
 ];
 
 // Placeholder data for monthly registrations chart
@@ -61,11 +77,101 @@ const recentActivityData = [
   { id: 5, icon: UserPlus, text: 'Нов потребител регистриран: Мария Петрова', time: 'преди 5 часа', type: 'user' },
 ];
 
+interface PromotionPayment {
+  id: string;
+  businessId: string;
+  businessName?: string;
+  promotionId: string;
+  promotionDetails?: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  createdAt: Timestamp; // Assuming createdAt is a Firestore Timestamp
+}
+
 export default function AdminIndexPage() {
-  // In a real application, you would fetch this data from your backend/Firebase
   const [stats, setStats] = useState(placeholderStats);
   const [userRegData, setUserRegData] = useState(monthlyUserRegistrationsData);
   const [activityFeed, setActivityFeed] = useState(recentActivityData);
+
+  const [latestUsers, setLatestUsers] = useState<UserProfile[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [latestSalons, setLatestSalons] = useState<Salon[]>([]);
+  const [loadingSalons, setLoadingSalons] = useState(true);
+  const [latestPayments, setLatestPayments] = useState<PromotionPayment[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(true);
+
+  const firestore = getFirestore();
+
+  useEffect(() => {
+    const fetchLatestUsers = async () => {
+      setLoadingUsers(true);
+      try {
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, orderBy('createdAt', 'desc'), limit(3));
+        const querySnapshot = await getDocs(q);
+        const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        setLatestUsers(usersList);
+      } catch (error) {
+        console.error("Error fetching latest users:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    const fetchLatestSalons = async () => {
+      setLoadingSalons(true);
+      try {
+        const salonsRef = collection(firestore, 'salons');
+        const q = query(salonsRef, orderBy('createdAt', 'desc'), limit(3));
+        const querySnapshot = await getDocs(q);
+        const salonsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
+        setLatestSalons(salonsList);
+      } catch (error) {
+        console.error("Error fetching latest salons:", error);
+      } finally {
+        setLoadingSalons(false);
+      }
+    };
+
+    const fetchLatestPayments = async () => {
+      setLoadingPayments(true);
+      try {
+        const paymentsRef = collection(firestore, 'promotionsPayments');
+        const q = query(paymentsRef, orderBy('createdAt', 'desc'), limit(10));
+        const querySnapshot = await getDocs(q);
+        const paymentsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
+        setLatestPayments(paymentsList);
+      } catch (error) {
+        console.error("Error fetching latest payments:", error);
+      } finally {
+        setLoadingPayments(false);
+      }
+    };
+
+    fetchLatestUsers();
+    fetchLatestSalons();
+    fetchLatestPayments();
+  }, [firestore]);
+
+  const getRoleDisplayName = (role?: UserProfile['role']) => {
+    switch (role) {
+      case 'admin': return 'Администратор';
+      case 'business': return 'Бизнес';
+      case 'customer': return 'Клиент';
+      default: return 'Неопределена';
+    }
+  };
+  
+  const getPaymentStatusDisplayName = (status?: PromotionPayment['status']) => {
+    switch (status) {
+      case 'completed': return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Завършено</Badge>;
+      case 'pending': return <Badge variant="outline">Чакащо</Badge>;
+      case 'failed': return <Badge variant="destructive">Неуспешно</Badge>;
+      default: return <Badge variant="secondary">Неизвестен</Badge>;
+    }
+  };
+
 
   return (
     <div className="space-y-8 p-4 md:p-6 lg:p-8">
@@ -78,7 +184,6 @@ export default function AdminIndexPage() {
             Общ преглед и управление на Glowy платформата.
           </p>
         </div>
-        {/* Placeholder for any top-right actions like a date range picker or refresh button */}
       </div>
 
       {/* Stats Cards Section */}
@@ -91,16 +196,18 @@ export default function AdminIndexPage() {
             </CardHeader>
             <CardContent>
               <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-              {/* Optional: Add a small trend indicator or description here */}
-              {/* <p className="text-xs text-muted-foreground">+20.1% from last month</p> */}
+              <p className={`text-xs mt-1 ${stat.trend && stat.trend.startsWith('+') ? 'text-green-600' : stat.trend && stat.trend.startsWith('-') ? 'text-red-600' : 'text-muted-foreground'}`}>
+                {stat.trend && stat.trend.startsWith('+') && <TrendingUp className="inline h-3 w-3 mr-1" />}
+                {stat.trend && stat.trend.startsWith('-') && <TrendingDown className="inline h-3 w-3 mr-1" />}
+                {stat.trend}
+              </p>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Main Content Area: Chart and Recent Activity */}
+      {/* Main Content Area: Chart and Recent Activity (Existing) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Chart Section */}
         <Card className="lg:col-span-2 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -113,28 +220,11 @@ export default function AdminIndexPage() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={userRegData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
-                <XAxis 
-                  dataKey="month" 
-                  stroke="hsl(var(--muted-foreground))" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                />
-                <YAxis 
-                  stroke="hsl(var(--muted-foreground))" 
-                  fontSize={12} 
-                  tickLine={false} 
-                  axisLine={false} 
-                  tickFormatter={(value) => `${value}`} 
-                />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))', radius: 4 }}
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))', 
-                    borderColor: 'hsl(var(--border))',
-                    borderRadius: '0.5rem',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
-                  }}
+                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
                   labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
                 />
                 <Legend iconSize={10} wrapperStyle={{fontSize: "12px", paddingTop: "10px"}} />
@@ -144,7 +234,6 @@ export default function AdminIndexPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Activity Section */}
         <Card className="lg:col-span-1 shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -157,18 +246,8 @@ export default function AdminIndexPage() {
             <div className="space-y-4">
               {activityFeed.map((activity) => (
                 <div key={activity.id} className="flex items-start space-x-3 p-3 hover:bg-muted/50 rounded-md transition-colors">
-                  <div className={`p-2 rounded-full ${
-                    activity.type === 'user' ? 'bg-blue-500/10' :
-                    activity.type === 'salon' ? 'bg-green-500/10' :
-                    activity.type === 'booking' ? 'bg-purple-500/10' :
-                    'bg-orange-500/10' // payment or other
-                  }`}>
-                    <activity.icon className={`h-5 w-5 ${
-                      activity.type === 'user' ? 'text-blue-500' :
-                      activity.type === 'salon' ? 'text-green-500' :
-                      activity.type === 'booking' ? 'text-purple-500' :
-                      'text-orange-500'
-                    }`} />
+                  <div className={`p-2 rounded-full ${activity.type === 'user' ? 'bg-blue-500/10' : activity.type === 'salon' ? 'bg-green-500/10' : activity.type === 'booking' ? 'bg-purple-500/10' : 'bg-orange-500/10'}`}>
+                    <activity.icon className={`h-5 w-5 ${activity.type === 'user' ? 'text-blue-500' : activity.type === 'salon' ? 'text-green-500' : activity.type === 'booking' ? 'text-purple-500' : 'text-orange-500'}`} />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground leading-tight">{activity.text}</p>
@@ -185,6 +264,115 @@ export default function AdminIndexPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Sections: Latest Users, Salons, Payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        {/* Latest Registered Users */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5 text-primary" />Последни регистрирани потребители</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingUsers ? <p>Зареждане...</p> : latestUsers.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Име</TableHead>
+                    <TableHead>Имейл</TableHead>
+                    <TableHead>Роля</TableHead>
+                    <TableHead>Дата</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {latestUsers.map(user => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.displayName || user.name || 'N/A'}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'business' ? 'secondary' : 'outline'}>{getRoleDisplayName(user.role)}</Badge></TableCell>
+                      <TableCell>{user.createdAt ? format(new Date(user.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : <p className="text-muted-foreground">Няма наскоро регистрирани потребители.</p>}
+          </CardContent>
+        </Card>
+
+        {/* Latest Created Businesses */}
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center"><Building className="mr-2 h-5 w-5 text-primary" />Последни създадени бизнеси</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingSalons ? <p>Зареждане...</p> : latestSalons.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Име на салон</TableHead>
+                    <TableHead>Град</TableHead>
+                    <TableHead>Собственик ID</TableHead>
+                    <TableHead>Дата</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {latestSalons.map(salon => (
+                    <TableRow key={salon.id}>
+                      <TableCell>{salon.name}</TableCell>
+                      <TableCell>{salon.city || 'N/A'}</TableCell>
+                      <TableCell className="text-xs">{salon.ownerId || 'N/A'}</TableCell>
+                      <TableCell>{salon.createdAt ? format(new Date(salon.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : <p className="text-muted-foreground">Няма наскоро създадени бизнеси.</p>}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Latest Promotion Payments */}
+      <Card className="shadow-lg mt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center"><CreditCard className="mr-2 h-5 w-5 text-primary" />Последни плащания за промоции</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-1 flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg border border-dashed">
+            <PieChartIcon className="h-16 w-16 text-primary/70 mb-4" />
+            <p className="text-center text-muted-foreground text-sm">
+              Място за кръгова диаграма на плащанията (напр. по тип пакет или по месеци).
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">(Ще бъде добавено по-късно)</p>
+          </div>
+          <div className="md:col-span-2">
+            {loadingPayments ? <p>Зареждане...</p> : latestPayments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Плащане ID</TableHead>
+                    <TableHead>Име на бизнес</TableHead>
+                    <TableHead>Сума</TableHead>
+                    <TableHead>Статус</TableHead>
+                    <TableHead>Дата</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {latestPayments.map(payment => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="text-xs">{payment.id}</TableCell>
+                      <TableCell>{payment.businessName || payment.businessId || 'N/A'}</TableCell>
+                      <TableCell>{payment.amount.toFixed(2)} {payment.currency}</TableCell>
+                      <TableCell>{getPaymentStatusDisplayName(payment.status)}</TableCell>
+                      <TableCell>{payment.createdAt ? format(payment.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }) : 'N/A'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : <p className="text-muted-foreground">Няма скорошни плащания.</p>}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
+
+    
