@@ -1,18 +1,16 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import paypal from '@paypal/paypal-server-sdk';
+import paypal from '@paypal/checkout-server-sdk';
 
 const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
 if (!clientId || !clientSecret) {
   console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set for create-order API.");
-  // In a real application, you might want to handle this more gracefully
 }
 
-const environment = process.env.NODE_ENV === 'production'
-  ? new paypal.core.LiveEnvironment(clientId!, clientSecret!)
-  : new paypal.core.SandboxEnvironment(clientId!, clientSecret!);
+// Always use LiveEnvironment
+const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
 const client = new paypal.core.PayPalHttpClient(environment);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,7 +20,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!clientId || !clientSecret) {
-     return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server for order creation.' });
+    console.error("PayPal API credentials not configured on the server for create-order.");
+    return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server.' });
   }
 
   const { amount, currency, packageId, businessId, description } = req.body;
@@ -40,30 +39,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currency_code: currency,
         value: amount,
       },
-      custom_id: packageId, // Pass packageId in custom_id
-      reference_id: businessId, // Pass businessId in reference_id
-      description: description, // Optional description
+      custom_id: packageId,
+      reference_id: businessId,
+      description: description || ('Promotion: ' + packageId + ' for business ' + businessId),
     }],
-    // Add application_context if needed for things like return_url, cancel_url
-    // application_context: {
-    //   return_url: 'YOUR_RETURN_URL',
-    //   cancel_url: 'YOUR_CANCEL_URL',
-    // }
   });
 
   try {
     const order = await client.execute(request);
     res.status(200).json({ success: true, orderID: order.result.id });
   } catch (error: any) {
-    console.error('PayPal Create Order Error:', JSON.stringify(error, null, 2)); // Log the entire error object
-     let errorMessage = 'Failed to create PayPal order.';
-     // Attempt to extract more specific error from PayPal API response
-     if (error.statusCode && error.message) {
-         errorMessage = `PayPal Error (${error.statusCode}): ${error.message}`;
-     } else if (error.message) {
-        errorMessage = error.message;
-     }
+    console.error('PayPal Create Order Error:', JSON.stringify(error, null, 2));
+    let errorMessage = 'Failed to create PayPal order.';
+    let errorDetails = null;
 
-    res.status(500).json({ success: false, message: errorMessage });
- }
+    if (error.isAxiosError && error.response && error.response.data) { // PayPal SDK v1.x uses Axios-like errors
+        errorMessage = error.response.data.message || errorMessage;
+        errorDetails = error.response.data.details;
+        if (error.response.data.details && error.response.data.details.length > 0) {
+            const detailsString = error.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
+            errorMessage += ' Details: ' + detailsString;
+        }
+        console.error('PayPal Create Order Error Details:', error.response.data);
+    } else if (error.message) { // Fallback for other error types
+        errorMessage = error.message;
+    }
+    res.status(500).json({ success: false, message: errorMessage, details: errorDetails });
+  }
 }

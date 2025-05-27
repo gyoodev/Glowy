@@ -1,8 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import paypal from '@paypal/paypal-server-sdk';
+import paypal from '@paypal/checkout-server-sdk';
 import { initializeApp, getApps, cert, type App as AdminApp } from 'firebase-admin/app';
-// FieldValue is a special type from firebase-admin
 import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
@@ -12,42 +11,38 @@ const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
 
 if (!clientId || !clientSecret) {
   console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set for capture API.");
-  // Consider throwing an error here or handling it appropriately
-  // For now, operations will fail if these are not set.
 }
 
-const environment = process.env.NODE_ENV === 'production'
-  ? new paypal.core.LiveEnvironment(clientId!, clientSecret!)
-  : new paypal.core.SandboxEnvironment(clientId!, clientSecret!);
+// Always use LiveEnvironment
+const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
 const client = new paypal.core.PayPalHttpClient(environment);
 
 let adminApp: AdminApp;
 if (!getApps().length) {
   const serviceAccountEnv = process.env.FIREBASE_ADMIN_SDK_CONFIG;
   if (!serviceAccountEnv) {
-    console.warn("FIREBASE_ADMIN_SDK_CONFIG environment variable is not set. Initializing Firebase Admin with default credentials (may only work in Firebase environment). PayPal capture API might not update Firestore if default creds don't work.");
+    console.warn("FIREBASE_ADMIN_SDK_CONFIG environment variable is not set. PayPal capture API might not update Firestore correctly.");
     adminApp = initializeApp();
   } else {
     try {
       const serviceAccount = JSON.parse(serviceAccountEnv);
-       adminApp = initializeApp({
+      adminApp = initializeApp({
         credential: cert(serviceAccount),
-      });
+      }, 'paypalCaptureAdminApp'); // Give a unique name to avoid conflict if default app is also initialized
     } catch (e) {
-       console.error("Error parsing FIREBASE_ADMIN_SDK_CONFIG:", e);
-       if (!getApps().length) {
-          adminApp = initializeApp();
-          console.warn("Initialized Firebase Admin with default credentials after failed FIREBASE_ADMIN_SDK_CONFIG parse.");
-        } else {
-          adminApp = getApps()[0];
-        }
+      console.error("Error parsing FIREBASE_ADMIN_SDK_CONFIG for paypalCaptureAdminApp:", e);
+      if (!getApps().find(app => app?.name === 'paypalCaptureAdminApp')) {
+        adminApp = initializeApp({}, 'paypalCaptureAdminApp'); // Initialize with default for this specific use if parsing failed
+        console.warn("Initialized paypalCaptureAdminApp with default credentials after failed FIREBASE_ADMIN_SDK_CONFIG parse.");
+      } else {
+        adminApp = getApps().find(app => app?.name === 'paypalCaptureAdminApp')!;
+      }
     }
   }
 } else {
-  adminApp = getApps()[0];
+  adminApp = getApps().find(app => app?.name === 'paypalCaptureAdminApp') || initializeApp({}, 'paypalCaptureAdminApp');
 }
 const adminFirestore = getAdminFirestore(adminApp);
-
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5 },
@@ -62,7 +57,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!clientId || !clientSecret) {
-    return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server for capture.' });
+    console.error("PayPal API credentials not configured on the server for capture-order.");
+    return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server.' });
   }
 
   const { orderID } = req.body;
@@ -72,9 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const request = new paypal.orders.OrdersCaptureRequest(orderID);
-  // Use 'as any' to bypass strict type checking for the requestBody.
-  // For a standard capture, an empty object is often sufficient for the PayPal API.
-  request.requestBody({} as any);
+  request.requestBody({} as any); // For standard capture, empty body is usually fine, using 'as any' to bypass strict SDK types if necessary
 
   try {
     const capture = await client.execute(request);
@@ -87,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const purchaseUnit = orderDetails.purchase_units && orderDetails.purchase_units[0];
       const packageId = purchaseUnit?.custom_id;
-      const businessId = purchaseUnit?.reference_id; 
+      const businessId = purchaseUnit?.reference_id;
       const transactionId = captureResult.id;
 
       if (!businessId || !packageId) {
@@ -106,9 +100,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const newPromotion: Promotion = {
         isActive: true,
         packageId: chosenPackage.id,
-        packageName: chosenPackage.name, // TODO: This is a temporary fix. The type of 'purchasedAt' in Promotion should be properly typed
-        // Cast to any to bypass type check for FieldValue.serverTimestamp()
-        purchasedAt: FieldValue.serverTimestamp() as any, // Use serverTimestamp for Firestore
+        packageName: chosenPackage.name,
+        purchasedAt: FieldValue.serverTimestamp() as any,
         expiresAt: expiryDate.toISOString(),
         paymentMethod: 'paypal',
         transactionId: transactionId,
@@ -117,19 +110,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const salonRef = adminFirestore.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
 
+      // Notify admins
       const adminUsersQuery = adminFirestore.collection('users').where('role', '==', 'admin');
       const adminUsersSnapshot = await adminUsersQuery.get();
-      
       if (!adminUsersSnapshot.empty) {
         const salonDoc = await salonRef.get();
         const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
         const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
-        
         const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
           return adminFirestore.collection('notifications').add({
             userId: adminDoc.id,
             message: notificationMessage,
-            link: '/admin/business',
+            link: '/admin/payments', // Link to admin payments page
             read: false,
             createdAt: FieldValue.serverTimestamp(),
             type: 'new_payment_admin',
@@ -137,9 +129,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           });
         });
         await Promise.all(adminNotificationsPromises);
-        console.log('Sent new payment notifications to ' + adminUsersSnapshot.size + ' admin(s).');
-      } else {
-        console.warn("No admin users found to send new payment notification.");
       }
 
       console.log('Successfully captured PayPal order ' + orderID + ' for business ' + businessId + ' and package ' + packageId + '. Firestore updated.');
@@ -149,18 +138,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.status(400).json({ success: false, message: 'PayPal плащането не е завършено: ' + captureResult.status, details: captureResult });
     }
   } catch (error: any) {
-    console.error('PayPal Capture Order Error for orderID ' + orderID + ':', error);
+    console.error('PayPal Capture Order Error for orderID ' + orderID + ':', JSON.stringify(error, null, 2));
     let errorMessage = 'Failed to capture PayPal order.';
-     if (error.isAxiosError && error.response && error.response.data) {
+    let errorDetails = null;
+
+    if (error.isAxiosError && error.response && error.response.data) { // PayPal SDK v1.x uses Axios-like errors
         errorMessage = error.response.data.message || errorMessage;
-        if(error.response.data.details && error.response.data.details.length > 0){
+        errorDetails = error.response.data.details;
+        if (error.response.data.details && error.response.data.details.length > 0) {
             const detailsString = error.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
             errorMessage += ' Details: ' + detailsString;
         }
         console.error('PayPal Capture Error Details:', error.response.data);
-    } else if (error.message) {
+    } else if (error.message) { // Fallback for other error types
         errorMessage = error.message;
     }
-    res.status(500).json({ success: false, message: errorMessage });
+    res.status(500).json({ success: false, message: errorMessage, details: errorDetails });
   }
 }
