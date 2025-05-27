@@ -1,4 +1,6 @@
 
+import { Timestamp } from 'firebase/firestore';
+
 // UserProfile type includes the 'customer' role
 export interface DayWorkingHours {
   open: string;
@@ -83,7 +85,7 @@ export interface Booking {
   serviceId: string; // ID of the booked service
   serviceName: string; // Name of the booked service
   userId: string; // ID of the user who made the booking
-  startTime: Timestamp; // Start time of the booking // For Firestore Timestamp
+  startTime: Timestamp; // Start time of the booking
   endTime: string; // End time of the booking (e.g., ISO string or specific format)
   date: string; // Date of the booking (ISO date string)
   time: string; // Time of the booking ("HH:mm")
