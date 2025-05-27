@@ -79,7 +79,7 @@ export default function AccountPage() {
           }
 
           if (profileData) {
-            setUserProfile(profileData as UserProfileNew);
+            setUserProfile(profileData as UserProfile);
             await fetchNewsletterStatus(profileData.email);
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
