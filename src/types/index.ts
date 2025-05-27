@@ -1,4 +1,5 @@
 
+// UserProfile type includes the 'customer' role
 export interface DayWorkingHours {
   open: string;
   close: string;
@@ -57,7 +58,7 @@ export interface Salon {
   promotion?: Promotion;
 }
 
-export interface UserProfile {
+export interface UserProfileNew {
   id: string;
   name: string;
   email: string;
