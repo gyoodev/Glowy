@@ -125,9 +125,6 @@ export default function AccountPage() {
             salonAddress: booking.salonAddress || 'N/A',
             salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
             salonOwnerId: booking.salonOwnerId || 'N/A',
-            serviceName: booking.serviceName || 'N/A', // Provide default if missing
-            date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
-            time: booking.time || 'N/A', // Provide default or handle missing
             service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
           }));
           setBookings(mappedBookings as Booking[]); // Cast to Booking[] to ensure type correctness
