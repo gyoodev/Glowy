@@ -6,3 +6,4 @@ export * from './salon';
 export * from './service';
 export * from './notification';
 export * from './newsletter';
+export * from './promotion';

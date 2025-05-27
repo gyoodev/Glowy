@@ -1,4 +1,3 @@
-import { Timestamp } from 'firebase/firestore';
 
 export interface Review {
   id: string;
@@ -6,7 +5,9 @@ export interface Review {
   salonId: string;
   rating: number;
   comment: string;
-  reply: string;
-  date: Timestamp;
-  reviewedBy: string;
+  date: string; // Changed from Timestamp
+  userName: string; // Added based on ReviewCard usage
+  userAvatar?: string; // Added based on ReviewCard usage
+  reply?: string;
+  reviewedBy?: string; // This field's purpose might need clarification
 }

@@ -3,8 +3,23 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp, orderBy, updateDoc, limit, serverTimestamp, doc, setDoc, FieldValue, getDoc } from 'firebase/firestore'; // Added getDoc
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  updateDoc,
+  limit,
+  serverTimestamp,
+  doc,
+  getDoc, // Ensure getDoc is imported
+  FieldValue // Keep for serverTimestamp
+} from 'firebase/firestore';
 import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
+import { mapUserProfile, mapBooking, mapNotification, mapNewsletterSubscriber } from '@/utils/mappers'; // Path alias should now work
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
@@ -23,8 +38,8 @@ if (!getApps().length) {
   app = getApp();
 }
 
-const auth = getAuth(app);
-const firestore = getFirestore(app);
+const authInstance = getAuth(app);
+const firestoreInstance = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
@@ -50,7 +65,7 @@ export const createBooking = async (bookingDetails: {
   salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore: Omit<Booking, 'id'> = {
+    const bookingDataForFirestore: Omit<Booking, 'id' | 'startTime' | 'endTime' | 'createdAt' | 'serviceId' | 'serviceName' | 'service'> & { serviceId: string; serviceName: string; service?: Service; createdAt: FieldValue } = {
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
       salonOwnerId: bookingDetails.salonOwnerId,
@@ -59,22 +74,22 @@ export const createBooking = async (bookingDetails: {
       serviceName: bookingDetails.service.name,
       date: bookingDetails.date,
       time: bookingDetails.time,
-      status: 'pending', // Default status
+      status: 'pending',
       createdAt: serverTimestamp(),
       clientName: bookingDetails.clientName,
       clientEmail: bookingDetails.clientEmail,
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
       salonAddress: bookingDetails.salonAddress,
       salonPhoneNumber: bookingDetails.salonPhoneNumber,
+      service: bookingDetails.service, // Include the full service object
     };
 
-    const docRef = await addDoc(collection(firestore, 'bookings'), bookingDataForFirestore);
+    const docRef = await addDoc(collection(firestoreInstance, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
-    // Notify salon owner
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
-      await addDoc(collection(firestore, 'notifications'), {
+      await addDoc(collection(firestoreInstance, 'notifications'), {
         userId: bookingDetails.salonOwnerId,
         message: notificationMessage,
         link: `/business/salon-bookings/${bookingDetails.salonId}`,
@@ -96,48 +111,19 @@ export const createBooking = async (bookingDetails: {
 };
 
 export const getUserBookings = async (userId: string): Promise<Booking[]> => {
-  const bookings: Booking[] = [];
-  if (!userId) return bookings;
+  if (!userId) return [];
   try {
     const q = query(
-      collection(firestore, 'bookings'),
+      collection(firestoreInstance, 'bookings'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc')
     );
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      const booking: Booking = {
-        id: docSnap.id,
-        salonId: data.salonId,
-        salonName: data.salonName,
-        salonOwnerId: data.salonOwnerId,
-        serviceId: data.serviceId,
-        serviceName: data.serviceName,
-        userId: data.userId,
-        // Combine date and time strings to create Timestamp objects
-        // Handle potential missing date or time data gracefully
-        startTime: (data.date && data.time)
-          ? Timestamp.fromDate(new Date(`${data.date}T${data.time}`))
- : (data.createdAt || Timestamp.now()), // Fallback to createdAt or now
-        // endTime is a string according to the Booking type
-        endTime: data.time || '', // Assign time string directly
-        date: data.date || '',
-        time: data.time || '',
-        status: data.status as Booking['status'],
-        clientName: data.clientName, // Should be populated on creation
-        clientEmail: data.clientEmail, // Should be populated on creation
-        clientPhoneNumber: data.clientPhoneNumber, // Should be populated on creation
-        createdAt: data.createdAt,
-        salonAddress: data.salonAddress,
-        salonPhoneNumber: data.salonPhoneNumber,
-      };
-      bookings.push(booking);
-    });
+    return querySnapshot.docs.map(docSnap => mapBooking({ id: docSnap.id, ...docSnap.data() }));
   } catch (error) {
     console.error(`Error fetching bookings for user ${userId}:`, error);
+    return [];
   }
-  return bookings;
 };
 
 export const getUserProfile = async (userId: string): Promise<UserProfile | null> => {
@@ -146,27 +132,10 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     return null;
   }
   try {
-    const userDocRef = doc(firestore, 'users', userId);
+    const userDocRef = doc(firestoreInstance, 'users', userId);
     const userDocSnap = await getDoc(userDocRef);
     if (userDocSnap.exists()) {
-      const data = userDocSnap.data();
-      return {
-        id: userDocSnap.id,
-        userId: data.userId || userId,
-        name: data.name || data.displayName || '',
-        displayName: data.displayName || data.name || '',
-        email: data.email || '',
-        role: data.role,
-        profilePhotoUrl: data.profilePhotoUrl,
-        phoneNumber: data.phoneNumber,
-        numericId: data.numericId,
-        preferences: {
-          favoriteServices: data.preferences?.favoriteServices || [],
-          priceRange: data.preferences?.priceRange || '',
-          preferredLocations: data.preferences?.preferredLocations || [],
-        },
-        // lastUpdatedAt: data.lastUpdatedAt ? (data.lastUpdatedAt as Timestamp).toDate() : undefined,
-      } as UserProfile;
+      return mapUserProfile(userDocSnap.data(), userDocSnap.id);
     } else {
       console.log(`No Firestore profile found for UID: ${userId} in getUserProfile.`);
       return null;
@@ -176,13 +145,13 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
     if (error.code === 'permission-denied') {
       console.error(`Firestore permission denied when fetching profile for user ${userId}. Check Firestore rules for /users/{userId}.`);
     }
-    return null; // Return null on any error to allow graceful handling
+    return null;
   }
 };
 
-export const updateUserRole = async (userId: string, role: string) => {
+export const updateUserRole = async (userId: string, role: UserProfile['role']) => {
   try {
-    const userDocRef = doc(firestore, 'users', userId);
+    const userDocRef = doc(firestoreInstance, 'users', userId);
     await updateDoc(userDocRef, { role });
     console.log(`User ${userId} role updated to ${role}`);
   } catch (error) {
@@ -193,35 +162,32 @@ export const updateUserRole = async (userId: string, role: string) => {
 
 export const getUserNotifications = async (userId: string): Promise<Notification[]> => {
   if (!userId) return [];
-  const notifications: Notification[] = [];
   try {
     const q = query(
-      collection(firestore, 'notifications'),
+      collection(firestoreInstance, 'notifications'),
       where('userId', '==', userId),
       orderBy('createdAt', 'desc'),
-      limit(20) // Increased limit slightly
+      limit(20)
     );
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => {
-      notifications.push({ id: docSnap.id, ...docSnap.data() } as Notification);
-    });
+    return querySnapshot.docs.map(docSnap => mapNotification({ id: docSnap.id, ...docSnap.data() }));
   } catch (error: any) {
     console.error("Error fetching user notifications:", error);
     if (error.code === 'permission-denied') {
       console.error(`Firestore permission denied when fetching notifications for user ${userId}. Check Firestore rules for /notifications collection for read access where userId matches.`);
     }
+    return [];
   }
-  return notifications;
 };
 
 export const markNotificationAsRead = async (notificationId: string): Promise<void> => {
   if (!notificationId) return;
   try {
-    const notificationRef = doc(firestore, 'notifications', notificationId);
+    const notificationRef = doc(firestoreInstance, 'notifications', notificationId);
     await updateDoc(notificationRef, { read: true });
   } catch (error: any) {
     console.error("Error marking notification as read:", error);
-     if (error.code === 'permission-denied') {
+    if (error.code === 'permission-denied') {
       console.error(`Firestore permission denied when marking notification ${notificationId} as read. Check Firestore rules for /notifications/{notificationId} for update access where userId matches.`);
     }
   }
@@ -231,14 +197,14 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
   if (!userId) return;
   try {
     const q = query(
-      collection(firestore, 'notifications'),
+      collection(firestoreInstance, 'notifications'),
       where('userId', '==', userId),
       where('read', '==', false)
     );
     const querySnapshot = await getDocs(q);
     const batchPromises: Promise<void>[] = [];
     querySnapshot.forEach((docSnap) => {
-      batchPromises.push(updateDoc(doc(firestore, 'notifications', docSnap.id), { read: true }));
+      batchPromises.push(updateDoc(doc(firestoreInstance, 'notifications', docSnap.id), { read: true }));
     });
     if (batchPromises.length > 0) {
       await Promise.all(batchPromises);
@@ -257,7 +223,8 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    await addDoc(collection(firestore, 'newsletterSubscribers'), {
+    // No longer querying for existing subscriptions to avoid permission issues for non-admins
+    await addDoc(collection(firestoreInstance, 'newsletterSubscribers'), {
       email: email,
       subscribedAt: serverTimestamp(),
     });
@@ -272,35 +239,28 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
 }
 
 export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]> {
-  const subscribers: NewsletterSubscriber[] = [];
   try {
-    const subscribersRef = collection(firestore, 'newsletterSubscribers');
+    const subscribersRef = collection(firestoreInstance, 'newsletterSubscribers');
     const q = query(subscribersRef, orderBy('subscribedAt', 'desc'));
     const querySnapshot = await getDocs(q);
-    querySnapshot.forEach((docSnap) => {
-      subscribers.push({ id: docSnap.id, ...docSnap.data() } as NewsletterSubscriber);
-    });
+    return querySnapshot.docs.map(docSnap => mapNewsletterSubscriber({ id: docSnap.id, ...docSnap.data() }));
   } catch (error: any) {
     console.error("Error fetching newsletter subscribers:", error);
     if (error.code === 'permission-denied') {
       console.error('Firestore permission denied when fetching newsletter subscribers. Ensure admin has read/list access to newsletterSubscribers collection.');
     }
+    return [];
   }
-  return subscribers;
 }
 
 export async function getNewsletterSubscriptionStatus(email: string): Promise<boolean> {
   if (!email) return false;
   try {
-    const subscribersRef = collection(firestore, 'newsletterSubscribers');
+    const subscribersRef = collection(firestoreInstance, 'newsletterSubscribers');
     const q = query(subscribersRef, where('email', '==', email), limit(1));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
   } catch (error: any) {
-    // This function is called by non-admins on their profile page.
-    // Rules usually restrict non-admins from querying newsletterSubscribers.
-    // So, an error (likely permission-denied) is expected here for non-admins.
-    // We log it but return false, as the user effectively isn't confirmed as subscribed if we can't check.
     if (error.code === 'permission-denied') {
       // console.warn(`Permission denied for user to check newsletter status for email: ${email}. This is expected if user is not admin.`);
     } else {
@@ -310,4 +270,5 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
   }
 }
 
-export { app, auth, analytics, firestore, FieldValue };
+// Export the initialized instances
+export { app, authInstance as auth, analytics, firestoreInstance as firestore, FieldValue };

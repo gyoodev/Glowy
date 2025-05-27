@@ -1,3 +1,4 @@
+
 import { Timestamp } from 'firebase/firestore';
 import type {
   Booking,
@@ -7,6 +8,8 @@ import type {
   Salon,
   Notification,
   NewsletterSubscriber,
+  DayWorkingHours,
+  WorkingHoursStructure,
 } from '@/types';
 
 function timestampToISOString(value: Timestamp | string | undefined | Date): string {
@@ -24,17 +27,16 @@ export function mapBooking(raw: any): Booking {
     userId: raw.userId,
     salonId: raw.salonId,
     serviceId: raw.serviceId,
-    // Ensure startTime and endTime are handled, they might be Timestamps or already strings
     startTime: timestampToISOString(raw.startTime),
     endTime: timestampToISOString(raw.endTime),
     salonName: raw.salonName || 'N/A',
     serviceName: raw.serviceName || 'N/A',
-    date: raw.date || new Date().toISOString().split('T')[0], // date is already typically a string 'YYYY-MM-DD'
+    date: raw.date || new Date().toISOString().split('T')[0],
     time: raw.time || 'N/A',
     status: raw.status as Booking['status'] || 'pending',
-    clientName: raw.clientName || 'N/A',
-    clientEmail: raw.clientEmail || 'N/A',
-    clientPhoneNumber: raw.clientPhoneNumber || 'N/A',
+    clientName: raw.clientName || 'N/A', // Ensure this field is included
+    clientEmail: raw.clientEmail || 'N/A', // Ensure this field is included
+    clientPhoneNumber: raw.clientPhoneNumber || 'N/A', // Ensure this field is included
     createdAt: timestampToISOString(raw.createdAt),
     salonAddress: raw.salonAddress || 'N/A',
     salonPhoneNumber: raw.salonPhoneNumber || 'N/A',
@@ -44,9 +46,6 @@ export function mapBooking(raw: any): Booking {
 }
 
 // -------------------- Review --------------------
-// Assuming a more complete Review type might be used elsewhere.
-// The current Review type in `types/review.ts` is minimal.
-// This mapper matches what might be expected based on `ReviewCard` and `AddReviewForm`.
 export function mapReview(raw: any, id?: string): Review {
   return {
     id: id || raw.id,
@@ -55,20 +54,18 @@ export function mapReview(raw: any, id?: string): Review {
     rating: raw.rating ?? 0,
     comment: raw.comment || '',
     date: timestampToISOString(raw.date),
-    // Fields used by ReviewCard, potentially set during review creation
     userName: raw.userName || 'Анонимен потребител',
     userAvatar: raw.userAvatar || 'https://placehold.co/40x40.png',
-    // Fields from types/review.ts
     reply: raw.reply || '',
-    reviewedBy: raw.reviewedBy || '', // This field is a bit ambiguous
+    reviewedBy: raw.reviewedBy || '',
   };
 }
 
 // -------------------- UserProfile --------------------
 export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
   return {
-    id: idOverride || raw.id || raw.userId || '', // Ensure ID is present
-    userId: raw.userId || idOverride || raw.id || '', // Ensure userId is present
+    id: idOverride || raw.id || raw.userId || '',
+    userId: raw.userId || idOverride || raw.id || '',
     name: raw.name || raw.displayName || 'Потребител',
     displayName: raw.displayName || raw.name || 'Потребител',
     email: raw.email || '',
@@ -81,13 +78,14 @@ export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
     },
     createdAt: timestampToISOString(raw.createdAt),
     phoneNumber: raw.phoneNumber || '',
-    numericId: raw.numericId || undefined, // Keep as number | undefined
+    numericId: raw.numericId || undefined,
     lastUpdatedAt: raw.lastUpdatedAt ? timestampToISOString(raw.lastUpdatedAt) : undefined,
   };
 }
 
 // -------------------- Salon --------------------
-// This needs to be comprehensive based on all fields used for a Salon.
+const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+
 export function mapSalon(raw: any, id?: string): Salon {
   const services = Array.isArray(raw.services) ? raw.services.map((s: any) => ({
     id: s.id || '',
@@ -95,39 +93,51 @@ export function mapSalon(raw: any, id?: string): Salon {
     description: s.description || '',
     price: typeof s.price === 'number' ? s.price : 0,
     duration: typeof s.duration === 'number' ? s.duration : 0,
-    categoryIcon: s.categoryIcon, // This will be undefined if not present
+    categoryIcon: s.categoryIcon,
   })) : [];
 
-  const workingHours = raw.workingHours || {};
-  // Ensure all days are present in workingHours
-  const daysOfWeek = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-  daysOfWeek.forEach(day => {
-    if (!workingHours[day]) {
-      workingHours[day] = { open: '', close: '', isOff: true }; // Default to closed if day is missing
-    }
-  });
-  
+  let workingHours: WorkingHoursStructure = {};
+  if (typeof raw.workingHours === 'object' && raw.workingHours !== null) {
+    daysOrder.forEach(dayKey => {
+      if (raw.workingHours[dayKey]) {
+        workingHours[dayKey] = {
+          open: raw.workingHours[dayKey].open || '',
+          close: raw.workingHours[dayKey].close || '',
+          isOff: raw.workingHours[dayKey].isOff ?? true, // Default to off if not specified
+        };
+      } else {
+        // Ensure all days are present, default to closed
+        workingHours[dayKey] = { open: '', close: '', isOff: true };
+      }
+    });
+  } else {
+    // Default working hours if none are provided
+    daysOrder.forEach(dayKey => {
+      workingHours[dayKey] = { open: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '09:00'), close: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '18:00'), isOff: (dayKey === 'saturday' || dayKey === 'sunday') };
+      if (dayKey === 'saturday') workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
+    });
+  }
+
   return {
     id: id || raw.id,
     name: raw.name || 'Неизвестен салон',
     description: raw.description || '',
     ownerId: raw.ownerId || '',
     address: raw.address || '',
-    city: raw.city || '', // Added city
-    priceRange: raw.priceRange || 'moderate', // Added priceRange
-    phoneNumber: raw.phoneNumber || raw.phone || '', // Added phone
-    email: raw.email || '', // Added email
-    website: raw.website || '', // Added website
+    city: raw.city || '',
+    priceRange: raw.priceRange || 'moderate',
+    phoneNumber: raw.phoneNumber || raw.phone || '',
+    email: raw.email || '',
+    website: raw.website || '',
     services: services,
     photos: Array.isArray(raw.photos) ? raw.photos : [],
-    heroImage: raw.heroImage || '', // Added heroImage
+    heroImage: raw.heroImage || '',
     location: raw.location || { lat: 0, lng: 0 },
     rating: typeof raw.rating === 'number' ? raw.rating : 0,
     createdAt: timestampToISOString(raw.createdAt),
-    availability: raw.availability || {}, // Added availability
-    workingHours: workingHours, // Added workingHours
-    promotion: raw.promotion, // Added promotion, ensure it's mapped if complex
-    // Fields from CreateBusinessPage that might be missing
+    availability: raw.availability || {},
+    workingHours: workingHours,
+    promotion: raw.promotion,
     atmosphereForAi: raw.atmosphereForAi || '',
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
@@ -139,12 +149,12 @@ export function mapNotification(raw: any, id?: string): Notification {
   return {
     id: id || raw.id,
     userId: raw.userId,
-    message: raw.message || '', // Title was removed from type, message is main content
+    message: raw.message || '',
     type: raw.type || 'info',
     read: raw.read ?? false,
     createdAt: timestampToISOString(raw.createdAt),
-    link: raw.link, // link is optional
-    relatedEntityId: raw.relatedEntityId, // optional
+    link: raw.link,
+    relatedEntityId: raw.relatedEntityId,
   };
 }
 
