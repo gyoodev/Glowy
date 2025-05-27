@@ -18,6 +18,7 @@ import { generateSalonDescription } from '@/ai/flows/generate-salon-description'
 import { Building, Sparkles, Loader2, PlusCircle, Trash2 } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { allBulgarianCities, mockServices } from '@/lib/mock-data';
+import { Service } from '@/types/service';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the schema for the form
