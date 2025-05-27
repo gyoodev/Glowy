@@ -18,7 +18,7 @@ import { Badge } from '@/components/ui/badge';
 
 const navItems = [
   { href: '/', label: 'Салони' },
-  { href: '/recommendations', label: 'AI Препоръки' },
+  { href: '/recommendations', label: 'Glowy Препоръка' },
   { href: '/contact', label: 'Контакти' },
 ];
 
@@ -130,7 +130,7 @@ export function Header() {
       // NOTE: A Firebase Cloud Function is needed to listen for new contacts
       // and create notifications of type 'new_contact_admin' for admin users.
       if (notification.type === 'new_contact_admin') {
- notification.link = '/admin/contacts';
+        notification.link = '/admin/contacts';
       }
       router.push(notification.link);
     }
@@ -165,7 +165,7 @@ export function Header() {
 
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
           {navItems.map((item) => {
-             if (item.href === '/recommendations' && !isLoggedIn) {
+             if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
               return null; 
             }
             return (
@@ -226,11 +226,11 @@ export function Header() {
                         >
                           <p className="text-sm leading-tight">{notification.message}</p>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {notification.createdAt?.seconds 
-                              ? formatDistanceToNow(new Date(notification.createdAt.seconds * 1000), { addSuffix: true, locale: bg })
-                              : (notification.createdAt && typeof (notification.createdAt as any).toDate === 'function') 
-                                ? formatDistanceToNow((notification.createdAt as any).toDate(), { addSuffix: true, locale: bg })
-                                : 'Преди малко'}
+                            {notification.createdAt
+                              ? (notification.createdAt as any).seconds
+                                ? formatDistanceToNow(new Date((notification.createdAt as any).seconds * 1000), { addSuffix: true, locale: bg })
+                                : formatDistanceToNow(new Date(notification.createdAt as string), { addSuffix: true, locale: bg })
+                              : 'Преди малко'}
                           </p>
                         </div>
                       ))}
@@ -277,7 +277,7 @@ export function Header() {
               <SheetTitle className="sr-only">Меню за навигация</SheetTitle>
               <nav className="flex flex-col space-y-2 mt-6">
                 {navItems.map((item) => {
-                  if (item.href === '/recommendations' && !isLoggedIn) {
+                  if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
                     return null; 
                   }
                   return (
@@ -306,7 +306,7 @@ export function Header() {
                             <User className="mr-2 h-4 w-4" /> Профил
                         </Link>
                     </Button>
-                    <Button variant="ghost" onClick={() => { handleLogout(); }} className="justify-start text-base py-3 text-destructive hover:text-destructive">
+                    <Button variant="ghost" onClick={() => { handleLogout(); setIsMobileMenuOpen(false); }} className="justify-start text-base py-3 text-destructive hover:text-destructive">
                         <LogOut className="mr-2 h-4 w-4" /> Изход
                     </Button>
                   </>
