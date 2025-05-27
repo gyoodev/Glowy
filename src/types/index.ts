@@ -15,15 +15,11 @@ export interface Service {
   categoryIcon?: React.ElementType;
 }
 
-export interface Review {
-  id: string;
-  userName: string;
-  userAvatar?: string;
+export interface Review { // Added this type
+  id: string; // Added this field
+  author: string; // Changed from userName to author and removed userAvatar, date, userId, and salonId
   rating: number; // 1-5
   comment: string;
-  date: string; // ISO date string
-  userId: string;
-  salonId?: string;
 }
 
 export interface Promotion {
