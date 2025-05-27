@@ -109,9 +109,9 @@ export default function AccountPage() {
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
-            // Ensure startTime and endTime are Timestamps as per the updated Booking type
-            startTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
-            endTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
+            // Convert startTime and endTime Timestamps to ISO strings
+            startTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)).toDate().toISOString(),
+            endTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)).toDate().toISOString(),
             // Provide default values or handle missing properties gracefully
             salonName: booking.salonName || 'N/A',
             serviceName: booking.serviceName || 'N/A',
