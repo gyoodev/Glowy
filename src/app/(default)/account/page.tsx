@@ -104,7 +104,13 @@ export default function AccountPage() {
 
           // Fetch user's bookings
           const userBookings = await getUserBookings(user.uid);
-          setBookings(userBookings);
+          // Map the fetched data to explicitly match the Booking type structure
+          const mappedBookings: Booking[] = userBookings.map(booking => ({
+            id: booking.id,
+            ...booking, // Spread existing properties
+            // Ensure all required Booking properties are present, add defaults or handle missing ones if necessary
+          }));
+          setBookings(mappedBookings);
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
