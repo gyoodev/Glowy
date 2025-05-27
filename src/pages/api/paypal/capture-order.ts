@@ -1,6 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import paypal from '@paypal/checkout-server-sdk';
+import paypal from '@paypal/paypal-server-sdk';
 import { initializeApp, getApps, cert, type App as AdminApp } from 'firebase-admin/app';
 // FieldValue is a special type from firebase-admin
 import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
