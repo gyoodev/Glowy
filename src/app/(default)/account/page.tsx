@@ -113,7 +113,7 @@ export default function AccountPage() {
             startTime: booking.startTime,
             endTime: booking.endTime,
             status: booking.status,
-            salonName: booking.salonName || 'N/A', // Provide default or handle missing
+            salonName: booking.salonName || 'N/A', // Provide default value
             serviceName: booking.serviceName || 'N/A', // Provide default or handle missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
             time: booking.time || 'N/A', // Provide default or handle missing
