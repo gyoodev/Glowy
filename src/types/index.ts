@@ -87,9 +87,9 @@ export interface Booking {
   time: string; // "HH:mm"
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
   createdAt?: any; // For Firestore Timestamp
-  clientName: string;
-  clientEmail: string;
-  clientPhoneNumber: string;
+  clientName?: string;
+  clientEmail?: string;
+  clientPhoneNumber?: string;
   salonAddress?: string;
   salonPhoneNumber?: string;
   salonOwnerId?: string; // Added for notifying salon owner
