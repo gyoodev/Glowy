@@ -203,7 +203,7 @@ export default function CreateBusinessPage() {
         reviews: [], 
         photos: ['https://placehold.co/600x400.png?text=Photo+1'], 
         heroImage: 'https://placehold.co/1200x400.png?text=Hero+Image', 
-        availability: {}, 
+        availability: {}, // TODO: Implement availability management
         createdAt: serverTimestamp(),
     };
 
