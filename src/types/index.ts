@@ -83,6 +83,8 @@ export interface Booking {
   serviceId: string; // ID of the booked service
   serviceName: string; // Name of the booked service
   userId: string; // ID of the user who made the booking
+  startTime: string; // Start time of the booking (e.g., ISO string or specific format)
+  endTime: string; // End time of the booking (e.g., ISO string or specific format)
   date: string; // Date of the booking (ISO date string)
   time: string; // Time of the booking ("HH:mm")
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed'; // Current status of the booking
