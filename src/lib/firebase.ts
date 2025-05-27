@@ -115,8 +115,17 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
         serviceId: data.serviceId,
         serviceName: data.serviceName,
         userId: data.userId,
-        date: data.date,
-        time: data.time,
+        // Combine date and time strings to create Timestamp objects
+        // Handle potential missing date or time data gracefully
+        startTime: (data.date && data.time)
+          ? Timestamp.fromDate(new Date(`${data.date}T${data.time}`))
+ : (data.createdAt || Timestamp.now()), // Fallback to createdAt or now
+        endTime: (data.date && data.time && data.serviceDuration) // Assuming serviceDuration is available to calculate end time
+ ? Timestamp.fromDate(new Date(new Date(`${data.date}T${data.time}`).getTime() + data.serviceDuration * 60000)) // Add duration in milliseconds
+ : (data.createdAt || Timestamp.now()), // Fallback
+        // Keep date and time as strings if they are used elsewhere in this format
+        date: data.date || '',
+        time: data.time || '',
         status: data.status as Booking['status'],
         clientName: data.clientName, // Should be populated on creation
         clientEmail: data.clientEmail, // Should be populated on creation

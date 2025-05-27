@@ -111,8 +111,8 @@ export default function AccountPage() {
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
             startTime: Timestamp.fromDate(new Date(booking.startTime)),
-            endTime: booking.endTime, // Assuming endTime is always present
-            status: booking.status, // Assuming status is always present
+            endTime: Timestamp.fromDate(new Date(booking.endTime)), // Ensure endTime is also a Timestamp
+            status: booking.status as Booking['status'], // Explicitly cast status
             salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
