@@ -110,16 +110,19 @@ export default function AccountPage() {
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
-            startTime: Timestamp.fromDate(new Date(booking.startTime)),
-            endTime: Timestamp.fromDate(new Date(booking.endTime)), // Ensure endTime is also a Timestamp
-            status: booking.status as Booking['status'], // Explicitly cast status
-            salonName: booking.salonName || 'N/A', // Provide default if missing
+            startTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
+            endTime: booking.time, // Assign time string directly to endTime as per type
+            status: booking.status as Booking['status'], // Explicitly cast status            salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
             time: booking.time || 'N/A', // Provide default or handle missing
             service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
           }));
           setBookings(mappedBookings);
+          // Add console log to inspect types after mapping
+          console.log('Mapped bookings with types:', mappedBookings.map(b => ({
+            id: b.id, startTimeType: typeof b.startTime, endTimeType: typeof b.endTime,
+          })));
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
