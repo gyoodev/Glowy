@@ -111,8 +111,23 @@ export default function AccountPage() {
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
+            // Ensure startTime and endTime are Timestamps as per the updated Booking type
             startTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
-            endTime: booking.time, // Assign time string directly to endTime as per type
+            endTime: Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)), // Convert date and time string to Timestamp
+            // Provide default values or handle missing properties gracefully
+            salonName: booking.salonName || 'N/A',
+            serviceName: booking.serviceName || 'N/A',
+            date: booking.date || new Date().toISOString().split('T')[0],
+            time: booking.time || 'N/A',
+            status: booking.status as Booking['status'],
+            clientName: booking.clientName || 'N/A',
+            clientEmail: booking.clientEmail || 'N/A',
+            clientPhoneNumber: booking.clientPhoneNumber || 'N/A',
+            createdAt: booking.createdAt || Timestamp.now(), // Provide default Timestamp
+            salonAddress: booking.salonAddress || 'N/A',
+            salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
+            salonOwnerId: booking.salonOwnerId || 'N/A',
+            // Removed the 'service' property as it was not in the Booking type definition
             status: booking.status as Booking['status'], // Explicitly cast status
             salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
@@ -120,11 +135,7 @@ export default function AccountPage() {
             time: booking.time || 'N/A', // Provide default or handle missing
             service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
           }));
-          setBookings(mappedBookings);
-          // Add console log to inspect types after mapping
-          console.log('Mapped bookings with types:', mappedBookings.map(b => ({
-            id: b.id, startTimeType: typeof b.startTime, endTimeType: typeof b.endTime,
-          })));
+          setBookings(mappedBookings as Booking[]); // Cast to Booking[] to ensure type correctness
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
