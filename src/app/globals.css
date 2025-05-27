@@ -17,42 +17,48 @@ body {
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 10%;
 
-    --primary: 250 70% 75%; /* Periwinkle/Lavender-Blue */
-    --primary-foreground: 250 40% 20%; /* Darker blue-purple for text on primary */
+    --primary: 260 85% 65%; /* New Admin Purple Accent */
+    --primary-foreground: 0 0% 100%; /* White for text on new primary */
 
-    --secondary: 270 60% 95%; /* Very light lavender */
-    --secondary-foreground: 270 20% 30%; /* Text for secondary */
+    --secondary: 240 5% 96%; /* Lighter gray for backgrounds like main content area */
+    --secondary-foreground: 240 10% 25%; /* Text for secondary */
 
-    --muted: 240 20% 96%; /* Light cool gray */
-    --muted-foreground: 240 10% 45%; /* Muted text */
+    --muted: 240 5% 90%; /* Slightly darker muted gray */
+    --muted-foreground: 240 5% 45%; /* Muted text */
 
-    --accent: 330 85% 70%; /* Vibrant Pink */
-    --accent-foreground: 330 50% 25%; /* Darker, slightly desaturated pink/maroon for text on accent */
+    --accent: 330 85% 70%; /* Vibrant Pink - can be used for other accents if needed */
+    --accent-foreground: 330 50% 25%;
 
     --destructive: 0 80% 65%; /* Softer red/coral */
     --destructive-foreground: 0 0% 100%; /* White */
 
-    --border: 270 20% 88%; /* Light lavender gray border */
-    --input: 270 20% 97%; /* Very light lavender gray for input backgrounds */
-    --ring: 250 70% 65%; /* Slightly darker periwinkle for rings */
+    --border: 240 5% 88%; /* Light cool gray border */
+    --input: 240 5% 97%; /* Very light gray for input backgrounds */
+    --ring: 260 85% 70%; /* Ring color based on new primary */
     
 
     --radius: 0.5rem;
 
-    /* Sidebar specific variables */
-    --sidebar-background: 270 60% 97%; /* Lighter version of secondary for sidebar */
-    --sidebar-foreground: 240 10% 25%;
-    --sidebar-primary: 250 70% 70%; /* Brighter periwinkle for sidebar highlights */
-    --sidebar-primary-foreground: 250 40% 15%;
-    --sidebar-accent: 330 85% 75%; /* Lighter accent for sidebar */
-    --sidebar-accent-foreground: 330 50% 20%;
-    --sidebar-border: 250 20% 86%;
-    --sidebar-ring: 250 70% 70%;
+    /* Admin Panel Specific Colors from Image */
+    --admin-sidebar-background: 0 0% 100%; /* White sidebar */
+    --admin-sidebar-foreground: 240 10% 30%;
+    --admin-sidebar-active-background: 260 85% 97%; /* Light purple for active item bg */
+    --admin-sidebar-active-foreground: var(--primary); /* Main purple for active item text/icon */
+    
+    --admin-topbar-background: 0 0% 100%; /* White top bar */
+    --admin-content-background: 240 5% 98%; /* Very light gray for main content (slightly different from secondary) */
+
+    --stat-green: 145 63% 42%;
+    --stat-green-light: 145 63% 95%;
+    --stat-blue: 217 91% 55%;
+    --stat-blue-light: 217 91% 95%;
+    --stat-orange: 30 100% 50%;
+    --stat-orange-light: 30 100% 95%;
   }
 
   .dark {
-    --background: 240 10% 10%; /* Dark blue-gray */
-    --foreground: 0 0% 95%; /* Light Gray / Off-white */
+    --background: 240 10% 10%;
+    --foreground: 0 0% 95%;
 
     --card: 240 10% 12%;
     --card-foreground: 0 0% 95%;
@@ -60,33 +66,40 @@ body {
     --popover: 240 10% 12%;
     --popover-foreground: 0 0% 95%;
 
-    --primary: 250 70% 65%; /* Periwinkle/Lavender-Blue (brighter for dark mode) */
-    --primary-foreground: 250 20% 10%; /* Very dark blue-purple for text */
+    --primary: 260 85% 70%; /* Brighter Admin Purple for Dark Mode */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 30% 20%; /* Darker lavender */
-    --secondary-foreground: 0 0% 90%;
+    --secondary: 240 10% 15%; /* Darker gray for secondary bg */
+    --secondary-foreground: 0 0% 80%;
 
-    --muted: 240 10% 18%; /* Darker gray */
+    --muted: 240 10% 20%;
     --muted-foreground: 0 0% 60%;
 
-    --accent: 330 80% 65%; /* Vibrant Pink (slightly adjusted for dark mode) */
-    --accent-foreground: 330 30% 15%; /* Very dark pink for text */
+    --accent: 330 80% 65%;
+    --accent-foreground: 0 0% 95%;
 
-    --destructive: 0 70% 55%; /* Darker Coral/Red */
+    --destructive: 0 70% 55%;
     --destructive-foreground: 0 0% 95%;
 
-    --border: 270 20% 25%;
-    --input: 270 20% 22%;
-    --ring: 250 70% 55%;
+    --border: 240 10% 25%;
+    --input: 240 10% 18%;
+    --ring: 260 85% 65%;
     
-    --sidebar-background: 240 10% 13%;
-    --sidebar-foreground: 0 0% 90%;
-    --sidebar-primary: 250 70% 60%;
-    --sidebar-primary-foreground: 0 0% 95%;
-    --sidebar-accent: 330 80% 70%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 250 20% 20%;
-    --sidebar-ring: 250 70% 60%;
+    /* Admin Panel Dark Specific Colors */
+    --admin-sidebar-background: 240 10% 13%; 
+    --admin-sidebar-foreground: 0 0% 80%;
+    --admin-sidebar-active-background: 260 85% 20%; 
+    --admin-sidebar-active-foreground: var(--primary);
+    
+    --admin-topbar-background: 240 10% 12%; 
+    --admin-content-background: 240 10% 9%; 
+
+    --stat-green: 145 50% 55%;
+    --stat-green-light: 145 50% 15%;
+    --stat-blue: 217 70% 60%;
+    --stat-blue-light: 217 70% 18%;
+    --stat-orange: 30 80% 55%;
+    --stat-orange-light: 30 80% 16%;
   }
 }
 
