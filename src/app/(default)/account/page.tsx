@@ -10,7 +10,6 @@ import type { UserProfile, Booking, Review, Service } from '../../../types/index
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ReviewCard } from '@/components/salon/review-card';
 import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { Timestamp } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
@@ -107,8 +106,7 @@ export default function AccountPage() {
           const userBookings = await getUserBookings(user.uid);
           // Map the fetched data to explicitly match the Booking type structure and ensure all required properties are present
           const mappedBookings: Booking[] = userBookings.map((booking: any) => ({
-            console.log('Type of booking.endTime:', typeof booking.endTime);
-            console.log('Type of mappedBooking.endTime:', typeof Timestamp.fromDate(new Date(`${booking.date}T${booking.time}`)));
+
             id: booking.id, // Assuming id is always present
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
