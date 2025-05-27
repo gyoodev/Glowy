@@ -10,6 +10,7 @@ import { getFirestore, collection, query, where, getDocs, orderBy, Timestamp as 
 import type { UserProfile, Salon, Booking } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -85,42 +86,38 @@ export default function BusinessManagePage() {
             });
             setUserBusinesses(businesses);
 
-            // After fetching businesses, fetch bookings for charts
             if (businesses.length > 0) {
               setLoadingCharts(true);
               const salonIds = businesses.map(b => b.id);
               const bookingsRef = collection(firestore, 'bookings');
-              // Fetch all bookings for these salons in one go
               const bookingsQuery = query(bookingsRef, where('salonId', 'in', salonIds));
               const bookingsSnapshot = await getDocs(bookingsQuery);
-              const allBookings: Booking[] = bookingsSnapshot.docs.map(doc => ({id: doc.id, ...doc.data()}) as Booking);
+              const allBookings: Booking[] = bookingsSnapshot.docs.map(docSnap => ({id: docSnap.id, ...docSnap.data()}) as Booking);
 
               const monthlyPlaceholders = generateMonthlyPlaceholders(NUM_MONTHS_FOR_CHARTS);
 
-              // Aggregate total monthly reservations
               const aggregatedTotal: Record<string, number> = {};
               allBookings.forEach(booking => {
-                if (booking.createdAt) {
+                if (booking.createdAt && typeof booking.createdAt === 'string') {
                   try {
-                    const date = new Date(booking.createdAt); // Assuming createdAt is ISO string
+                    const date = new Date(booking.createdAt); 
                     if (!isNaN(date.getTime())) {
                       const monthKey = monthYearFormatter(date);
                       aggregatedTotal[monthKey] = (aggregatedTotal[monthKey] || 0) + 1;
                     }
-                  } catch (e) { console.warn("Error parsing booking date", e); }
+                  } catch (e) { console.warn("Error parsing booking date for total chart", e); }
                 }
               });
               setTotalMonthlyReservationsData(
                 monthlyPlaceholders.map(p => ({ ...p, count: aggregatedTotal[p.month] || 0 }))
               );
 
-              // Aggregate per-salon monthly reservations
               const perSalonAggregated: Record<string, Array<{ month: string, count: number }>> = {};
               businesses.forEach(salon => {
                 const salonBookings = allBookings.filter(b => b.salonId === salon.id);
                 const aggregatedSalonBookings: Record<string, number> = {};
                 salonBookings.forEach(booking => {
-                  if (booking.createdAt) {
+                  if (booking.createdAt && typeof booking.createdAt === 'string') {
                     try {
                       const date = new Date(booking.createdAt);
                       if (!isNaN(date.getTime())) {
@@ -135,7 +132,7 @@ export default function BusinessManagePage() {
               setPerSalonMonthlyReservationsData(perSalonAggregated);
               setLoadingCharts(false);
             } else {
-              setLoadingCharts(false); // No businesses, so no charts to load
+              setLoadingCharts(false); 
             }
 
           } catch (error) {
@@ -224,7 +221,6 @@ export default function BusinessManagePage() {
             </div>
           ) : (
             <>
-              {/* Aggregate Chart for All Businesses */}
               {userBusinesses.length > 0 && (
                 <Card className="mb-8 shadow-lg">
                   <CardHeader>
@@ -254,10 +250,9 @@ export default function BusinessManagePage() {
                 </Card>
               )}
 
-              {/* Per-Business Listing and Charts */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8"> {/* Changed to 1 column for better layout with chart below */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8">
                 {userBusinesses.map((business) => (
-                  <div key={business.id} className="space-y-4">
+                  <div key={business.id} className="space-y-0"> {/* Removed space-y-4 to put chart dialog inside card footer */}
                     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
                       <CardHeader className="p-0">
                         <Link href={`/salons/${salonNameToSlug(business.name)}`} aria-label={`Преглед на ${business.name}`}>
@@ -307,37 +302,40 @@ export default function BusinessManagePage() {
                             <Gift className="mr-2 h-4 w-4" /> Промотирай
                           </Link>
                         </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              <LineChartIcon className="mr-2 h-4 w-4" /> Статистика
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-[700px] md:max-w-[800px] lg:max-w-[900px]">
+                            <DialogHeader>
+                              <DialogTitle>Статистика за резервации: {business.name}</DialogTitle>
+                              <DialogDescription>
+                                Преглед на месечните резервации за последните {NUM_MONTHS_FOR_CHARTS} месеца.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="h-[350px] p-4 mt-4">
+                              {loadingCharts ? <p>Зареждане на статистика...</p> : perSalonMonthlyReservationsData[business.id]?.length > 0 ? (
+                                <ResponsiveContainer width="100%" height="100%">
+                                  <LineChart data={perSalonMonthlyReservationsData[business.id]} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/30" />
+                                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
+                                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} width={30}/>
+                                    <Tooltip
+                                      cursor={{ strokeDasharray: '3 3' }}
+                                      contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.375rem', fontSize: '0.75rem' }}
+                                      labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: '500' }}
+                                    />
+                                    <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Резервации" />
+                                  </LineChart>
+                                </ResponsiveContainer>
+                              ) : <p className="text-center text-sm text-muted-foreground pt-4">Няма данни за резервации за този салон.</p>}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </CardFooter>
                     </Card>
-
-                    {/* Per-Salon Chart */}
-                    {perSalonMonthlyReservationsData[business.id] && (
-                      <Card className="shadow-md">
-                        <CardHeader className="pb-2 pt-4">
-                          <CardTitle className="text-md font-semibold flex items-center">
-                            <LineChartIcon className="mr-2 h-4 w-4 text-secondary-foreground" />
-                            Месечни резервации за: {business.name}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="h-[200px] p-2">
-                          {loadingCharts ? <p>Зареждане...</p> : perSalonMonthlyReservationsData[business.id]?.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
-                              <LineChart data={perSalonMonthlyReservationsData[business.id]} margin={{ top: 5, right: 20, left: -25, bottom: 5 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/30" />
-                                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} allowDecimals={false} width={30}/>
-                                <Tooltip
-                                  cursor={{ strokeDasharray: '3 3' }}
-                                  contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.375rem', fontSize: '0.75rem' }}
-                                  labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: '500' }}
-                                />
-                                <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} name="Резервации" />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          ) : <p className="text-center text-sm text-muted-foreground pt-4">Няма данни за резервации за този салон.</p>}
-                        </CardContent>
-                      </Card>
-                    )}
                   </div>
                 ))}
               </div>
@@ -348,7 +346,8 @@ export default function BusinessManagePage() {
     </div>
   );
 }
+    
+    
+    
 
-    
-    
     
