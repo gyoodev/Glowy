@@ -6,7 +6,7 @@ import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking, Review } from '../../../types/index';
+import type { UserProfile, Booking, Review, Service } from '../../../types/index';
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -104,11 +104,20 @@ export default function AccountPage() {
 
           // Fetch user's bookings
           const userBookings = await getUserBookings(user.uid);
-          // Map the fetched data to explicitly match the Booking type structure
+          // Map the fetched data to explicitly match the Booking type structure and ensure all required properties are present
           const mappedBookings: Booking[] = userBookings.map(booking => ({
             id: booking.id,
-            ...booking, // Spread existing properties
-            // Ensure all required Booking properties are present, add defaults or handle missing ones if necessary
+            userId: booking.userId,
+            salonId: booking.salonId,
+            serviceId: booking.serviceId,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
+            status: booking.status,
+            salonName: booking.salonName || 'N/A', // Provide default or handle missing
+            serviceName: booking.serviceName || 'N/A', // Provide default or handle missing
+            date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
+            time: booking.time || 'N/A', // Provide default or handle missing
+            service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
           }));
           setBookings(mappedBookings);
 
