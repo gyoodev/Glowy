@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
-import { ReviewCard } from '../../components/salon/review-card'; // Import ReviewCard
+import { ReviewCard } from '@/components/salon/review-card'; // Import ReviewCard
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge'; import type { UserProfile, Booking, Review, Service } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
