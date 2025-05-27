@@ -5,15 +5,14 @@ import { useState, useEffect, useRef } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';import type { Booking } from '../../../types/index';
-import type { UserProfile, Booking, Review, Service } from '../../../types/index';
-import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; import type { UserProfile, Booking, Review, Service } from '../../../types/index';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { getUserProfile, getNewsletterSubscriptionStatus, getUserBookings } from '@/lib/firebase';
+import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 
 interface FirebaseError extends Error {
   code?: string;
