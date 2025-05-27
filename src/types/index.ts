@@ -77,19 +77,19 @@ export interface UserProfile {
 }
 
 export interface Booking {
-  id: string;
-  salonId: string;
-  salonName: string; // Explicitly define salonName as a string
-  serviceId: string;
-  serviceName: string;
-  userId: string;
-  date: string; // ISO date string
-  time: string; // "HH:mm"
-  status: 'confirmed' | 'pending' | 'cancelled' | 'completed';
+  id: string; // Unique identifier for the booking
+  salonId: string; // ID of the associated salon
+  salonName: string; // Name of the associated salon
+  serviceId: string; // ID of the booked service
+  serviceName: string; // Name of the booked service
+  userId: string; // ID of the user who made the booking
+  date: string; // Date of the booking (ISO date string)
+  time: string; // Time of the booking ("HH:mm")
+  status: 'confirmed' | 'pending' | 'cancelled' | 'completed'; // Current status of the booking
   createdAt?: any; // For Firestore Timestamp
-  clientName?: string;
-  clientEmail?: string;
-  clientPhoneNumber?: string;
+  clientName?: string; // Name of the client (optional)
+  clientEmail?: string; // Email of the client (optional)
+  clientPhoneNumber?: string; // Phone number of the client (optional)
   salonAddress?: string;
   salonPhoneNumber?: string;
   salonOwnerId?: string; // Added for notifying salon owner

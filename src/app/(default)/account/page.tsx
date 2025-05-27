@@ -105,16 +105,16 @@ export default function AccountPage() {
           // Fetch user's bookings
           const userBookings = await getUserBookings(user.uid);
           // Map the fetched data to explicitly match the Booking type structure and ensure all required properties are present
-          const mappedBookings: Booking[] = userBookings.map(booking => ({
-            id: booking.id,
-            userId: booking.userId,
-            salonId: booking.salonId,
-            serviceId: booking.serviceId,
-            startTime: booking.startTime,
-            endTime: booking.endTime,
-            status: booking.status,
-            salonName: booking.salonName || 'N/A', // Provide default value
-            serviceName: booking.serviceName || 'N/A', // Provide default or handle missing
+          const mappedBookings: Booking[] = userBookings.map((booking: any) => ({
+            id: booking.id, // Assuming id is always present
+            userId: booking.userId, // Assuming userId is always present
+            salonId: booking.salonId, // Assuming salonId is always present
+            serviceId: booking.serviceId, // Assuming serviceId is always present
+            startTime: booking.startTime, // Assuming startTime is always present
+            endTime: booking.endTime, // Assuming endTime is always present
+            status: booking.status, // Assuming status is always present
+            salonName: booking.salonName || 'N/A', // Provide default if missing
+            serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
             time: booking.time || 'N/A', // Provide default or handle missing
             service: booking.service as Service || { name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
