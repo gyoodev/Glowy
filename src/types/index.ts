@@ -58,7 +58,7 @@ export interface Salon {
   promotion?: Promotion;
 }
 
-export interface UserProfileNew {
+export interface UserProfile {
   id: string;
   name: string;
   email: string;

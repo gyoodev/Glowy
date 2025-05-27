@@ -6,7 +6,7 @@ export interface UserProfile {
   displayName?: string | null;
   name?: string | null;
   phoneNumber?: string | null;
-  role?: 'user' | 'business' | 'admin';
+  role?: 'user' | 'business' | 'admin' | 'customer';
   // Add other user profile properties here as needed
   createdAt?: any; // Added for firebase timestamp
 }

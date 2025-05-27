@@ -6,7 +6,7 @@ import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfileNew, Booking, Review } from '../../../types/index';
+import type { UserProfile, Booking, Review } from '../../../types/index';
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -37,7 +37,7 @@ function getRoleDisplayName(role?: string) {
 }
 
 export default function AccountPage() {
-  const [userProfile, setUserProfile] = useState<UserProfileNew | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]); // Reviews written BY this user
@@ -73,7 +73,7 @@ export default function AccountPage() {
             const querySnapshot = await getDocs(usersQuery);
             if (!querySnapshot.empty) {
               const userDoc = querySnapshot.docs[0];
-              profileData = { id: userDoc.id, ...userDoc.data() } as UserProfileNew;
+              profileData = { id: userDoc.id, ...userDoc.data() } as UserProfile;
               console.log("Profile found by email:", profileData);
             }
           }
@@ -97,7 +97,7 @@ export default function AccountPage() {
             const newProfile = {
               id: user.uid,
               ...dataToSave,
-            } as UserProfileNew;
+            } as UserProfile;
             setUserProfile(newProfile);
             await fetchNewsletterStatus(newProfile.email);
           }
@@ -251,7 +251,7 @@ export default function AccountPage() {
               </div>
             ) : userProfile ? (
               <UserProfileForm
-                userProfile={userProfile}
+                userProfile={userProfile as UserProfile}
                 newsletterSubscriptionStatus={newsletterStatus}
                 onNewsletterSubscriptionChange={handleNewsletterSubscriptionChange}
               />
