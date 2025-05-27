@@ -135,7 +135,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     console.log('AdminLayout: Rendering loading state...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
-        <p className="text-lg">Зареждане на административен панел...</p>
+        <p className="text-lg">Glowy - Зареждане на административен панел...</p>
       </div>
     );
   }
