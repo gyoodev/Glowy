@@ -190,7 +190,7 @@ export default function CreateBusinessPage() {
         services: data.services.map(s => ({
             id: mockServices.find(ms => ms.name === s.name)?.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: s.name,
-            description: s.description || mockServices.find(ms => ms.name === s.name)?.description || '', 
+            description: (s as Service).description || mockServices.find(ms => ms.name === s.name)?.description || '',
             price: Number(s.price), 
             duration: Number(s.duration), 
         })),
