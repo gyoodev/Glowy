@@ -27,7 +27,7 @@ service cloud.firestore {
       // Admins can get any user document, list all users,
       // create user documents (e.g., if a Firebase Function only handles Auth user creation),
       // update any user document (e.g., to change a role),
-      // and delete any user document from Firestore.
+      // and delete any user document from Firestore. (Auth user deletion is separate via Admin SDK).
       allow get, list, create, update, delete: if isAdmin();
     }
 
@@ -59,7 +59,7 @@ service cloud.firestore {
                         get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid &&
                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
                       ) || isAdmin(); // Admins can update anything
-      allow list: if isAdmin();
+      allow list: if isAdmin(); // Only admins can list all bookings broadly
       allow delete: if false; // Or if isAdmin(); if admins should be able to delete
     }
 
@@ -75,7 +75,7 @@ service cloud.firestore {
 
     // Contacts collection
     match /contacts/{contactId} {
-      allow create: if true;
+      allow create: if true; // Allow anyone to submit
       allow get, list, update, delete: if isAdmin();
     }
 
@@ -87,21 +87,25 @@ service cloud.firestore {
       allow update: if false; // Updates are generally not needed by clients for subscribers
     }
 
+    // Notifications collection
+    match /notifications/{notificationId} {
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId; // User can read/update their own
+      allow create: if request.auth != null; // Authenticated users can create (e.g., for other users)
+      allow delete: if isAdmin();
+    }
+
+    // promotionsPayments collection (for admin dashboard charts)
+    match /promotionsPayments/{paymentId} {
+      allow get, list: if isAdmin(); // Admins can read payment data
+      // Create/update/delete for payments should ideally be server-side (e.g., via PayPal API route)
+      allow create, update, delete: if false; // Or if isAdmin() if manual admin management is needed
+    }
+
     // Counters collection
     match /counters/users {
       // Allow authenticated users to read and write the user counter.
       // WARNING: Still not secure for production - use Cloud Functions instead.
       allow read, write: if request.auth != null;
-    }
-
-    // promotionsPayments collection - NEW RULE
-    match /promotionsPayments/{paymentId} {
-      // Admins can read payment records for dashboard and payment management.
-      allow get, list: if isAdmin();
-      // Creation of payment records should be handled by a secure server-side process
-      // (e.g., your PayPal capture API route using Firebase Admin SDK).
-      // Client-side creation/update/delete of payment records is generally not allowed.
-      allow create, update, delete: if false; // Or if isAdmin() for manual admin adjustments, carefully consider.
     }
   }
 }
