@@ -125,7 +125,6 @@ export default function AccountPage() {
             salonAddress: booking.salonAddress || 'N/A',
             salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
             salonOwnerId: booking.salonOwnerId || 'N/A',
-            salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
             time: booking.time || 'N/A', // Provide default or handle missing
