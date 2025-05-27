@@ -11,8 +11,7 @@ import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lu
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { auth } from '@/lib/firebase';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
-import { Timestamp } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { getUserProfile, getNewsletterSubscriptionStatus, getUserBookings } from '@/lib/firebase';
 
