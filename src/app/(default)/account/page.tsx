@@ -110,7 +110,7 @@ export default function AccountPage() {
             userId: booking.userId, // Assuming userId is always present
             salonId: booking.salonId, // Assuming salonId is always present
             serviceId: booking.serviceId, // Assuming serviceId is always present
-            startTime: booking.startTime, // Assuming startTime is always present
+            startTime: Timestamp.fromDate(new Date(booking.startTime)), // Convert string to Timestamp
             endTime: booking.endTime, // Assuming endTime is always present
             status: booking.status, // Assuming status is always present
             salonName: booking.salonName || 'N/A', // Provide default if missing
