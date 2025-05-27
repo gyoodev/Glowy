@@ -15,7 +15,7 @@ export interface Service {
   categoryIcon?: React.ElementType;
 }
 
-export type Review = { // Export the Review type
+export type Review = { 
   id: string;
   userName: string;
   userAvatar?: string;
