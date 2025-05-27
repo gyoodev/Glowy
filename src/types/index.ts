@@ -61,7 +61,7 @@ export interface UserProfile {
   id: string;
   name: string;
   email: string;
-  role?: 'customer' | 'business' | 'admin';
+  role?: 'user' | 'customer' | 'business' | 'admin';
   profilePhotoUrl?: string;
   preferences?: {
     favoriteServices?: string[];
