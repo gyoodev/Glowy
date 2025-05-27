@@ -125,8 +125,6 @@ export default function AccountPage() {
             salonAddress: booking.salonAddress || 'N/A',
             salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
             salonOwnerId: booking.salonOwnerId || 'N/A',
-            // Removed the 'service' property as it was not in the Booking type definition
-            status: booking.status as Booking['status'], // Explicitly cast status
             salonName: booking.salonName || 'N/A', // Provide default if missing
             serviceName: booking.serviceName || 'N/A', // Provide default if missing
             date: booking.date || new Date().toISOString().split('T')[0], // Provide default or handle missing
