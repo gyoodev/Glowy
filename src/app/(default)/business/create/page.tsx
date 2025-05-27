@@ -21,6 +21,13 @@ import { allBulgarianCities, mockServices } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 
 // Define the schema for the form
+interface SalonServiceData {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  duration: number;
+}
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
   description: z.string().min(20, 'Описанието трябва да е поне 20 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
@@ -180,7 +187,7 @@ export default function CreateBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        services: data.services.map(s => ({ 
+        services: data.services.map(s => ({
             id: mockServices.find(ms => ms.name === s.name)?.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: s.name,
             description: s.description || mockServices.find(ms => ms.name === s.name)?.description || '', 
