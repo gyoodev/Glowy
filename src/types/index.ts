@@ -15,10 +15,10 @@ export interface Service {
   categoryIcon?: React.ElementType;
 }
 
-export interface Review { // Added this type
-  id: string; // Added this field
-  author: string; // Changed from userName to author and removed userAvatar, date, userId, and salonId
-  rating: number; // 1-5
+export interface Review {
+  id: string;
+  author: string;
+  rating: number;
   comment: string;
 }
 
