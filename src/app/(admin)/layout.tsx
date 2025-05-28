@@ -43,6 +43,7 @@ const navItems: NavItem[] = [
   { href: '/admin/contacts', label: 'Запитвания', icon: Mail },
   { href: '/admin/newsletter', label: 'Бюлетин', icon: Newspaper },
   { href: '/admin/payments', label: 'Плащания', icon: CreditCard },
+  { href: '/admin/settings', label: 'Настройки', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
