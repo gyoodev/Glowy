@@ -112,10 +112,10 @@ export default function SalonsDirectoryPage() {
       <header className="mb-16 py-12 relative overflow-hidden">
         <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
             <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
-            <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
-            <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/50 rounded-lg filter blur-xl animate-ping-slow delay-100 transform -rotate-45"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse duration-1000 delay-200"></div>
+            <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/50 rounded-lg filter blur-xl animate-ping-slow duration-1000 delay-100 transform -rotate-45"></div>
             <div className="absolute bottom-1/3 right-1/3 w-20 h-20 bg-primary/20 rounded-full filter blur-lg animate-pulse delay-300"></div>
-            <div className="absolute top-10 right-20 w-0.5 h-32 bg-border/50 transform rotate-[20deg] opacity-70"></div>
+            <div className="absolute top-10 right-20 w-0.5 h-32 bg-border/50 transform rotate-[20deg] opacity-70 duration-1000"></div>
         </div>
         <div className="container mx-auto px-6 grid md:grid-cols-2 gap-8 items-center relative z-0">
             <div className="text-center md:text-left">
@@ -156,8 +156,8 @@ export default function SalonsDirectoryPage() {
           {isLoading ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[...Array(6)].map((_, i) => (
-                 <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-                  <Skeleton className="h-48 w-full" />
+ <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden animate-pulse duration-100">
+                  <Skeleton className="h-48 w-full animate-pulse duration-1000" />
                   <div className="p-4">
                     <Skeleton className="h-6 w-3/4 mb-2" />
                     <Skeleton className="h-4 w-full mb-1" />

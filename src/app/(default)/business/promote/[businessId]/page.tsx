@@ -3,21 +3,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, FieldValue } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, firestore } from '@/lib/firebase';
 import type { Salon, Promotion } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, CheckCircle, Gift, Loader2, ArrowLeft, XCircle } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Gift, Loader2, ArrowLeft, XCircle, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
-import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
-import type { ReactPayPalScriptOptions } from '@paypal/react-paypal-js';
-import type { OnApproveData, OnApproveActions } from '@paypal/paypal-js';
-
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import type { StripeCardElementOptions } from '@stripe/stripe-js';
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
@@ -25,28 +24,157 @@ const promotionPackages = [
   { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
 ];
 
-const PAYPAL_CURRENCY = "EUR";
+const STRIPE_CURRENCY = "EUR"; // Stripe uses lowercase for currency
+
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
+
+const cardElementOptions: StripeCardElementOptions = {
+  style: {
+    base: {
+      color: "#32325d",
+      fontFamily: '"Helvetica Neue", Helvetica, sans-serif',
+      fontSmoothing: "antialiased",
+      fontSize: "16px",
+      "::placeholder": {
+        color: "#aab7c4",
+      },
+    },
+    invalid: {
+      color: "#fa755a",
+      iconColor: "#fa755a",
+    },
+  },
+  hidePostalCode: true,
+};
+
+interface CheckoutFormProps {
+  packageId: string;
+  amount: number;
+  currency: string;
+  businessId: string;
+  salonName: string;
+  onPaymentSuccess: (details: any, packageId: string) => void;
+  setIsProcessing: (isProcessing: string | null) => void;
+  isProcessing: boolean;
+}
+
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ packageId, amount, currency, businessId, salonName, onPaymentSuccess, setIsProcessing, isProcessing }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsProcessing(packageId);
+
+    if (!stripe || !elements) {
+      toast({ title: "Грешка", description: "Stripe не е зареден правилно.", variant: "destructive" });
+      setIsProcessing(null);
+      return;
+    }
+
+    const cardElement = elements.getElement(CardElement);
+    if (!cardElement) {
+      toast({ title: "Грешка", description: "Картовият елемент не е намерен.", variant: "destructive" });
+      setIsProcessing(null);
+      return;
+    }
+
+    try {
+      const { error: paymentMethodError, paymentMethod } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+      });
+
+      if (paymentMethodError) {
+        throw new Error(paymentMethodError.message || 'Грешка при създаване на метод за плащане.');
+      }
+
+      // Placeholder: Make API call to create PaymentIntent
+      const response = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount * 100, // Stripe expects amount in cents
+          currency: currency.toLowerCase(),
+          packageId,
+          businessId,
+          salonName,
+          paymentMethodId: paymentMethod.id,
+        }),
+      });
+
+      const paymentIntentResponse = await response.json();
+
+      if (!response.ok || !paymentIntentResponse.success) {
+        throw new Error(paymentIntentResponse.message || 'Грешка при създаване на намерение за плащане.');
+      }
+      
+      // Placeholder: Confirm card payment (normally the server confirms after webhook)
+      // For this client-side simulation, we'll assume it's confirmed by the API route
+      // In a real scenario, the server would confirm the PaymentIntent and update Firestore.
+      // The client might just get a success message or poll for status.
+      console.log('Simulating payment confirmation for package:', packageId, 'PaymentIntent Client Secret:', paymentIntentResponse.clientSecret);
+      
+      // Simulate success and update Firestore directly for now
+      const chosenPackage = promotionPackages.find(p => p.id === packageId);
+      if (!chosenPackage) {
+        throw new Error("Избраният пакет не е намерен.");
+      }
+
+      const now = new Date();
+      const expiryDate = addDays(now, chosenPackage.durationDays);
+      const newPromotion: Promotion = {
+        isActive: true,
+        packageId: chosenPackage.id,
+        packageName: chosenPackage.name,
+        purchasedAt: FirestoreTimestamp.fromDate(now) as any, // Use Firestore Timestamp for server
+        expiresAt: expiryDate.toISOString(),
+        paymentMethod: 'stripe', // Changed from paypal
+        transactionId: paymentMethod.id, // Using PaymentMethod ID as a placeholder transaction ID
+      };
+
+      const salonRef = doc(firestore, 'salons', businessId);
+      await updateDoc(salonRef, { promotion: newPromotion });
+
+      onPaymentSuccess({ id: paymentMethod.id /* Mocking details */ }, packageId);
+
+    } catch (err: any) {
+      console.error("Stripe payment error:", err);
+      toast({ title: "Грешка при плащане", description: err.message || "Възникна грешка при обработка на плащането.", variant: "destructive" });
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <CardElement options={cardElementOptions} />
+      <Button type="submit" className="w-full" disabled={!stripe || isProcessing}>
+        {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CreditCard className="mr-2 h-4 w-4" />}
+        Плати {amount} {currency.toUpperCase()}
+      </Button>
+    </form>
+  );
+};
+
 
 export default function PromoteBusinessPage() {
   const params = useParams();
   const router = useRouter();
-  const firestore = getFirestore();
   const { toast } = useToast();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState<string | null>(null); // Can store packageId being processed
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-  const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
+  const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
-  const paypalScriptOptions: ReactPayPalScriptOptions = {
-    clientId: paypalClientId || "test", // Fallback to "test" if not set, though UI will show error
-    currency: PAYPAL_CURRENCY,
-    intent: "capture",
-  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -64,7 +192,6 @@ export default function PromoteBusinessPage() {
       }
     });
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, router]);
 
   const fetchSalonData = async (userId: string) => {
@@ -105,108 +232,15 @@ export default function PromoteBusinessPage() {
       setIsProcessing(null);
       return;
     }
-
-    const now = new Date();
-    const expiryDate = addDays(now, chosenPackage.durationDays);
-    
-    // Use a structure that matches Firestore's Timestamp for server-side writing,
-    // but for client-side state, use ISO string or Date object.
-    const updatedPromotionClientState: Promotion = {
-      packageId: chosenPackage.id,
-      packageName: chosenPackage.name,
-      isActive: true,
-      expiresAt: expiryDate.toISOString(),
-      purchasedAt: now.toISOString(), // For client-side display
-      paymentMethod: 'paypal',
-      transactionId: details.id,
-    };
-
-    if (!salon.id) {
-        toast({ title: "Грешка", description: "ID на салона липсва.", variant: "destructive"});
-        setIsProcessing(null);
-        return;
-    }
-    // Firestore update is handled by the capture-order API route.
-    // Here we just update the client state.
-    setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotionClientState } : null);
+    // This part is now effectively handled within CheckoutForm for Stripe
+    // For PayPal, it was here. For Stripe, the Firestore update simulation is in CheckoutForm.
+    // A real implementation would rely on a server response after webhook.
+    fetchSalonData(currentUser!.uid); // Re-fetch salon data to show updated promotion status
     toast({
       title: 'Успешна покупка',
       description: 'Промоцията "' + chosenPackage.name + '" за ' + salon.name + ' е активирана!',
     });
     setIsProcessing(null);
-  };
-
-  const createOrder = async (packageId: string): Promise<string> => {
-    const chosenPackage = promotionPackages.find(p => p.id === packageId);
-    if (!chosenPackage || !businessId) {
-      toast({ title: "Грешка", description: "Невалиден пакет или ID на бизнеса.", variant: "destructive" });
-      throw new Error("Invalid package or business ID");
-    }
-    setIsProcessing(packageId);
-    try {
-      const response = await fetch('/api/paypal/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          packageId: chosenPackage.id,
-          businessId: businessId,
-          amount: chosenPackage.price.toString(),
-          currency: PAYPAL_CURRENCY,
-          description: 'Промоция: ' + chosenPackage.name + ' за салон ID ' + businessId,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("PayPal createOrder server error response:", errorText);
-        throw new Error('Грешка при създаване на PayPal поръчка. Сървърът отговори с: ' + response.status + '. Детайли: ' + errorText.substring(0, 200));
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        throw new Error(data.message || 'Грешка при създаване на PayPal поръчка.');
-      }
-      return data.orderID;
-    } catch (err: any) {
-      console.error("PayPal createOrder error:", err);
-      toast({ title: "Грешка с PayPal", description: err.message || "Възникна грешка при създаване на PayPal поръчка.", variant: "destructive" });
-      setIsProcessing(null);
-      throw err; // Rethrow to be caught by PayPalButtons onError
-    }
-  };
-
-  const onApprove = async (data: OnApproveData, actions: OnApproveActions, packageId: string): Promise<void> => {
-    if (!actions.order) {
-      toast({ title: "Грешка", description: "PayPal actions.order е неопределен.", variant: "destructive" });
-      setIsProcessing(null);
-      return Promise.reject(new Error("PayPal actions.order undefined"));
-    }
-    try {
-      const response = await fetch('/api/paypal/capture-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderID: data.orderID }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("PayPal captureOrder server error response:", errorText);
-        throw new Error('Грешка при финализиране на PayPal плащането. Сървърът отговори с: ' + response.status + '. Детайли: ' + errorText.substring(0, 200) );
-      }
-
-      const captureData = await response.json();
-
-      if (!captureData.success) {
-        throw new Error(captureData.message || 'Грешка при финализиране на PayPal плащането.');
-      }
-
-      handlePaymentSuccess(captureData.details, packageId);
-    } catch (err: any) {
-      console.error("PayPal onApprove error:", err);
-      toast({ title: "Грешка при плащане", description: err.message || "Възникна грешка при обработка на плащането.", variant: "destructive" });
-      setIsProcessing(null); 
-      throw err; 
-    }
   };
 
 
@@ -215,17 +249,11 @@ export default function PromoteBusinessPage() {
     setIsProcessing('stop');
     setError(null);
     try {
-      const response = await fetch(`/api/business/promote/${businessId}/stop`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const salonRef = doc(firestore, 'salons', salon.id);
+      await updateDoc(salonRef, {
+        'promotion.isActive': false,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to stop promotion via API.');
-      }
-
+      fetchSalonData(currentUser.uid); // Re-fetch salon data
       toast({
         title: 'Промоцията е спряна',
         description: 'Промоцията за ' + salon.name + ' беше деактивирана.',
@@ -255,7 +283,7 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  if (!paypalClientId) {
+  if (!stripePromise || !stripePublishableKey) {
     return (
       <div className="container mx-auto py-10 px-6">
          <header className="mb-8">
@@ -265,7 +293,7 @@ export default function PromoteBusinessPage() {
         </header>
         <div className="border border-yellow-400 rounded-md bg-yellow-50 p-4">
           <h4 className="text-lg font-semibold text-yellow-700 flex items-center"><AlertTriangle className="mr-2 h-6 w-6" /> Конфигурационна грешка</h4>
-          <p className="text-sm text-yellow-600 mt-2">PayPal Client ID не е конфигуриран. Моля, настройте NEXT_PUBLIC_PAYPAL_CLIENT_ID environment variable.</p>
+          <p className="text-sm text-yellow-600 mt-2">Stripe Publishable Key не е конфигуриран. Моля, настройте NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY environment variable.</p>
         </div>
       </div>
     );
@@ -289,7 +317,6 @@ export default function PromoteBusinessPage() {
 
 
   return (
-    <PayPalScriptProvider options={paypalScriptOptions}>
       <div className="container mx-auto py-10 px-6">
         <header className="mb-8">
           <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
@@ -338,53 +365,40 @@ export default function PromoteBusinessPage() {
             </Card>
 
             {!isCurrentlyPromoted && (
-              <section>
-                <h2 className="text-2xl font-semibold mb-6 text-foreground">Изберете Промоционален Пакет</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {promotionPackages.map((pkg) => (
-                    <Card key={pkg.id} className="flex flex-col shadow-md hover:shadow-xl transition-shadow">
-                      <CardHeader>
-                        <CardTitle className="text-xl flex items-center"><Gift className="mr-2 h-5 w-5 text-primary" /> {pkg.name}</CardTitle>
-                        <CardDescription>{pkg.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex-grow">
-                        <p className="text-2xl font-bold text-primary mb-2">{pkg.price} {PAYPAL_CURRENCY}</p>
-                        <p className="text-sm text-muted-foreground">Продължителност: {pkg.durationDays} дни</p>
-                      </CardContent>
-                      <CardFooter className="flex-col items-stretch">
-                        {isProcessing === pkg.id && <Loader2 className="h-6 w-6 animate-spin text-primary mx-auto my-2" />}
-                        <PayPalButtons
-                          key={`${pkg.id}-${salon.id || 'new'}`} // Ensure key changes if salon.id is not yet available
-                          style={{ layout: "vertical", color: "blue", shape: "rect", label: "pay" }}
-                          disabled={!!isProcessing || isProcessing === pkg.id}
-                          createOrder={() => createOrder(pkg.id)}
-                          onApprove={(data, actions) => onApprove(data, actions, pkg.id)}
-                          onError={(err: any) => {
-                            console.error("PayPal Button onError:", err);
-                            let message = "Възникна грешка по време на PayPal процеса.";
-                            if (err && err.message) {
-                                message = err.message;
-                            }
-                            toast({ title: "Грешка с PayPal", description: message, variant: "destructive" });
-                            setIsProcessing(null);
-                          }}
-                          onCancel={() => {
-                            toast({ title: "Плащането е отказано", description: "Отказахте плащането през PayPal. Моля, опитайте отново, ако желаете.", variant: "default" });
-                            setIsProcessing(null);
-                          }}
-                        />
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </section>
+              <Elements stripe={stripePromise}>
+                <section>
+                  <h2 className="text-2xl font-semibold mb-6 text-foreground">Изберете Промоционален Пакет</h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {promotionPackages.map((pkg) => (
+                      <Card key={pkg.id} className="flex flex-col shadow-md hover:shadow-xl transition-shadow">
+                        <CardHeader>
+                          <CardTitle className="text-xl flex items-center"><Gift className="mr-2 h-5 w-5 text-primary" /> {pkg.name}</CardTitle>
+                          <CardDescription>{pkg.description}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                          <p className="text-2xl font-bold text-primary mb-2">{pkg.price} {STRIPE_CURRENCY.toUpperCase()}</p>
+                          <p className="text-sm text-muted-foreground">Продължителност: {pkg.durationDays} дни</p>
+                        </CardContent>
+                        <CardFooter className="flex-col items-stretch space-y-2">
+                           <CheckoutForm
+                              packageId={pkg.id}
+                              amount={pkg.price}
+                              currency={STRIPE_CURRENCY}
+                              businessId={businessId!}
+                              salonName={salon.name}
+                              onPaymentSuccess={handlePaymentSuccess}
+                              setIsProcessing={setIsProcessing}
+                              isProcessing={isProcessing === pkg.id}
+                           />
+                        </CardFooter>
+                      </Card>
+                    ))}
+                  </div>
+                </section>
+              </Elements>
             )}
           </>
         )}
       </div>
-    </PayPalScriptProvider>
   );
 }
-    
-
-    
