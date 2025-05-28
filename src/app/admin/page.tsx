@@ -30,8 +30,9 @@ import {
   PieChart as PieChartIcon,
   TrendingUp,
   TrendingDown,
-  ListFilter, // Added for consistency with example image
-  Search, // Added for consistency with example image
+  ListFilter, 
+  Search, 
+  LineChart as LineChartLucide
 } from 'lucide-react';
 import {
   BarChart,
@@ -49,6 +50,7 @@ import type { UserProfile, Salon } from '@/types';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { auth } from '@/lib/firebase';
+import Link from 'next/link';
 
 interface PromotionPayment {
   id: string;
@@ -63,16 +65,16 @@ interface PromotionPayment {
 }
 
 const placeholderStats = [
-  { title: 'Общо Потребители', value: '0', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10', trendInfo: '', dataKey: 'totalUsers' },
-  { title: 'Общо Салони', value: '0', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-green-500/10', trendInfo: '', dataKey: 'totalSalons' },
-  { title: 'Активни Резервации', value: '0', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10', trendInfo: '', dataKey: 'activeBookings' }, // Placeholder, needs real data
-  { title: 'Приходи (Промоции)', value: '0.00 лв.', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-orange-500/10', trendInfo: '', dataKey: 'totalRevenue' },
+  { title: 'Общо Потребители', value: '0', icon: Users, color: 'text-blue-500', bgColor: 'bg-stat-blue-light dark:bg-stat-blue-light/30', trendInfo: '', dataKey: 'totalUsers', href: '/admin/users' },
+  { title: 'Общо Салони', value: '0', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-stat-green-light dark:bg-stat-green-light/30', trendInfo: '', dataKey: 'totalSalons', href: '/admin/business' },
+  { title: 'Активни Резервации', value: '0', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10 dark:bg-purple-500/30', trendInfo: '', dataKey: 'activeBookings', href: '/admin/bookings' }, 
+  { title: 'Приходи (Промоции)', value: '0.00 лв.', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-stat-orange-light dark:bg-stat-orange-light/30', trendInfo: '', dataKey: 'totalRevenue', href: '/admin/payments' },
 ];
 
 const monthlyDataPlaceholder = Array(12).fill(null).map((_, i) => {
   const monthDate = new Date(new Date().getFullYear(), i, 1);
   return {
-    month: format(monthDate, 'LLL yy', { locale: bg }), // e.g., "Яну 24"
+    month: format(monthDate, 'LLL yy', { locale: bg }), 
     users: 0,
     salons: 0,
     payments: 0,
@@ -116,14 +118,14 @@ export default function AdminIndexPage() {
         const usersSnapshot = await getDocs(usersRef);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt && typeof user.createdAt === 'string');
+        const validUsersWithDate = usersList.filter(user => user.createdAt && (typeof user.createdAt === 'string' || user.createdAt instanceof Timestamp));
         setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
         validUsersWithDate.forEach(user => {
           try {
-            const date = new Date(user.createdAt!);
-            if (!isNaN(date.getTime())) { // Check if date is valid
+            const date = typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate();
+            if (!isNaN(date.getTime())) { 
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyUsers[monthKey] = (aggregatedMonthlyUsers[monthKey] || 0) + 1;
             } else {
@@ -143,13 +145,13 @@ export default function AdminIndexPage() {
         const salonsSnapshot = await getDocs(salonsRef);
         const salonsList = salonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
         
-        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && typeof salon.createdAt === 'string');
+        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && (typeof salon.createdAt === 'string' || salon.createdAt instanceof Timestamp));
         setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
          validSalonsWithDate.forEach(salon => {
           try {
-            const date = new Date(salon.createdAt!);
+            const date = typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate();
              if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
@@ -167,7 +169,7 @@ export default function AdminIndexPage() {
 
         // Fetch Payments
         const paymentsRef = collection(firestore, 'promotionsPayments');
-        const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); // Fetch all for aggregation, limit for table
+        const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); 
         const paymentsSnapshot = await getDocs(paymentsQuery);
         const paymentsList = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
         
@@ -177,7 +179,7 @@ export default function AdminIndexPage() {
         const aggregatedMonthlyPayments: { [key: string]: number } = {};
         validPaymentsWithDate.forEach(payment => {
           try {
-            const date = payment.createdAt.toDate(); // Firestore Timestamp to JS Date
+            const date = payment.createdAt.toDate(); 
             if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyPayments[monthKey] = (aggregatedMonthlyPayments[monthKey] || 0) + (payment.amount || 0);
@@ -193,7 +195,6 @@ export default function AdminIndexPage() {
           payments: aggregatedMonthlyPayments[item.month] || 0,
         })));
         
-        // Update stats
         const totalRevenue = validPaymentsWithDate
           .filter(p => p.status === 'completed')
           .reduce((sum, p) => sum + (p.amount || 0), 0);
@@ -206,28 +207,28 @@ export default function AdminIndexPage() {
           return stat;
         }));
 
-        // Update activity feed (simplified example)
         const newActivityFeed = [];
-        if (usersList.length > 0 && latestUsers[0]?.createdAt) {
+        if (usersList.length > 0 && validUsersWithDate[0]?.createdAt) {
             try {
-                newActivityFeed.push({ id: 'activity-user', icon: UserPlus, text: `Нов потребител: ${latestUsers[0].name || latestUsers[0].displayName || 'N/A'}`, time: format(new Date(latestUsers[0].createdAt), 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'user' });
+                const userDate = typeof validUsersWithDate[0].createdAt === 'string' ? new Date(validUsersWithDate[0].createdAt) : (validUsersWithDate[0].createdAt as Timestamp).toDate();
+                newActivityFeed.push({ id: 'activity-user', icon: UserPlus, text: `Нов потребител: ${validUsersWithDate[0].name || validUsersWithDate[0].displayName || 'N/A'}`, time: format(userDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'user' });
             } catch (e) { console.warn("Error formatting user activity time", e); }
         }
-        if (salonsList.length > 0 && latestSalons[0]?.createdAt) {
+        if (salonsList.length > 0 && validSalonsWithDate[0]?.createdAt) {
             try {
-                 newActivityFeed.push({ id: 'activity-salon', icon: Building, text: `Нов салон: ${latestSalons[0].name || 'N/A'}`, time: format(new Date(latestSalons[0].createdAt), 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'salon' });
+                 const salonDate = typeof validSalonsWithDate[0].createdAt === 'string' ? new Date(validSalonsWithDate[0].createdAt) : (validSalonsWithDate[0].createdAt as Timestamp).toDate();
+                 newActivityFeed.push({ id: 'activity-salon', icon: Building, text: `Нов салон: ${validSalonsWithDate[0].name || 'N/A'}`, time: format(salonDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'salon' });
             } catch (e) { console.warn("Error formatting salon activity time", e); }
         }
-        if (paymentsList.length > 0 && latestPayments[0]?.createdAt) {
+        if (paymentsList.length > 0 && validPaymentsWithDate[0]?.createdAt) {
             try {
-                newActivityFeed.push({ id: 'activity-payment', icon: CreditCard, text: `Плащане: ${(latestPayments[0].amount || 0).toFixed(2)} ${latestPayments[0].currency || ''}`, time: format(latestPayments[0].createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'payment' });
+                newActivityFeed.push({ id: 'activity-payment', icon: CreditCard, text: `Плащане: ${(validPaymentsWithDate[0].amount || 0).toFixed(2)} ${validPaymentsWithDate[0].currency || ''}`, time: format(validPaymentsWithDate[0].createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'payment' });
             } catch (e) { console.warn("Error formatting payment activity time", e); }
         }
         setActivityFeed(newActivityFeed.length > 0 ? newActivityFeed.slice(0, 5) : recentActivityDataPlaceholder);
 
       } catch (error) {
         console.error("Error fetching admin dashboard data:", error);
-        // Optionally set an error state here to display to the user
       } finally {
         setLoadingUsers(false);
         setLoadingSalons(false);
@@ -265,39 +266,32 @@ export default function AdminIndexPage() {
 
 
   return (
-    <div className="space-y-8 p-4 md:p-6 lg:p-8">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Административно Табло
-          </h1>
-          <p className="text-muted-foreground">
-            Общ преглед и управление на Glowy платформата.
-          </p>
-        </div>
-      </div>
-
+    <div className="space-y-8">
+      {/* Stats Cards Section */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => (
-          <Card key={stat.title} className={`shadow-lg hover:shadow-xl transition-shadow duration-300 ${stat.bgColor}`}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className={`text-sm font-medium ${stat.color}`}>{stat.title}</CardTitle>
-              <stat.icon className={`h-5 w-5 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
-              {stat.trendInfo && (
-                <p className={`text-xs mt-1 ${stat.trendInfo.startsWith('+') ? 'text-green-600' : stat.trendInfo.startsWith('-') ? 'text-red-600' : 'text-muted-foreground'}`}>
-                  {stat.trendInfo.startsWith('+') && <TrendingUp className="inline h-3 w-3 mr-1" />}
-                  {stat.trendInfo.startsWith('-') && <TrendingDown className="inline h-3 w-3 mr-1" />}
-                  {stat.trendInfo}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <Link href={stat.href || '#'} key={stat.title} className="block">
+            <Card className={`shadow-lg hover:shadow-xl transition-shadow duration-300 ${stat.bgColor} h-full`}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className={`text-sm font-medium ${stat.color}`}>{stat.title}</CardTitle>
+                <stat.icon className={`h-5 w-5 ${stat.color}`} />
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+                {stat.trendInfo && (
+                  <p className={`text-xs mt-1 ${stat.trendInfo.startsWith('+') ? 'text-green-600' : stat.trendInfo.startsWith('-') ? 'text-red-600' : 'text-muted-foreground'}`}>
+                    {stat.trendInfo.startsWith('+') && <TrendingUp className="inline h-3 w-3 mr-1" />}
+                    {stat.trendInfo.startsWith('-') && <TrendingDown className="inline h-3 w-3 mr-1" />}
+                    {stat.trendInfo}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </Link>
         ))}
       </div>
 
+      {/* Main Content Area: Chart and Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-lg">
            <CardHeader>
@@ -307,12 +301,12 @@ export default function AdminIndexPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[350px] p-2 md:p-4">
-            {loadingCharts ? <p>Зареждане на диаграма...</p> : (
+            {loadingCharts ? <p className="text-center text-muted-foreground pt-10">Зареждане на диаграма...</p> : monthlyUserData.some(d => d.users > 0) ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyUserData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} allowDecimals={false} />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))', radius: 4 }}
                   contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
@@ -322,7 +316,7 @@ export default function AdminIndexPage() {
                 <Bar dataKey="users" fill={chartConfig.users.color} name="Нови потребители" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
             </ResponsiveContainer>
-            )}
+            ) : <p className="text-center text-muted-foreground pt-10">Няма данни за нови потребители.</p>}
           </CardContent>
         </Card>
 
@@ -360,7 +354,7 @@ export default function AdminIndexPage() {
       </div>
 
       {/* New Charts for Salons and Payments */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -369,12 +363,12 @@ export default function AdminIndexPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] p-2 md:p-4">
-            {loadingCharts ? <p>Зареждане на диаграма...</p> : (
+            {loadingCharts ? <p className="text-center text-muted-foreground pt-10">Зареждане на диаграма...</p> : monthlySalonData.some(d => d.salons > 0) ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlySalonData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} allowDecimals={false} />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))', radius: 4 }}
                   contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
@@ -384,18 +378,18 @@ export default function AdminIndexPage() {
                 <Bar dataKey="salons" fill={chartConfig.salons.color} name="Нови салони" radius={[4, 4, 0, 0]} barSize={25} />
               </BarChart>
             </ResponsiveContainer>
-            )}
+            ) : <p className="text-center text-muted-foreground pt-10">Няма данни за нови салони.</p>}
           </CardContent>
         </Card>
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center">
-              <DollarSign className="mr-2 h-5 w-5 text-primary" />
+              <LineChartLucide className="mr-2 h-5 w-5 text-primary" />
               Месечни Плащания (Промоции)
             </CardTitle>
           </CardHeader>
           <CardContent className="h-[300px] p-2 md:p-4">
-            {loadingCharts ? <p>Зареждане на диаграма...</p> : (
+            {loadingCharts ? <p className="text-center text-muted-foreground pt-10">Зареждане на диаграма...</p> : monthlyPaymentData.some(d=> d.payments > 0) ? (
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={monthlyPaymentData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
@@ -411,19 +405,20 @@ export default function AdminIndexPage() {
                 <Bar dataKey="payments" fill={chartConfig.payments.color} name="Плащания" radius={[4, 4, 0, 0]} barSize={25} />
               </BarChart>
             </ResponsiveContainer>
-            )}
+            ) : <p className="text-center text-muted-foreground pt-10">Няма данни за плащания.</p>}
           </CardContent>
         </Card>
       </div>
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+      {/* Latest Users, Salons, Payments */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle className="flex items-center"><UserPlus className="mr-2 h-5 w-5 text-primary" />Последни регистрирани потребители</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingUsers ? <p>Зареждане...</p> : latestUsers.length > 0 ? (
+            {loadingUsers ? <p className="text-center text-muted-foreground pt-4">Зареждане...</p> : latestUsers.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -439,12 +434,12 @@ export default function AdminIndexPage() {
                       <TableCell>{user.displayName || user.name || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'business' ? 'secondary' : 'outline'}>{getRoleDisplayName(user.role)}</Badge></TableCell>
-                      <TableCell>{user.createdAt ? format(new Date(user.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{user.createdAt ? format(typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            ) : <p className="text-muted-foreground">Няма наскоро регистрирани потребители.</p>}
+            ) : <p className="text-center text-muted-foreground pt-4">Няма наскоро регистрирани потребители.</p>}
           </CardContent>
         </Card>
 
@@ -453,7 +448,7 @@ export default function AdminIndexPage() {
             <CardTitle className="flex items-center"><Building className="mr-2 h-5 w-5 text-primary" />Последни създадени бизнеси</CardTitle>
           </CardHeader>
           <CardContent>
-            {loadingSalons ? <p>Зареждане...</p> : latestSalons.length > 0 ? (
+            {loadingSalons ? <p className="text-center text-muted-foreground pt-4">Зареждане...</p> : latestSalons.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -469,17 +464,17 @@ export default function AdminIndexPage() {
                       <TableCell>{salon.name}</TableCell>
                       <TableCell>{salon.city || 'N/A'}</TableCell>
                       <TableCell className="text-xs">{salon.ownerId || 'N/A'}</TableCell>
-                      <TableCell>{salon.createdAt ? format(new Date(salon.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{salon.createdAt ? format(typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            ) : <p className="text-muted-foreground">Няма наскоро създадени бизнеси.</p>}
+            ) : <p className="text-center text-muted-foreground pt-4">Няма наскоро създадени бизнеси.</p>}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="shadow-lg mt-6">
+      <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="flex items-center"><CreditCard className="mr-2 h-5 w-5 text-primary" />Последни плащания за промоции</CardTitle>
         </CardHeader>
@@ -492,35 +487,35 @@ export default function AdminIndexPage() {
             <p className="text-xs text-muted-foreground mt-1">(Ще бъде добавено по-късно)</p>
           </div>
           <div className="md:col-span-2">
-            {loadingPayments ? <p>Зареждане...</p> : latestPayments.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Плащане ID</TableHead>
-                    <TableHead>Име на бизнес</TableHead>
-                    <TableHead>Сума</TableHead>
-                    <TableHead>Статус</TableHead>
-                    <TableHead>Дата</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {latestPayments.map(payment => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="text-xs">{payment.id}</TableCell>
-                      <TableCell>{payment.businessName || payment.businessId || 'N/A'}</TableCell>
-                      <TableCell>{(payment.amount || 0).toFixed(2)} {payment.currency}</TableCell>
-                      <TableCell>{getPaymentStatusDisplayName(payment.status)}</TableCell>
-                      <TableCell>{payment.createdAt ? format(payment.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }) : 'N/A'}</TableCell>
+            {loadingPayments ? <p className="text-center text-muted-foreground pt-4">Зареждане...</p> : latestPayments.length > 0 ? (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Плащане ID</TableHead>
+                      <TableHead>Име на бизнес</TableHead>
+                      <TableHead>Сума</TableHead>
+                      <TableHead>Статус</TableHead>
+                      <TableHead>Дата</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : <p className="text-muted-foreground">Няма скорошни плащания.</p>}
+                  </TableHeader>
+                  <TableBody>
+                    {latestPayments.map(payment => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="text-xs">{payment.id}</TableCell>
+                        <TableCell>{payment.businessName || payment.businessId || 'N/A'}</TableCell>
+                        <TableCell>{(payment.amount || 0).toFixed(2)} {payment.currency}</TableCell>
+                        <TableCell>{getPaymentStatusDisplayName(payment.status)}</TableCell>
+                        <TableCell>{payment.createdAt ? format(payment.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }) : 'N/A'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : <p className="text-center text-muted-foreground pt-4">Няма скорошни плащания.</p>}
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-    
