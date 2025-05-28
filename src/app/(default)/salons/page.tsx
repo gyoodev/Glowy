@@ -8,14 +8,15 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
+import { Footer } from '@/components/layout/footer';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
 const DEFAULT_MIN_PRICE = 0;
+
 
 export default function SalonsDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
@@ -106,12 +107,32 @@ export default function SalonsDirectoryPage() {
 
 
   return (
+    <>
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">Всички Салони</h1>
-        <p className="text-lg text-muted-foreground">Разгледайте всички салони, налични в платформата.</p>
+      <header className="mb-16 py-12 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
+            <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
+            <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/50 rounded-lg filter blur-xl animate-ping-slow delay-100 transform -rotate-45"></div>
+            <div className="absolute bottom-1/3 right-1/3 w-20 h-20 bg-primary/20 rounded-full filter blur-lg animate-pulse delay-300"></div>
+            <div className="absolute top-10 right-20 w-0.5 h-32 bg-border/50 transform rotate-[20deg] opacity-70"></div>
+        </div>
+        <div className="container mx-auto px-6 grid md:grid-cols-2 gap-8 items-center relative z-0">
+            <div className="text-center md:text-left">
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
+                Всички Салони
+                </h1>
+                <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0">
+                Разгледайте всички салони, налични в платформата и намерете подходящия за Вас.
+                </p>
+            </div>
+             {/* Add an image section here if desired, similar to the home page */}
+             {/* For now, leaving the second column empty or for potential future use */}
+            <div className="relative z-10 md:col-span-1 space-y-4">
+                {/* Placeholder for image or other content */}
+            </div>
+        </div>
       </header>
-
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-1/4 lg:w-1/5">
           <FilterSidebar
@@ -129,7 +150,7 @@ export default function SalonsDirectoryPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 text-base py-6 rounded-lg shadow-sm border-border/80 focus:border-primary focus:ring-primary"
             />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> */}
           </div>
 
           {isLoading ? (
@@ -158,7 +179,7 @@ export default function SalonsDirectoryPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+              {/* <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> */}
               <h3 className="text-xl font-semibold text-foreground">Няма намерени салони</h3>
               <p className="text-muted-foreground mt-2">
                 Опитайте да промените Вашите филтри или термина за търсене.
@@ -168,5 +189,7 @@ export default function SalonsDirectoryPage() {
         </main>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }
