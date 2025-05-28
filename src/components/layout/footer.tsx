@@ -65,6 +65,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-foreground mb-3">Важни Връзки</h3>
             <ul className="space-y-2 text-sm">
+              <li><Link href="/about-glowy" className="text-muted-foreground hover:text-primary transition-colors">За Glowy</Link></li>
               <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Условия за ползване</Link></li>
               <li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Политика за поверителност</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Контакти</Link></li>
@@ -115,3 +116,4 @@ export function Footer() {
     </footer>
   );
 }
+
