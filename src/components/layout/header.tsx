@@ -17,13 +17,13 @@ import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 
 const navItems = [
-  { href: '/', label: 'Салони' },
+  { href: '/salons', label: 'Салони' },
   { href: '/recommendations', label: 'Glowy Препоръка' },
   { href: '/contact', label: 'Контакти' },
 ];
 
 export function Header() {
-  const router = useRouter();
+  const router = useRouter(); 
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
