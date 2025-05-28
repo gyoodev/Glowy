@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
@@ -17,11 +17,9 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Added db alias
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';import { useEffect, useState, useRef } from 'react';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format, formatDistanceToNow } from 'date-fns';
-import { bg } from 'date-fns/locale';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
@@ -54,6 +52,56 @@ function formatWorkingHours(workingHours?: WorkingHoursStructure): string {
   });
   return parts.join('; ') || 'Няма предоставено работно време';
 }
+
+function generateSalonSchema(salon: Salon) {
+  const daysOrderForSchema: Record<string, string> = {
+    monday: "Monday",
+    tuesday: "Tuesday",
+    wednesday: "Wednesday",
+    thursday: "Thursday",
+    friday: "Friday",
+    saturday: "Saturday",
+    sunday: "Sunday",
+  };
+
+  const openingHoursSpecification = daysOrder.map(dayKey => {
+    const dayInfo = salon.workingHours?.[dayKey];
+    if (!dayInfo || dayInfo.isOff) {
+      return null;
+    }
+    return {
+      "@type": "OpeningHoursSpecification",
+      "dayOfWeek": `https://schema.org/${daysOrderForSchema[dayKey]}`,
+      "opens": dayInfo.open,
+      "closes": dayInfo.close,
+    };
+  }).filter(Boolean);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": salon.name,
+    "image": salon.heroImage || 'https://placehold.co/1200x400.png', // Provide a default if no image
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": salon.address || 'Няма предоставен адрес',
+      "addressLocality": salon.city || 'Не е посочен град',
+      // Add postalCode, addressRegion, addressCountry if available in your data
+    },
+    "telephone": salon.phone || 'Няма предоставен телефон',
+    "openingHoursSpecification": openingHoursSpecification.length > 0 ? openingHoursSpecification : undefined, // Only include if available
+    "priceRange": salon.priceRange ? (
+        salon.priceRange === 'cheap' ? '$' : salon.priceRange === 'moderate' ? '$$' : salon.priceRange === 'expensive' ? '$$$' : undefined
+    ) : undefined, // Use schema.org price range symbols
+    "aggregateRating": salon.rating !== undefined && salon.reviews !== undefined ? {
+      "@type": "AggregateRating",
+      "ratingValue": salon.rating.toFixed(1),
+      "reviewCount": salon.reviews.length.toString(),
+    } : undefined, // Only include if rating data is available
+  };
+}
+import { format, formatDistanceToNow } from 'date-fns';
+import { bg } from 'date-fns/locale';
 
 export default function SalonProfilePage() {
   const params = useParams();
@@ -543,15 +591,21 @@ export default function SalonProfilePage() {
   };
 
   return (
+    <>
+     {/* Structured Data for SEO */}
+    {salon && (
+ <script
+ type="application/ld+json"
+ dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
+ /> )}
     <div className="bg-background">
       <div className="relative h-64 md:h-96 w-full group">
         <Image
           src={salon.heroImage || 'https://placehold.co/1200x400.png'}
-          alt={`Hero image for ${salon.name}`}
+          alt={`Предна снимка на ${salon.name} в ${salon.city}`}
           layout="fill"
           objectFit="cover"
           priority
-          data-ai-hint="salon ambiance luxury"
         />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
           <div className="text-center text-white p-4">
@@ -682,7 +736,7 @@ export default function SalonProfilePage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
                             <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                                <Image src={photo} alt={`${salon.name} снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
+                                <Image src={photo} alt={`Снимка ${index + 1} от галерията на ${salon.name} в ${salon.city}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
                             </div>
                         )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
                     </div>
@@ -763,5 +817,6 @@ export default function SalonProfilePage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

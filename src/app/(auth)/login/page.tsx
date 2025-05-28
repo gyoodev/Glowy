@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase'; // Use alias
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'; // Import Firestore functions
 
 const loginSchema = z.object({
   email: z.string().email('Невалиден имейл адрес.'),
@@ -29,6 +30,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = React.useState(false);
   const router = useRouter();
   const form = useForm<LoginFormValues>({
+
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
@@ -36,6 +38,7 @@ export default function LoginPage() {
     },
   });
 
+  const firestore = getFirestore(); // Get Firestore instance
   const [rememberMe, setRememberMe] = React.useState(false);
 
   React.useEffect(() => {
@@ -75,11 +78,40 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
+    form.formState.isSubmitting = true; // Manually set submitting state
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       console.log('Google Sign-In successful:', user); 
+
+      if (user) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const docSnap = await getDoc(userRef);
+
+        if (docSnap.exists()) {
+          // User document exists, update relevant information
+          await setDoc(userRef, {
+            displayName: user.displayName,
+            name: user.displayName, // Keep name in sync
+            photoURL: user.photoURL,
+            lastLoginAt: Timestamp.fromDate(new Date()),
+            // Avoid overwriting email, phoneNumber, role if they exist
+          }, { merge: true });
+        } else {
+          // User document does not exist, create a new one (should ideally happen during registration, but good to have a fallback)
+          // Note: This assumes a basic user structure. Adjust fields as needed.
+          await setDoc(userRef, {
+            userId: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            name: user.displayName,
+            photoURL: user.photoURL,
+            createdAt: Timestamp.fromDate(new Date()),
+            role: 'customer', // Default role for Google sign-in
+          });
+        }
+      }
       localStorage.setItem('isUserLoggedIn', 'true'); 
       toast({
         title: 'Влизане с Google успешно',
@@ -93,6 +125,8 @@ export default function LoginPage() {
         description: error.message || 'Възникна неочаквана грешка.',
         variant: 'destructive',
       });
+    } finally {
+      form.formState.isSubmitting = false; // Reset submitting state
     }
   };
 

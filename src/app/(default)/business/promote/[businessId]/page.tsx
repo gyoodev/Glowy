@@ -215,15 +215,17 @@ export default function PromoteBusinessPage() {
     setIsProcessing('stop');
     setError(null);
     try {
-      const updatedPromotionClientState: Promotion = { ...salon.promotion, isActive: false };
-      const salonRef = doc(firestore, 'salons', salon.id);
-      // We assume promotion object is flat and simple, not containing serverTimestamps for this client-side update.
-      // For a more robust 'stop' mechanism, it might be better to call an API route.
-      await updateDoc(salonRef, { 
-        'promotion.isActive': false,
-        // Optionally, update a 'stoppedAt' field or similar
+      const response = await fetch(`/api/business/promote/${businessId}/stop`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
       });
-      setSalon(prevSalon => prevSalon ? { ...prevSalon, promotion: updatedPromotionClientState } : null);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to stop promotion via API.');
+      }
+
       toast({
         title: 'Промоцията е спряна',
         description: 'Промоцията за ' + salon.name + ' беше деактивирана.',

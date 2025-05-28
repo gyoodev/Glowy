@@ -32,9 +32,8 @@ export function SalonCard({ salon }: SalonCardProps) {
             <Image
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
               alt={`Екстериор или интериор на ${salon.name}`}
-              layout="fill"
-              objectFit="cover"
-              data-ai-hint="salon interior beauty"
+              fill={true}
+              style={{ objectFit: 'cover' }}
             />
           </div>
         </Link>

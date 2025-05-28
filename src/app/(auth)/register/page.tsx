@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
-
+import { AuthError } from 'firebase/auth';
 import { auth, subscribeToNewsletter } from '@/lib/firebase';
 import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
@@ -167,61 +167,72 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      console.log('Google Sign-Up successful:', user);
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        console.log('Google Sign-Up successful:', user);
 
-      if (user) {
-        const userRef = doc(collection(firestore, 'users'), user.uid);
-        const docSnap = await getDoc(userRef);
+        if (user) {
+            const userRef = doc(collection(firestore, 'users'), user.uid);
+            const docSnap = await getDoc(userRef);
 
-        if (!docSnap.exists()) {
-          let numericIdForUser: number | undefined = undefined;
-          try {
-            const counterDocRef = doc(firestore, 'counters', 'users');
-            const counterDocSnap = await getDoc(counterDocRef);
-            if (counterDocSnap.exists()) {
-              numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
-            } else {
-              numericIdForUser = 1;
+            if (!docSnap.exists()) {
+                let numericIdForUser: number | undefined = undefined;
+                try {
+                    const counterDocRef = doc(firestore, 'counters', 'users');
+                    const counterDocSnap = await getDoc(counterDocRef);
+                    if (counterDocSnap.exists()) {
+                        numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
+                    } else {
+                        numericIdForUser = 1;
+                    }
+                    await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
+                } catch (counterError) {
+                    console.error("Error updating user counter for Google sign-up:", counterError);
+                }
+
+                await setDoc(userRef, {
+                    userId: user.uid,
+                    email: user.email,
+                    numericId: numericIdForUser,
+                    displayName: user.displayName,
+                    name: user.displayName, // Also set name field
+                    phoneNumber: user.phoneNumber || '+359', // Default to +359 if no phone from Google
+                    createdAt: Timestamp.fromDate(new Date()),
+                    role: 'customer', // Default role for Google sign-up, can be changed later
+                });
+
+                // Create welcome notification for new Google user
+                await addDoc(collection(firestore, 'notifications'), {
+                    userId: user.uid,
+                    message: 'Добре дошли в Glowy! Радваме се да Ви видим. Вашият профил е създаден чрез Google.',
+                    link: '/account',
+                    read: false,
+                    createdAt: Timestamp.fromDate(new Date()),
+                    type: 'welcome_user',
+                });
+
+                // Placeholder for notifying admins (better done server-side)
+                await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
             }
-            await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
-          } catch (counterError) {
-            console.error("Error updating user counter for Google sign-up:", counterError);
-          }
 
-          await setDoc(userRef, {
-            userId: user.uid,
-            email: user.email,
-            numericId: numericIdForUser,
-            displayName: user.displayName,
-            name: user.displayName, // Also set name field
-            phoneNumber: user.phoneNumber || '+359', // Default to +359 if no phone from Google
-            createdAt: Timestamp.fromDate(new Date()),
-            role: 'customer', // Default role for Google sign-up, can be changed later
-          });
+            // Check if the user already exists with a different provider
+            if (result.operationType === 'link') {
+                // This case is unlikely with signInWithPopup directly for sign-up,
+                // but good to be aware of for account linking scenarios.
+            } else if (result.operationType === 'signIn' && !docSnap.exists()) {
+                // User exists but signed in with Google for the first time, document created above.
+            } else if (result.operationType === 'signIn' && docSnap.exists()) {
+                // User exists and signed in with Google again - no need to create document.
+            }
 
-          // Create welcome notification for new Google user
-          await addDoc(collection(firestore, 'notifications'), {
-            userId: user.uid,
-            message: 'Добре дошли в Glowy! Радваме се да Ви видим. Вашият профил е създаден чрез Google.',
-            link: '/account',
-            read: false,
-            createdAt: Timestamp.fromDate(new Date()),
-            type: 'welcome_user',
-          });
-
-          // Placeholder for notifying admins (better done server-side)
-          await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
-        }
-
-        if (user.email && form.getValues('subscribeNewsletter')) {
+            if (user.email && form.getValues('subscribeNewsletter')) {
             const newsletterResult = await subscribeToNewsletter(user.email);
              if (newsletterResult.success) {
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message });
             } else if (!newsletterResult.message.includes("вече е абониран")) {
                 toast({ title: 'Абонамент за бюлетин', description: newsletterResult.message, variant: "destructive" });
             }
+
         }
 
 
@@ -230,10 +241,23 @@ export default function RegisterPage() {
           title: 'Регистрация с Google успешна',
           description: `Добре дошли, ${user.displayName || user.email}!`,
         });
+
         router.push('/');
       }
     } catch (error: any) {
       console.error('Error during Google Sign-Up:', error);
+        if (error.code === 'auth/account-exists-with-different-credential') {
+            // Handle the case where an account with the same email exists but with a different sign-in method
+            toast({
+                title: 'Имейл адресът вече се използва',
+                description: 'Вече имате акаунт с този имейл адрес, регистриран с различен метод (например, имейл/парола). Моля, влезте със съществуващия си акаунт.',
+                variant: 'destructive',
+                duration: 6000,
+            });
+        } else if (error.code === 'auth/popup-closed-by-user') {
+            // Handle cases where the user closes the popup
+            toast({ title: 'Регистрацията отменена', description: 'Прозорецът за вход с Google беше затворен.', variant: 'default' });
+        } else {
       toast({
         title: 'Грешка при регистрация с Google',
         description: error.message || 'Възникна неочаквана грешка.',
@@ -241,6 +265,7 @@ export default function RegisterPage() {
       });
     } finally {
       setIsSubmitting(false);
+    }
     }
   };
 

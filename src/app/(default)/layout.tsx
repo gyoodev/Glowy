@@ -1,5 +1,8 @@
-import { type ReactNode } from 'react';
+"use client";
+import { type ReactNode, useEffect } from 'react';
 // Header and Footer are now provided by RootLayout
+import { gsap } from 'gsap';
+
 // Toaster is also provided by RootLayout
 
 interface DefaultLayoutProps {
@@ -7,6 +10,17 @@ interface DefaultLayoutProps {
 }
 
 export default function DefaultLayout({ children }: DefaultLayoutProps) {
+  useEffect(() => {
+    gsap.fromTo(
+      '*',
+      { opacity: 0 },
+      {
+        opacity: 1,
+        duration: 2,
+        stagger: 0.1,
+      }
+    );
+  }, []);
   return (
     <>
       {/* This layout now primarily passes children through.

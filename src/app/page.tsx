@@ -11,7 +11,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
-import { isFuture } from 'date-fns';
+import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 
 const DEFAULT_MIN_RATING = 0;
@@ -28,9 +28,9 @@ interface HeroImage {
 
 // Static list of 3 specific images
 const staticHeroImages: HeroImage[] = [
-  { id: 'hair_studio_large', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист работещ във фризьорски салон', dataAiHint: 'hair studio', priority: true },
-  { id: 'barber_small', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon' },
-  { id: 'nail_studio_small', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на инструменти в студио за маникюр', dataAiHint: 'nail salon' },
+  { id: 'hair_studio_large', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист оформя коса на клиент във фризьорски салон', priority: true },
+  { id: 'barber_small', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор от модерен бръснарски салон с бръснарски столове', },
+  { id: 'nail_studio_small', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на ръце с маникюр и инструменти в студио', },
 ];
 
 
@@ -151,7 +151,6 @@ export default function SalonDirectoryPage() {
                   height={320}
                   priority={staticHeroImages[0].priority}
                   className="w-full h-auto object-cover rounded-lg shadow-xl"
-                  data-ai-hint={staticHeroImages[0].dataAiHint}
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -164,7 +163,6 @@ export default function SalonDirectoryPage() {
                     height={270}
                     loading="lazy"
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={staticHeroImages[1].dataAiHint}
                   />
                 </div>
                 <div>
@@ -176,7 +174,6 @@ export default function SalonDirectoryPage() {
                     height={270}
                     loading="lazy"
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={staticHeroImages[2].dataAiHint}
                   />
                 </div>
               </div>
@@ -193,6 +190,7 @@ export default function SalonDirectoryPage() {
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
+          <div id="loading-screen"></div>
           <div className="mb-8 relative">
             <Input
               type="text"
