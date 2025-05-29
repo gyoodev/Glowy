@@ -2,7 +2,7 @@
 'use client';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from 'next/link';import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy } from 'firebase/firestore';
@@ -12,11 +12,11 @@ import AddReviewForm from '@/components/salon/AddReviewForm';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
-import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Added db alias
-import { Button } from '@/components/ui/button';import { useEffect, useState, useRef } from 'react';
+import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
+import { Button } from '@/components/ui/button';import { useEffect, useState, useRef, useCallback } from 'react';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
@@ -30,6 +30,7 @@ const dayTranslations: Record<string, string> = {
   saturday: "Съб",
   sunday: "Нед",
 };
+
 
 function formatWorkingHours(workingHours?: WorkingHoursStructure): string {
   if (!workingHours || typeof workingHours !== 'object' || Object.keys(workingHours).length === 0) {
@@ -119,6 +120,8 @@ export default function SalonProfilePage() {
   const [selectedBookingTime, setSelectedBookingTime] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const firestore = getFirestore();
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const reminderTimeoutId = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -306,6 +309,14 @@ export default function SalonProfilePage() {
         setUserReviews([]);
     }
   };
+  useEffect(() => {
+ if (!auth.currentUser || !salon?.id) {
+        setUserProfile(null);
+ setIsFavorite(false);
+ return;
+      }
+ const fetchUserDataAndFavorites = async () => {
+        fetchUserDataAndFavorites(); // Corrected syntax for useEffect
 
   useEffect(() => {
     if(salon?.id && auth.currentUser) {
@@ -313,6 +324,48 @@ export default function SalonProfilePage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, auth.currentUser?.uid, firestore, showReviewForm]);
+
+  const handleToggleFavorite = useCallback(async () => {
+    if (!auth.currentUser || !salon?.id) {
+      toast({
+        title: "Влезте в профила си",
+        description: "Моля, влезте, за да добавите салон към любими.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const method = isFavorite ? 'DELETE' : 'POST';
+    const url = `/api/users/${auth.currentUser.uid}/favorites`;
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ salonId: salon.id }),
+      });
+
+      if (response.ok) {
+        const newState = !isFavorite;
+        setIsFavorite(newState);
+        toast({
+          title: newState ? "Добавен в любими!" : "Премахнат от любими!",
+          description: newState ? `${salon.name} е добавен към вашите любими салони.` : `${salon.name} е премахнат от вашите любими салони.`,
+        });
+      } else {
+        throw new Error(`API Error: ${response.status}`);
+      }
+    } catch (error) {
+      console.error("[SalonProfilePage] Error toggling favorite status:", error);
+      toast({
+        title: "Грешка",
+        description: `Неуспешно ${isFavorite ? 'премахване на' : 'добавяне на'} салон към любими. Моля, опитайте отново.`,
+        variant: "destructive",
+      });
+    }
+  }, [auth.currentUser, salon?.id, isFavorite, toast]);
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -639,6 +692,18 @@ export default function SalonProfilePage() {
                     {priceRangeTranslations[salon.priceRange] || salon.priceRange}
                     </Badge>
                 )}
+                {auth.currentUser && salon?.id && (
+                   <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleToggleFavorite}
+                        className={`mt-2 sm:mt-0 ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
+                        aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                    >
+                       <Heart className={`${isFavorite ? 'fill-red-500' : ''}`} />
+                    </Button>
+                )}
+
               </div>
               <p className="text-foreground leading-relaxed">{salon.description}</p>
             </div>

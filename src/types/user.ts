@@ -9,6 +9,7 @@ export interface UserProfile {
   role: 'admin' | 'business' | 'customer';
   preferences?: {
     favoriteServices?: string[];
+    favoriteSalons?: string[];
     priceRange?: 'cheap' | 'moderate' | 'expensive' | ''; // Allow empty string for 'any'
     preferredLocations?: string[];
   };

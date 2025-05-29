@@ -13,7 +13,7 @@ import { auth } from '@/lib/firebase';
 import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { getUserProfile, getNewsletterSubscriptionStatus, getUserBookings } from '@/lib/firebase';
-import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText } from 'lucide-react';
+import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText, Heart } from 'lucide-react';
 
 interface FirebaseError extends Error {
   code?: string;
@@ -204,12 +204,6 @@ export default function AccountPage() {
     }
   }, [userProfile, firestore]);
 
-  const handleNewsletterSubscriptionChange = () => {
-    if (userProfile && userProfile.email) {
-      fetchNewsletterStatus(userProfile.email);
-    }
-  };
-
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <header className="mb-8 pb-6 border-b border-border">
@@ -252,6 +246,12 @@ export default function AccountPage() {
             <History className="mr-2 h-5 w-5" /> Резервации
           </TabsTrigger>
         </TabsList>
+ <TabsTrigger
+ value="favorites"
+ className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
+ >
+ <Heart className="mr-2 h-5 w-5" /> Любими Салони
+ </TabsTrigger>
 
         <div className="flex-1 min-w-0">
           <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
@@ -381,6 +381,36 @@ export default function AccountPage() {
               )}
             </div>
           </TabsContent>
+ <TabsContent value="favorites" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+ <div className="max-w-3xl mx-auto">
+ <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
+ Вашите Любими Салони
+ </h2>
+ {isLoading ? (
+ <div className="space-y-4">
+                  {[...Array(3)].map((_, i) => (
+ <Card key={i} className="shadow-sm animate-pulse">
+ <CardHeader>
+ <Skeleton className="h-6 w-3/4 mb-2" />
+ </CardHeader>
+ <CardContent className="space-y-2">
+ <Skeleton className="h-4 w-full" />
+ </CardContent>
+ </Card>
+                  ))}
+ </div>
+ ) : userProfile?.favoriteSalons && userProfile.favoriteSalons.length > 0 ? (
+ <div className="space-y-4">
+                  {userProfile.favoriteSalons.map(salonId => (
+ {/* Placeholder for favorite salon display */}
+ <div key={salonId} className="p-4 border rounded-md">{`Любим Салон ID: ${salonId}`}</div>
+                  ))}
+ </div>
+ ) : (
+ <p className="text-center text-muted-foreground py-10">Все още нямате любими салони.</p>
+ )}
+ </div>
+ </TabsContent>
         </div>
       </Tabs>
     </div>

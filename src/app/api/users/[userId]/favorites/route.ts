@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { firebaseApp } from '@/lib/firebase'; // Assuming you have firebaseApp initialized and exported from here
+
+const firestore = getFirestore(firebaseApp);
+
+// Helper function to get user document reference
+const getUserDocRef = (userId: string) => doc(firestore, 'users', userId);
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  const userId = params.userId;
+  const { salonId } = await req.json();
+
+  if (!userId || !salonId) {
+    return NextResponse.json({ error: 'Missing userId or salonId' }, { status: 400 });
+  }
+
+  try {
+    const userDocRef = getUserDocRef(userId);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    await updateDoc(userDocRef, {
+      favoriteSalons: arrayUnion(salonId),
+    });
+
+    return NextResponse.json({ message: 'Salon added to favorites' }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error adding salon to favorites:', error);
+    return NextResponse.json({ error: 'Failed to add salon to favorites' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { userId: string } }
+) {
+  const userId = params.userId;
+  const { salonId } = await req.json();
+
+  if (!userId || !salonId) {
+    return NextResponse.json({ error: 'Missing userId or salonId' }, { status: 400 });
+  }
+
+  try {
+    const userDocRef = getUserDocRef(userId);
+    const userDocSnap = await getDoc(userDocRef);
+
+    if (!userDocSnap.exists()) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    await updateDoc(userDocRef, {
+      favoriteSalons: arrayRemove(salonId),
+    });
+
+    return NextResponse.json({ message: 'Salon removed from favorites' }, { status: 200 });
+
+  } catch (error) {
+    console.error('Error removing salon from favorites:', error);
+    return NextResponse.json({ error: 'Failed to remove salon from favorites' }, { status: 500 });
+  }
+}

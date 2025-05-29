@@ -32,6 +32,7 @@ export interface Salon {
   // AI generation helper fields - optional as they might not always be present
   atmosphereForAi?: string;
   targetCustomerForAi?: string;
+  isFavorite?: boolean;
   uniqueSellingPointsForAi?: string;
   // reviews array is usually fetched separately, not stored directly on salon doc for scalability
 }
