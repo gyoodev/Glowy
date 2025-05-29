@@ -14,6 +14,7 @@ import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
 
+// Zod schema for the contact form
 const contactFormSchema = z.object({
   name: z.string().min(2, { message: "Името трябва да е поне 2 символа." }),
   email: z.string().email({ message: "Моля, въведете валиден имейл адрес." }),
@@ -24,6 +25,7 @@ const contactFormSchema = z.object({
 type ContactFormValues = z.infer<typeof contactFormSchema>;
 
 export default function ContactPage() {
+  // Hooks and state
   const { toast } = useToast();
   const firestore = getFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,6 +40,7 @@ export default function ContactPage() {
     },
   });
 
+  // Form submission handler
   const onSubmit = async (data: ContactFormValues) => {
     setIsSubmitting(true);
     try {
@@ -63,6 +66,7 @@ export default function ContactPage() {
     }
   };
 
+  // Render the contact form
   return (
     <div className="container mx-auto py-10 px-6">
       <Card className="max-w-2xl mx-auto shadow-xl">

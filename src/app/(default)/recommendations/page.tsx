@@ -1,6 +1,5 @@
 
 'use client';
-
 import { useState } from 'react';
 import { RecommendationForm } from '@/components/ai/recommendation-form';
 import { RecommendationResults } from '@/components/ai/recommendation-results';
