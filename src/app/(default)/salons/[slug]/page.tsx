@@ -95,10 +95,10 @@ function generateSalonSchema(salon: Salon) {
     "priceRange": salon.priceRange ? (
         salon.priceRange === 'cheap' ? '$' : salon.priceRange === 'moderate' ? '$$' : salon.priceRange === 'expensive' ? '$$$' : undefined
     ) : undefined,
-    "aggregateRating": salon.rating !== undefined ? {
+    "aggregateRating": salon.rating !== undefined && salon.reviewCount !== undefined ? {
       "@type": "AggregateRating",
       "ratingValue": salon.rating.toFixed(1),
-      "reviewCount": salon.reviewCount?.toString() || '0',
+      "reviewCount": salon.reviewCount.toString(),
     } : undefined,
   };
 }
@@ -164,6 +164,8 @@ export default function SalonProfilePage() {
           salonData.phone = salonData.phone || 'Няма предоставен телефон';
           salonData.address = salonData.address || 'Няма предоставен адрес';
           salonData.city = salonData.city || 'Не е посочен град';
+          salonData.priceRange = salonData.priceRange || '';
+
 
           if (!salonData.workingHours || typeof salonData.workingHours !== 'object') {
               const defaultHours: WorkingHoursStructure = {};
@@ -187,7 +189,7 @@ export default function SalonProfilePage() {
           setSalon(null);
           toast({
             title: "Салонът не е намерен",
-            description: `Салон с име '${name}' не беше открит. Моля, проверете адреса или се върнете към списъка със салони.`,
+            description: "Салон с име '" + name + "' не беше открит. Моля, проверете адреса или се върнете към списъка със салони.",
             variant: "destructive",
           });
         }
@@ -283,6 +285,7 @@ export default function SalonProfilePage() {
       } catch (error) {
         console.error("[SalonProfilePage] Error fetching salon reviews:", error);
         setDisplayedReviews([]);
+        // Do not toast here as it might be too noisy if only review fetching fails
       } finally {
         setIsLoadingReviews(false);
       }
@@ -292,7 +295,8 @@ export default function SalonProfilePage() {
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews();
     }
-  }, [salon?.id, firestore]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [salon?.id, firestore]); // Removed displayedReviews from dependencies to avoid loop with rating update
 
 
   const fetchUserReviews = async () => {
@@ -323,6 +327,7 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser) {
         fetchUserReviews();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, auth.currentUser?.uid, firestore, showReviewForm]);
 
   const handleToggleFavorite = useCallback(async () => {
@@ -351,28 +356,46 @@ export default function SalonProfilePage() {
         setIsFavorite(false);
         toast({
           title: "Премахнат от любими!",
-          description: `${salon.name} е премахнат от вашите любими салони.`,
+          description: salon.name + " е премахнат от вашите любими салони.",
         });
       } else {
         updatedFavorites = arrayUnion(salon.id);
         setIsFavorite(true);
         toast({
           title: "Добавен в любими!",
-          description: `${salon.name} е добавен към вашите любими салони.`,
+          description: salon.name + " е добавен към вашите любими салони.",
         });
       }
       await updateDoc(userDocRef, {
         'preferences.favoriteSalons': updatedFavorites
       });
+       // Update local userProfile state if it exists
+       if (userProfile) {
+        setUserProfile(prevProfile => {
+          if (!prevProfile) return null;
+          const newFavoriteSalons = updatedFavorites === arrayRemove(salon.id)
+            ? (prevProfile.preferences?.favoriteSalons || []).filter(id => id !== salon.id)
+            : [...(prevProfile.preferences?.favoriteSalons || []), salon.id];
+          return {
+            ...prevProfile,
+            preferences: {
+              ...prevProfile.preferences,
+              favoriteSalons: newFavoriteSalons,
+            },
+          };
+        });
+      }
+
+
     } catch (error) {
       console.error("[SalonProfilePage] Error toggling favorite status:", error);
       toast({
         title: "Грешка",
-        description: `Неуспешно ${isFavorite ? 'премахване на' : 'добавяне на'} салон от/към любими. Моля, опитайте отново.`,
+        description: "Неуспешно " + (isFavorite ? "премахване на" : "добавяне на") + " салон от/към любими. Моля, опитайте отново.",
         variant: "destructive",
       });
     }
-  }, [auth.currentUser, salon?.id, salon?.name, isFavorite, toast]);
+  }, [auth.currentUser, salon?.id, salon?.name, isFavorite, toast, userProfile]);
 
   const handleBookService = (serviceId: string) => {
     const service = salon?.services?.find(s => s.id === serviceId);
@@ -380,7 +403,7 @@ export default function SalonProfilePage() {
         setSelectedService(service);
         toast({
             title: "Услугата е избрана",
-            description: `${service.name} е добавена към календара за резервации. Моля, изберете дата и час.`,
+            description: service.name + " е добавена към календара за резервации. Моля, изберете дата и час.",
         });
         const calendarElement = document.getElementById("booking-calendar-section");
         calendarElement?.scrollIntoView({ behavior: "smooth" });
@@ -418,24 +441,26 @@ export default function SalonProfilePage() {
 
     const bookingSalonName = salon.name;
     const bookingServiceName = selectedService.name;
-    const bookingDate = new Date(selectedBookingDate);
+    const bookingDate = new Date(selectedBookingDate); // Already a Date object
     const bookingTime = selectedBookingTime;
-    const localSelectedService = selectedService;
+    const localSelectedService = selectedService; // To capture its current state
 
+    // Initialize client details with fallbacks
     let clientName = auth.currentUser.displayName || 'Клиент';
     let clientEmail = auth.currentUser.email || 'Няма имейл';
-    let clientPhoneNumber = 'Няма номер'; 
+    let clientPhoneNumber = 'Няма номер';
 
     try {
+      // Attempt to fetch more detailed user profile info
       const userId = auth.currentUser.uid;
       const fetchedUserProfile = await getUserProfile(userId);
       if (fetchedUserProfile) {
         clientName = fetchedUserProfile.name || fetchedUserProfile.displayName || clientName;
-        clientEmail = fetchedUserProfile.email || clientEmail;
-        clientPhoneNumber = fetchedUserProfile.phoneNumber || clientPhoneNumber;
+        clientEmail = fetchedUserProfile.email || clientEmail; // User's actual email
+        clientPhoneNumber = fetchedUserProfile.phoneNumber || clientPhoneNumber; // User's phone
       }
 
-      await createBooking({
+      const bookingId = await createBooking({
         salonId: salon.id,
         salonName: bookingSalonName,
         salonOwnerId: salon.ownerId,
@@ -447,7 +472,7 @@ export default function SalonProfilePage() {
             duration: localSelectedService.duration,
             description: localSelectedService.description || '',
         },
-        date: bookingDate.toISOString(),
+        date: bookingDate.toISOString(), // Store as ISO string
         time: bookingTime,
         clientName: clientName,
         clientEmail: clientEmail,
@@ -458,14 +483,15 @@ export default function SalonProfilePage() {
 
       toast({
         title: "Резервацията е потвърдена!",
-        description: `Успешно резервирахте ${bookingServiceName} за ${bookingDate.toLocaleDateString('bg-BG')} в ${bookingTime}.`,
+        description: "Успешно резервирахте " + bookingServiceName + " за " + format(bookingDate, 'PPP', { locale: bg }) + " в " + bookingTime + ".",
       });
 
       const [hours, minutes] = bookingTime.split(':').map(Number);
       const bookingDateTime = new Date(bookingDate);
       bookingDateTime.setHours(hours, minutes, 0, 0);
 
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000);
+      // Schedule reminder 1 hour AFTER the booking time
+      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); // 1 hour later
       const now = new Date();
       const delay = reminderDateTime.getTime() - now.getTime();
 
@@ -477,8 +503,8 @@ export default function SalonProfilePage() {
           try {
             const reminderResult = await sendReviewReminderEmail({
               salonName: bookingSalonName,
-              serviceName: bookingServiceName || undefined,
-              bookingDate: bookingDateTime.toLocaleDateString('bg-BG'),
+              serviceName: bookingServiceName || undefined, // Ensure serviceName is passed
+              bookingDate: format(bookingDate, 'PPP', { locale: bg }),
               bookingTime: bookingTime,
             });
             if(reminderResult.success) {
@@ -508,7 +534,7 @@ export default function SalonProfilePage() {
 
         toast({
           title: "Напомняне за отзив е насрочено",
-          description: `Ще получите покана да оставите отзив 1 час след Вашата резервация в ${bookingSalonName}.`,
+          description: "Ще получите покана да оставите отзив 1 час след Вашата резервация в " + bookingSalonName + ".",
           variant: "default",
           duration: 6000,
         });
@@ -540,16 +566,17 @@ export default function SalonProfilePage() {
 
     try {
       const userId = auth.currentUser.uid;
-      const userProfileData = await getUserProfile(userId);
+      const userProfileData = await getUserProfile(userId); // Fetch full user profile
       let reviewerName: string | null = null;
 
       if (auth.currentUser.displayName) {
         reviewerName = auth.currentUser.displayName;
       }
+      // Prioritize name from Firestore profile if available
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
         reviewerName = userProfileData.name || userProfileData.displayName || null;
       }
-      reviewerName = reviewerName || 'Анонимен потребител';
+      reviewerName = reviewerName || 'Анонимен потребител'; // Fallback
       const userAvatarUrl = userProfileData?.profilePhotoUrl || auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
 
@@ -557,7 +584,7 @@ export default function SalonProfilePage() {
         userName: reviewerName,
         rating: rating,
         comment: comment,
-        date: Timestamp.fromDate(new Date()).toDate().toISOString(),
+        date: Timestamp.fromDate(new Date()).toDate().toISOString(), // Store as ISO string
         userAvatar: userAvatarUrl,
         userId: userId,
         salonId: salon.id,
@@ -566,31 +593,35 @@ export default function SalonProfilePage() {
       const docRef = await addDoc(collection(firestore, 'reviews'), newReviewData);
       const newReviewWithId = { ...newReviewData, id: docRef.id } as Review;
 
+      // Optimistically update displayed reviews and user reviews
       const updatedDisplayedReviews = [newReviewWithId, ...displayedReviews].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setDisplayedReviews(updatedDisplayedReviews);
 
-      if(userId === auth.currentUser.uid) {
+      if(userId === auth.currentUser.uid) { // This check is a bit redundant here as we check auth.currentUser above
           setUserReviews(prevUserReviews => [newReviewWithId, ...prevUserReviews].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
       }
 
+      // Update salon's average rating and review count in Firestore
       if (updatedDisplayedReviews.length > 0) {
         const totalRating = updatedDisplayedReviews.reduce((acc, rev) => acc + rev.rating, 0);
         const newAverageRating = totalRating / updatedDisplayedReviews.length;
         const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
         await updateDoc(salonDocRefToUpdate, { rating: newAverageRating, reviewCount: updatedDisplayedReviews.length });
+        // Update local salon state to reflect new rating and count
         setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: updatedDisplayedReviews.length }) : null);
       }
 
+      // Notify business owner
       if (salon.ownerId) {
-        const notificationMessage = `${reviewerName} остави нов отзив за Вашия салон ${salon.name}.`;
+        const notificationMessage = reviewerName + " остави нов отзив за Вашия салон " + salon.name + ".";
         await addDoc(collection(db, 'notifications'), {
           userId: salon.ownerId,
           message: notificationMessage,
-          link: `/salons/${salon.name.replace(/\s+/g, '_')}#reviews`,
+          link: `/salons/${salon.name.replace(/\s+/g, '_')}#reviews`, // Link to the reviews section of the salon page
           read: false,
           createdAt: Timestamp.fromDate(new Date()),
           type: 'new_review_business',
-          relatedEntityId: docRef.id,
+          relatedEntityId: docRef.id, // ID of the new review
         });
       }
 
@@ -659,7 +690,7 @@ export default function SalonProfilePage() {
       <div className="relative h-64 md:h-96 w-full group">
         <Image
           src={salon.heroImage || 'https://placehold.co/1200x400.png'}
-          alt={`Предна снимка на ${salon.name} в ${salon.city}`}
+          alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
           layout="fill"
           objectFit="cover"
           priority
@@ -682,34 +713,36 @@ export default function SalonProfilePage() {
                   <div className="flex items-center mb-1">
                     <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
                     <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
-                    <span className="ml-2 text-muted-foreground">({salon.reviewCount || displayedReviews.length} отзива)</span>
+                    <span className="ml-2 text-muted-foreground">({salon.reviewCount || 0} отзива)</span>
                   </div>
                   <div className="flex items-center text-muted-foreground text-sm">
                     <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
                   </div>
                 </div>
-                {isPromotionActive && (
-                  <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize mt-2 sm:mt-0">
-                    <Gift className="h-3 w-3 mr-1" /> Промотиран
-                  </Badge>
-                )}
-                {salon.priceRange && (
-                    <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm mt-2 sm:mt-0 py-1 px-3">
-                    {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+                 <div className="flex items-center gap-2 mt-3 sm:mt-0">
+                    {isPromotionActive && (
+                    <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
+                        <Gift className="h-3 w-3 mr-1" /> Промотиран
                     </Badge>
-                )}
-                {auth.currentUser && salon?.id && (
-                   <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleToggleFavorite}
-                        className={`mt-2 sm:mt-0 ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
-                        aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
-                    >
-                       <Heart className={`${isFavorite ? 'fill-red-500' : ''}`} />
-                    </Button>
-                )}
-
+                    )}
+                    {salon.priceRange && (
+                        <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
+                        {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+                        </Badge>
+                    )}
+                    {auth.currentUser && salon?.id && (
+                    <Button
+                            variant="outline"
+                            size="sm" // Changed from "icon"
+                            onClick={handleToggleFavorite}
+                            className={`py-1 px-3 ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
+                            aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                        >
+                        <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
+                        {isFavorite ? "Премахни от любими" : "Добави в любими"}
+                        </Button>
+                    )}
+                </div>
               </div>
               <p className="text-foreground leading-relaxed">{salon.description}</p>
             </div>
@@ -739,7 +772,7 @@ export default function SalonProfilePage() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                  <TabsContent value="reviews" id="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                     <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                       <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
                     </h2>
@@ -806,7 +839,7 @@ export default function SalonProfilePage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
                             <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                                <Image src={photo} alt={`Снимка ${index + 1} от галерията на ${salon.name} в ${salon.city}`} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
+                                <Image src={photo} alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
                             </div>
                         )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
                     </div>
@@ -835,7 +868,7 @@ export default function SalonProfilePage() {
                 <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80">
                   <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
                   <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                     <Link href={salon.id ? `/business/promote/${salon.id}` : '#'}>Научете повече / Активирайте</Link>
+                     <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -889,5 +922,3 @@ export default function SalonProfilePage() {
     </>
   );
 }
-
-    
