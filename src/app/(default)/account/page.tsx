@@ -1,19 +1,21 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
-import { ReviewCard } from '@/components/salon/review-card'; // Import ReviewCard
+import { ReviewCard } from '@/components/salon/review-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge'; import type { UserProfile, Booking, Review, Service } from '@/types';
+import { Badge } from '@/components/ui/badge';
+import type { UserProfile, Booking, Review, Service } from '@/types';
+import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText, Heart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { auth } from '@/lib/firebase';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
+import { auth, getUserProfile, getNewsletterSubscriptionStatus, getUserBookings, firestore } from '@/lib/firebase';
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
-import { getUserProfile, getNewsletterSubscriptionStatus, getUserBookings } from '@/lib/firebase';
-import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText, Heart } from 'lucide-react';
+import { useToast } from "@/hooks/use-toast";
 
 interface FirebaseError extends Error {
   code?: string;
@@ -38,13 +40,14 @@ export default function AccountPage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [reviews, setReviews] = useState<Review[]>([]); // Reviews written BY this user
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
-  const [newsletterStatus, setNewsletterStatus] = useState<boolean | null>(null);
+  const [newsletterSubscriptionStatus, setNewsletterStatus] = useState<boolean | null>(null);
   const router = useRouter();
-  const firestore = getFirestore();
+  const { toast } = useToast();
+  // const firestore = getFirestore(); // Use imported instance
 
   const fetchNewsletterStatus = async (email: string | undefined | null) => {
     if (email) {
@@ -55,12 +58,18 @@ export default function AccountPage() {
     }
   };
 
+  const handleSubscriptionChange = async () => {
+    if (userProfile?.email) {
+      console.log("AccountPage: Refreshing newsletter status...");
+      await fetchNewsletterStatus(userProfile.email);
+    }
+  };
+
   useEffect(() => {
-    // Added comment to try and bust cache
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null);
-      setNewsletterStatus(null);
+      setNewsletterStatus(null); // Reset on auth change
       if (user && user.uid) {
         setCurrentUser(user);
         try {
@@ -83,12 +92,12 @@ export default function AccountPage() {
           } else {
             console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
-            const dataToSave: Omit<UserProfile, 'id'> & { createdAt: Timestamp } = {
+            const dataToSave: Omit<UserProfile, 'id' | 'createdAt'> & { createdAt: Timestamp; userId: string; } = {
               userId: user.uid,
               name: user.displayName || 'Потребител',
-              email: user.email || '', // Handle null email from auth
+              email: user.email || '',
               profilePhotoUrl: user.photoURL || '',
-              preferences: { favoriteServices: [], priceRange: '', preferredLocations: [] },
+              preferences: { favoriteServices: [], priceRange: '', preferredLocations: [], favoriteSalons: [] },
               role: 'customer',
               createdAt: Timestamp.fromDate(new Date()),
             };
@@ -96,23 +105,20 @@ export default function AccountPage() {
             const newProfile = {
               id: user.uid,
               ...dataToSave,
+              createdAt: dataToSave.createdAt.toDate().toISOString(),
             } as UserProfile;
             setUserProfile(newProfile);
             await fetchNewsletterStatus(newProfile.email);
           }
 
-          // Fetch user's bookings
           const userBookings = await getUserBookings(user.uid);
-          // Map the fetched data to explicitly match the Booking type structure and ensure all required properties are present
           const mappedBookings: Booking[] = userBookings.map((booking: any) => ({
-
-            id: booking.id, // Assuming id is always present
-            userId: booking.userId, // Assuming userId is always present
-            salonId: booking.salonId, // Assuming salonId is always present
-            serviceId: booking.serviceId, // Assuming serviceId is always present
-            startTime: booking.startTime, // Should be Timestamp
-            endTime: booking.endTime, // Should be Timestamp
-            // Provide default values or handle missing properties gracefully
+            id: booking.id,
+            userId: booking.userId,
+            salonId: booking.salonId,
+            serviceId: booking.serviceId,
+            startTime: booking.startTime,
+            endTime: booking.endTime,
             salonName: booking.salonName || 'N/A',
             serviceName: booking.serviceName || 'N/A',
             date: booking.date || new Date().toISOString().split('T')[0],
@@ -121,35 +127,35 @@ export default function AccountPage() {
             clientName: booking.clientName || 'N/A',
             clientEmail: booking.clientEmail || 'N/A',
             clientPhoneNumber: booking.clientPhoneNumber || 'N/A',
-            createdAt: booking.createdAt || Timestamp.now(), // Provide default Timestamp
+            createdAt: booking.createdAt || new Date().toISOString(),
             salonAddress: booking.salonAddress || 'N/A',
             salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
             salonOwnerId: booking.salonOwnerId || 'N/A',
-            service: booking.service as Service || { id: '', name: 'N/A', duration: 0, price: 0 }, // Provide default or handle missing
+            service: booking.service as Service || { id: '', name: 'N/A', duration: 0, price: 0 },
           }));
-          setBookings(mappedBookings as Booking[]); // Cast to Booking[] to ensure type correctness
+          setBookings(mappedBookings);
 
         } catch (error: any) {
           console.error("Error fetching/creating user profile or bookings:", error);
           const typedError = error as FirebaseError;
           setFetchError(typedError);
 
-          if (typedError.code) {
-            console.error("Firebase error code:", typedError.code);
+          if (error.code) {
+            console.error("Firebase error code:", error.code);
           }
-          if (typedError.message) {
-            console.error("Firebase error message:", typedError.message);
+          if (error.message) {
+            console.error("Firebase error message:", error.message);
           }
-          if (typedError.details) {
-            console.error("Firebase error details:", typedError.details);
+          if (error.details) {
+            console.error("Firebase error details:", error.details);
           }
-
+          
           if (typedError.code === 'failed-precondition') {
              setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "Грешка с базата данни: Необходим е индекс за тази операция. Моля, проверете конзолата на браузъра за линк от Firebase, за да го създадете, след което презаредете страницата." });
           } else if (typedError.code === 'permission-denied') {
-             const specificMessage = "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно. За повече информация, вижте конзолата на браузъра.";
-             console.error(specificMessage);
-             setFetchError({ name: "FirestorePermissionError", message: specificMessage, customMessage: specificMessage});
+            const specificMessage = "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно. За повече информация, вижте конзолата на браузъра.";
+            console.error(specificMessage);
+            setFetchError({ name: "FirestorePermissionError", message: specificMessage, customMessage: specificMessage });
           }
           setUserProfile(null);
           setBookings([]);
@@ -174,7 +180,7 @@ export default function AccountPage() {
     });
 
     return () => unsubscribe();
-  }, [firestore, router]);
+  }, [firestore, router, toast]); // Added toast to dependencies
 
   useEffect(() => {
     const fetchUserWrittenReviews = async () => {
@@ -185,11 +191,10 @@ export default function AccountPage() {
       const reviewsCollectionRef = collection(firestore, 'reviews');
 
       try {
-        // Fetch reviews written BY the current user, regardless of their role
         const reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id), orderBy('date', 'desc'));
         const reviewSnapshot = await getDocs(reviewsQuery);
         const fetchedReviews: Review[] = [];
-        reviewSnapshot.forEach(docSnap => { // Renamed to docSnap
+        reviewSnapshot.forEach(docSnap => {
           fetchedReviews.push({ id: docSnap.id, ...docSnap.data() } as Review);
         });
         setReviews(fetchedReviews);
@@ -245,13 +250,13 @@ export default function AccountPage() {
           >
             <History className="mr-2 h-5 w-5" /> Резервации
           </TabsTrigger>
+          <TabsTrigger
+            value="favorites"
+            className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
+            >
+            <Heart className="mr-2 h-5 w-5" /> Любими Салони
+            </TabsTrigger>
         </TabsList>
- <TabsTrigger
- value="favorites"
- className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
- >
- <Heart className="mr-2 h-5 w-5" /> Любими Салони
- </TabsTrigger>
 
         <div className="flex-1 min-w-0">
           <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
@@ -274,9 +279,9 @@ export default function AccountPage() {
               </div>
             ) : userProfile ? (
               <UserProfileForm
-                userProfile={userProfile as UserProfile}
-                newsletterSubscriptionStatus={newsletterStatus}
-                onNewsletterSubscriptionChange={handleNewsletterSubscriptionChange}
+                userProfile={userProfile}
+                newsletterSubscriptionStatus={newsletterSubscriptionStatus}
+                onNewsletterSubscriptionChange={handleSubscriptionChange}
               />
             ) : (
               <Card className="text-center border-destructive/50 bg-destructive/10 rounded-lg p-6 max-w-2xl mx-auto shadow-lg">
@@ -299,7 +304,15 @@ export default function AccountPage() {
                           </p>
                           <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all">
                           <code>
-                              {`rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /users/{userId} {\n      allow read, write: if request.auth != null && request.auth.uid == userId;\n    }\n    match /salons/{salonId} {\n      allow read: if true;\n      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';\n      allow update, delete: if request.auth != null && resource.data.ownerId == request.auth.uid && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';\n    }\n    match /reviews/{reviewId} {\n      allow read: if true;\n      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;\n      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;\n    }\n    match /bookings/{bookingId} {\n      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;\n      allow read: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid);\n      allow update: if request.auth != null && get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);\n    }\n    match /newsletterSubscribers/{subscriberId} {\n      allow create: if true;\n      allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /notifications/{notificationId} {\n      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;\n      allow create: if request.auth != null;\n      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n    match /counters/users {\n      allow read, write: if request.auth != null;\n    }\n  }\n}`}
+{`rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    // ... (keep your other rules for salons, bookings, etc.)
+  }
+}`}
                           </code>
                           </pre>
                           <p>Натиснете бутона <strong>Publish</strong>.</p>
@@ -381,36 +394,36 @@ export default function AccountPage() {
               )}
             </div>
           </TabsContent>
- <TabsContent value="favorites" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
- <div className="max-w-3xl mx-auto">
- <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
- Вашите Любими Салони
- </h2>
- {isLoading ? (
- <div className="space-y-4">
-                  {[...Array(3)].map((_, i) => (
- <Card key={i} className="shadow-sm animate-pulse">
- <CardHeader>
- <Skeleton className="h-6 w-3/4 mb-2" />
- </CardHeader>
- <CardContent className="space-y-2">
- <Skeleton className="h-4 w-full" />
- </CardContent>
- </Card>
-                  ))}
- </div>
- ) : userProfile?.favoriteSalons && userProfile.favoriteSalons.length > 0 ? (
- <div className="space-y-4">
-                  {userProfile.favoriteSalons.map(salonId => (
- {/* Placeholder for favorite salon display */}
- <div key={salonId} className="p-4 border rounded-md">{`Любим Салон ID: ${salonId}`}</div>
-                  ))}
- </div>
- ) : (
- <p className="text-center text-muted-foreground py-10">Все още нямате любими салони.</p>
- )}
- </div>
- </TabsContent>
+          <TabsContent value="favorites" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+            <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
+            Вашите Любими Салони
+            </h2>
+            {isLoading ? (
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => (
+                <Card key={i} className="shadow-sm animate-pulse">
+                  <CardHeader>
+                  <Skeleton className="h-6 w-3/4 mb-2" />
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+            ) : userProfile?.preferences?.favoriteSalons && userProfile.preferences.favoriteSalons.length > 0 ? (
+              <div className="space-y-4">
+                {userProfile.preferences.favoriteSalons.map(salonId => (
+                  // TODO: Fetch and display salon details for each favorite salonId
+                  <div key={salonId} className="p-4 border rounded-md">{`Любим Салон ID: ${salonId}`}</div>
+                ))}
+              </div>
+            ) : (
+            <p className="text-center text-muted-foreground py-10">Все още нямате любими салони.</p>
+            )}
+            </div>
+          </TabsContent>
         </div>
       </Tabs>
     </div>
