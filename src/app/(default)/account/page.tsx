@@ -5,17 +5,19 @@ import { useState, useEffect, type ReactNode } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { ReviewCard } from '@/components/salon/review-card';
+import { SalonCard } from '@/components/salon/salon-card'; // Import SalonCard
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking, Review, Service } from '@/types';
+import type { UserProfile, Booking, Review, Salon, Service } from '@/types';
 import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText, Heart } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { auth, getUserProfile, getNewsletterSubscriptionStatus, getUserBookings, firestore } from '@/lib/firebase';
-import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp, orderBy, getDoc as getFirestoreDoc } from 'firebase/firestore'; // Renamed getDoc to avoid conflict
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
+import { mapSalon } from '@/utils/mappers'; // Import mapSalon
 
 interface FirebaseError extends Error {
   code?: string;
@@ -45,9 +47,10 @@ export default function AccountPage() {
   const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const [newsletterSubscriptionStatus, setNewsletterStatus] = useState<boolean | null>(null);
+  const [favoriteSalonDetails, setFavoriteSalonDetails] = useState<Salon[]>([]);
+  const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  // const firestore = getFirestore(); // Use imported instance
 
   const fetchNewsletterStatus = async (email: string | undefined | null) => {
     if (email) {
@@ -69,7 +72,7 @@ export default function AccountPage() {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setIsLoading(true);
       setFetchError(null);
-      setNewsletterStatus(null); // Reset on auth change
+      setNewsletterStatus(null);
       if (user && user.uid) {
         setCurrentUser(user);
         try {
@@ -180,7 +183,7 @@ export default function AccountPage() {
     });
 
     return () => unsubscribe();
-  }, [firestore, router, toast]); // Added toast to dependencies
+  }, [firestore, router, toast]);
 
   useEffect(() => {
     const fetchUserWrittenReviews = async () => {
@@ -208,6 +211,45 @@ export default function AccountPage() {
       fetchUserWrittenReviews();
     }
   }, [userProfile, firestore]);
+
+  useEffect(() => {
+    const fetchFavoriteSalons = async () => {
+      if (!userProfile?.preferences?.favoriteSalons || userProfile.preferences.favoriteSalons.length === 0) {
+        setFavoriteSalonDetails([]);
+        setIsLoadingFavorites(false);
+        return;
+      }
+
+      setIsLoadingFavorites(true);
+      try {
+        const salonPromises = userProfile.preferences.favoriteSalons.map(async (salonId) => {
+          const salonDocRef = doc(firestore, 'salons', salonId);
+          const salonDocSnap = await getFirestoreDoc(salonDocRef);
+          if (salonDocSnap.exists()) {
+            return mapSalon(salonDocSnap.data(), salonDocSnap.id);
+          }
+          return null;
+        });
+        const resolvedSalons = (await Promise.all(salonPromises)).filter(salon => salon !== null) as Salon[];
+        setFavoriteSalonDetails(resolvedSalons);
+      } catch (error) {
+        console.error("Error fetching favorite salons:", error);
+        toast({
+          title: "Грешка при зареждане на любими салони",
+          description: "Неуспешно извличане на детайли за любимите салони.",
+          variant: "destructive",
+        });
+        setFavoriteSalonDetails([]);
+      } finally {
+        setIsLoadingFavorites(false);
+      }
+    };
+
+    if (userProfile) {
+      fetchFavoriteSalons();
+    }
+  }, [userProfile, firestore, toast]);
+
 
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -396,32 +438,35 @@ service cloud.firestore {
           </TabsContent>
           <TabsContent value="favorites" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
             <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
-            Вашите Любими Салони
-            </h2>
-            {isLoading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="shadow-sm animate-pulse">
-                  <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  </CardHeader>
-                  <CardContent className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-            ) : userProfile?.preferences?.favoriteSalons && userProfile.preferences.favoriteSalons.length > 0 ? (
-              <div className="space-y-4">
-                {userProfile.preferences.favoriteSalons.map(salonId => (
-                  // TODO: Fetch and display salon details for each favorite salonId
-                  <div key={salonId} className="p-4 border rounded-md">{`Любим Салон ID: ${salonId}`}</div>
-                ))}
-              </div>
-            ) : (
-            <p className="text-center text-muted-foreground py-10">Все още нямате любими салони.</p>
-            )}
+              <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
+                Вашите Любими Салони
+              </h2>
+              {isLoadingFavorites ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden animate-pulse">
+                      <Skeleton className="h-40 w-full" />
+                      <div className="p-4">
+                        <Skeleton className="h-6 w-3/4 mb-2" />
+                        <Skeleton className="h-4 w-full mb-1" />
+                        <Skeleton className="h-4 w-5/6 mb-3" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                      <div className="p-4 pt-0">
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : favoriteSalonDetails.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {favoriteSalonDetails.map(salon => (
+                    <SalonCard key={salon.id} salon={salon} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-10">Все още нямате любими салони.</p>
+              )}
             </div>
           </TabsContent>
         </div>
@@ -429,3 +474,4 @@ service cloud.firestore {
     </div>
   );
 }
+
