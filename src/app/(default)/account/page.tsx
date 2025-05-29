@@ -1,11 +1,11 @@
 
 'use client';
 
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode, useCallback } from 'react';
 import { UserProfileForm } from '@/components/user/user-profile-form';
 import { BookingHistoryItem } from '@/components/user/booking-history-item';
 import { ReviewCard } from '@/components/salon/review-card';
-import { SalonCard } from '@/components/salon/salon-card'; // Import SalonCard
+import { SalonCard } from '@/components/salon/salon-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import type { UserProfile, Booking, Review, Salon, Service } from '@/types';
@@ -13,11 +13,11 @@ import { UserCircle, History, Edit3, AlertTriangle, MessageSquareText, Heart } f
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { auth, getUserProfile, getNewsletterSubscriptionStatus, getUserBookings, firestore } from '@/lib/firebase';
-import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp, orderBy, getDoc as getFirestoreDoc } from 'firebase/firestore'; // Renamed getDoc to avoid conflict
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp, orderBy, getDoc as getFirestoreDoc, updateDoc, arrayRemove, arrayUnion } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { mapSalon } from '@/utils/mappers'; // Import mapSalon
+import { mapSalon } from '@/utils/mappers';
 
 interface FirebaseError extends Error {
   code?: string;
@@ -44,13 +44,15 @@ export default function AccountPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
-  const [_currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
   const [newsletterSubscriptionStatus, setNewsletterStatus] = useState<boolean | null>(null);
   const [favoriteSalonDetails, setFavoriteSalonDetails] = useState<Salon[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const db = getFirestore();
+
 
   const fetchNewsletterStatus = async (email: string | undefined | null) => {
     if (email) {
@@ -63,7 +65,6 @@ export default function AccountPage() {
 
   const handleSubscriptionChange = async () => {
     if (userProfile?.email) {
-      console.log("AccountPage: Refreshing newsletter status...");
       await fetchNewsletterStatus(userProfile.email);
     }
   };
@@ -79,13 +80,11 @@ export default function AccountPage() {
           let profileData = await getUserProfile(user.uid);
 
           if (!profileData && user.email) {
-            console.log(`Profile not found by UID ${user.uid}, trying by email ${user.email}`);
             const usersQuery = query(collection(firestore, 'users'), where('email', '==', user.email));
             const querySnapshot = await getDocs(usersQuery);
             if (!querySnapshot.empty) {
               const userDoc = querySnapshot.docs[0];
               profileData = { id: userDoc.id, ...userDoc.data() } as UserProfile;
-              console.log("Profile found by email:", profileData);
             }
           }
 
@@ -93,7 +92,6 @@ export default function AccountPage() {
             setUserProfile(profileData as UserProfile);
             await fetchNewsletterStatus(profileData.email);
           } else {
-            console.log("User document not found for UID:", user.uid, ". Creating default profile in Firestore using UID.");
             const newUserDocRef = doc(firestore, 'users', user.uid);
             const dataToSave: Omit<UserProfile, 'id' | 'createdAt'> & { createdAt: Timestamp; userId: string; } = {
               userId: user.uid,
@@ -143,15 +141,9 @@ export default function AccountPage() {
           const typedError = error as FirebaseError;
           setFetchError(typedError);
 
-          if (error.code) {
-            console.error("Firebase error code:", error.code);
-          }
-          if (error.message) {
-            console.error("Firebase error message:", error.message);
-          }
-          if (error.details) {
-            console.error("Firebase error details:", error.details);
-          }
+          if (error.code) console.error("Firebase error code:", error.code);
+          if (error.message) console.error("Firebase error message:", error.message);
+          if (error.details) console.error("Firebase error details:", error.details);
           
           if (typedError.code === 'failed-precondition') {
              setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "Грешка с базата данни: Необходим е индекс за тази операция. Моля, проверете конзолата на браузъра за линк от Firebase, за да го създадете, след което презаредете страницата." });
@@ -183,7 +175,7 @@ export default function AccountPage() {
     });
 
     return () => unsubscribe();
-  }, [firestore, router, toast]);
+  }, [db, router, toast]); // Updated dependency array
 
   useEffect(() => {
     const fetchUserWrittenReviews = async () => {
@@ -250,6 +242,69 @@ export default function AccountPage() {
     }
   }, [userProfile, firestore, toast]);
 
+
+  const handleToggleFavorite = useCallback(async (salonId: string, isCurrentlyFavorite: boolean) => {
+    if (!currentUser || !salonId) {
+      toast({
+        title: "Влезте в профила си",
+        description: "Моля, влезте, за да управлявате любими салони.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const userDocRef = doc(db, 'users', currentUser.uid);
+    try {
+      const userDocSnap = await getFirestoreDoc(userDocRef); // Use getFirestoreDoc
+      if (!userDocSnap.exists()) {
+        toast({ title: "Грешка", description: "Потребителският профил не е намерен.", variant: "destructive"});
+        return;
+      }
+
+      let updatedFavorites;
+      let toastMessage = "";
+      let toastTitle = "";
+
+      if (isCurrentlyFavorite) { // Trying to unfavorite
+        updatedFavorites = arrayRemove(salonId);
+        toastTitle = "Премахнат от любими!";
+        toastMessage = "Салонът е премахнат от вашите любими.";
+      } else { // Trying to favorite
+        updatedFavorites = arrayUnion(salonId);
+        toastTitle = "Добавен в любими!";
+        toastMessage = "Салонът е добавен към вашите любими.";
+      }
+
+      await updateDoc(userDocRef, {
+        'preferences.favoriteSalons': updatedFavorites
+      });
+
+      toast({ title: toastTitle, description: toastMessage });
+
+      // Update local state to reflect change immediately
+      setUserProfile(prevProfile => {
+        if (!prevProfile) return null;
+        const newFavoriteSalons = isCurrentlyFavorite
+          ? (prevProfile.preferences?.favoriteSalons || []).filter(id => id !== salonId)
+          : [...(prevProfile.preferences?.favoriteSalons || []), salonId];
+        return {
+          ...prevProfile,
+          preferences: {
+            ...(prevProfile.preferences || {}),
+            favoriteSalons: newFavoriteSalons,
+          },
+        };
+      });
+       // This will trigger the useEffect to re-fetch favorite salon details
+    } catch (error) {
+      console.error("Error toggling favorite status:", error);
+      toast({
+        title: "Грешка",
+        description: "Неуспешно обновяване на списъка с любими. Моля, опитайте отново.",
+        variant: "destructive",
+      });
+    }
+  }, [currentUser, db, toast]);
 
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -461,7 +516,12 @@ service cloud.firestore {
               ) : favoriteSalonDetails.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   {favoriteSalonDetails.map(salon => (
-                    <SalonCard key={salon.id} salon={salon} />
+                    <SalonCard
+                      key={salon.id}
+                      salon={salon}
+                      isFavoriteMode={true}
+                      onToggleFavorite={handleToggleFavorite}
+                    />
                   ))}
                 </div>
               ) : (
@@ -474,4 +534,3 @@ service cloud.firestore {
     </div>
   );
 }
-

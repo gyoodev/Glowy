@@ -1,22 +1,32 @@
 
+'use client';
+
 import Link from 'next/link';
 import Image from 'next/image';
 import type { Salon } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Gift } from 'lucide-react';
+import { Star, MapPin, Gift, HeartOff } from 'lucide-react'; // Added HeartOff
 import { isFuture } from 'date-fns';
 
 interface SalonCardProps {
   salon: Salon;
+  isFavoriteMode?: boolean; // New prop
+  onToggleFavorite?: (salonId: string, isCurrentlyFavorite: boolean) => void; // New prop
 }
 
-export function SalonCard({ salon }: SalonCardProps) {
+export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: SalonCardProps) {
   const isPromoted = salon.promotion &&
                       salon.promotion.isActive &&
                       salon.promotion.expiresAt &&
                       isFuture(new Date(salon.promotion.expiresAt));
+
+  const handleUnfavoriteClick = () => {
+    if (onToggleFavorite && salon.id) {
+      onToggleFavorite(salon.id, true); // Pass true because in favorite mode, it's currently a favorite
+    }
+  };
 
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full relative">
@@ -34,6 +44,7 @@ export function SalonCard({ salon }: SalonCardProps) {
               alt={`Екстериор или интериор на ${salon.name}`}
               fill={true}
               style={{ objectFit: 'cover' }}
+              data-ai-hint="salon exterior modern"
             />
           </div>
         </Link>
@@ -50,13 +61,20 @@ export function SalonCard({ salon }: SalonCardProps) {
         <div className="flex items-center space-x-1 text-sm">
           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
           <span>{(salon.rating || 0).toFixed(1)}</span>
-          <span className="text-muted-foreground">({(salon.reviews || []).length} отзива)</span>
+          <span className="text-muted-foreground">({(salon.reviewCount || 0)} отзива)</span>
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button asChild className="w-full">
-          <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`}>Виж Повече</Link>
-        </Button>
+        {isFavoriteMode ? (
+          <Button onClick={handleUnfavoriteClick} variant="outline" className="w-full">
+            <HeartOff className="mr-2 h-4 w-4" />
+            Премахни от любими
+          </Button>
+        ) : (
+          <Button asChild className="w-full">
+            <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`}>Виж Повече</Link>
+          </Button>
+        )}
       </CardFooter>
     </Card>
   );
