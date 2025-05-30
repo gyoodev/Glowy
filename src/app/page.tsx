@@ -1,6 +1,7 @@
 
 'use client';
 
+import { gsap } from 'gsap';
 import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { collection, getDocs, query, orderBy, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
@@ -9,6 +10,7 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
@@ -127,6 +129,31 @@ export default function SalonDirectoryPage() {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
   };
   
+  useEffect(() => {
+    // Ensure ScrollTrigger is registered (should be in global setup, but good to double-check)
+    gsap.registerPlugin(ScrollTrigger);
+
+    // Target all images within the hero section
+    gsap.utils.toArray('.hero-image').forEach((image: any) => {
+      gsap.fromTo(image, {
+        opacity: 0,
+        y: 50,
+      }, {
+        opacity: 1,
+        y: 0,
+        duration: 1,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: image,
+          start: 'top 80%', // Animation starts when the top of the image is 80% down the viewport
+          end: 'bottom 20%', // Animation ends when the bottom of the image is 20% up the viewport
+          toggleActions: 'play none none none', // Play animation once when scrolling down
+          // markers: true, // Uncomment for debugging ScrollTrigger
+        },
+      });
+    });
+  }, [isLoading]); // Run this effect when the loading state changes and salons are potentially rendered
+
   return (
     <div className="container mx-auto py-10 px-6">
       <header className="mb-16 py-12 relative overflow-hidden">
@@ -145,7 +172,7 @@ export default function SalonDirectoryPage() {
                   <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0">
                   Открийте най-добрите салони за красота и услуги близо до Вас.
                   </p>
-              </div>
+              </div> 
               <div className="relative z-10 md:col-span-1 space-y-4">
                 <div> 
                   <Image
@@ -156,7 +183,7 @@ export default function SalonDirectoryPage() {
                     height={320}
                     priority={staticHeroImages[0].priority}
                     className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={staticHeroImages[0].dataAiHint}
+                    data-ai-hint={staticHeroImages[0].dataAiHint} // Added class for targeting
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -169,7 +196,7 @@ export default function SalonDirectoryPage() {
                       height={270}
                       loading="lazy"
                       className="w-full h-auto object-cover rounded-lg shadow-xl"
-                      data-ai-hint={staticHeroImages[1].dataAiHint}
+                      data-ai-hint={staticHeroImages[1].dataAiHint} // Added class for targeting
                     />
                   </div>
                   <div>
@@ -181,7 +208,7 @@ export default function SalonDirectoryPage() {
                       height={270}
                       loading="lazy"
                       className="w-full h-auto object-cover rounded-lg shadow-xl"
-                      data-ai-hint={staticHeroImages[2].dataAiHint}
+                      data-ai-hint={staticHeroImages[2].dataAiHint} // Added class for targeting
                     />
                   </div>
                 </div>

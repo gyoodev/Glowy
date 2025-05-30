@@ -1,15 +1,42 @@
 
 import type { Salon, Service, Review, UserProfile, Booking } from '@/types';
-import { Scissors, Brush, Palette, Sparkles, Droplets, Sun } from 'lucide-react';
-
-export const mockServices: Service[] = [
+import { Scissors, Brush, Palette, Sparkles, Droplets, Sun, Hand, Flame, Eye, ArrowUpCircle } from 'lucide-react';
+import { CircleStop } from 'lucide-react';export const mockServices: Service[] = [
+  // Women's Hair
   { id: 's1', name: 'Дамска подстрижка', description: 'Шампоан, подстригване и стилизиране за жени.', price: 60, duration: 60, categoryIcon: Scissors },
+  { id: 's1a', name: 'Дамска прическа с изправяне/къдрене', description: 'Измиване, изсушаване и стилизиране по желание.', price: 50, duration: 75, categoryIcon: Scissors },
+  { id: 's1b', name: 'Официална дамска прическа', description: 'Стилизиране за специални поводи.', price: 80, duration: 90, categoryIcon: Scissors },
+  // Men's Hair
   { id: 's2', name: 'Мъжка подстрижка', description: 'Класическо мъжко подстригване и стилизиране.', price: 40, duration: 45, categoryIcon: Scissors },
-  { id: 's3', name: 'Цялостно боядисване', description: 'Еднопроцесно боядисване на цялата коса.', price: 120, duration: 120, categoryIcon: Palette },
-  { id: 's4', name: 'Кичури', description: 'Частични или цели кичури.', price: 150, duration: 180, categoryIcon: Sparkles },
-  { id: 's5', name: 'Маникюр', description: 'Класически маникюр с лак.', price: 35, duration: 45, categoryIcon: Brush },
-  { id: 's6', name: 'Педикюр', description: 'Релаксиращ педикюр с масаж и лак.', price: 50, duration: 60, categoryIcon: Droplets },
-  { id: 's7', name: 'Процедура за лице', description: 'Дълбоко почистваща и ревитализираща процедура за лице.', price: 90, duration: 75, categoryIcon: Sun },
+  { id: 's2a', name: 'Оформяне на брада', description: 'Подстригване и оформяне на брада с бръснене.', price: 25, duration: 30, categoryIcon: Scissors },
+  { id: 's2b', name: 'Мъжка прическа с бръснене', description: 'Подстригване и класическо бръснене.', price: 55, duration: 60, categoryIcon: Scissors },
+  // Coloring
+  { id: 's3', name: 'Цялостно боядисване', description: 'Еднопроцесно боядисване на цялата коса.', price: 120, duration: 120, categoryIcon: Palette }, // Keep existing
+  { id: 's4', name: 'Кичури', description: 'Частични или цели кичури.', price: 150, duration: 180, categoryIcon: Sparkles }, // Keep existing
+  { id: 's4a', name: 'Балеаж / Омбре', description: 'Техника за изсветляване на косата с плавни преходи.', price: 180, duration: 240, categoryIcon: Sparkles },
+  { id: 's4b', name: 'Тониране', description: 'Освежаване на цвета или неутрализиране на нежелани оттенъци.', price: 70, duration: 90, categoryIcon: Palette },
+  // Nail Procedures
+  { id: 's5', name: 'Класически маникюр', description: 'Почистване, оформяне и лакиране на ноктите.', price: 35, duration: 45, categoryIcon: Brush }, // Keep existing
+  { id: 's5a', name: 'Гелак (маникюр)', description: 'Поставяне на дълготраен гел лак.', price: 45, duration: 60, categoryIcon: Brush },
+  { id: 's5b', name: 'Поддръжка гелак', description: 'Сваляне и повторно поставяне на гел лак.', price: 50, duration: 75, categoryIcon: Brush },
+  { id: 's6', name: 'Класически педикюр', description: 'Релаксиращ педикюр с масаж и лак.', price: 50, duration: 60, categoryIcon: Droplets }, // Keep existing
+  { id: 's6a', name: 'Гелак (педикюр)', description: 'Поставяне на дълготраен гел лак на краката.', price: 60, duration: 75, categoryIcon: Droplets },
+  // Facial Procedures
+  { id: 's7', name: 'Почистваща процедура за лице', description: 'Дълбоко почистване и хидратация.', price: 90, duration: 75, categoryIcon: Sun }, // Keep existing
+  { id: 's7a', name: 'Процедура за лице с маска', description: 'Индивидуално подбрана маска според типа кожа.', price: 70, duration: 60, categoryIcon: Sun },
+  { id: 's7b', name: 'Терапия за околоочен контур', description: 'Специализирана грижа за нежната кожа около очите.', price: 50, duration: 45, categoryIcon: Sun },
+  // Massages
+  { id: 'm1', name: 'Класически масаж на цяло тяло', description: 'Релаксиращ масаж за облекчаване на напрежението.', price: 80, duration: 60, categoryIcon: CircleStop },
+  { id: 'm2', name: 'Частичен масаж (гръб/врат)', description: 'Таргетиран масаж за конкретни зони.', price: 50, duration: 30, categoryIcon: CircleStop },
+  { id: 'm3', name: 'Спортен масаж', description: 'По-дълбок масаж за спортисти или при мускулни болки.', price: 90, duration: 75, categoryIcon: CircleStop },
+];
+
+// New categories for Eyelashes and Eyebrows
+export const mockEyelashEyebrowServices: Service[] = [
+  { id: 'ee1', name: 'Оформяне на вежди', description: 'Професионално оформяне на вежди с пинсета или конец.', price: 25, duration: 30, categoryIcon: Eye },
+  { id: 'ee2', name: 'Боядисване на вежди', description: 'Боядисване на вежди за по-изразителен поглед.', price: 20, duration: 20, categoryIcon: Eye },
+  { id: 'ee3', name: 'Поставяне на мигли (косъм по косъм)', description: 'Удължаване и сгъстяване на миглите чрез техника косъм по косъм.', price: 120, duration: 120, categoryIcon: ArrowUpCircle },
+  { id: 'ee4', name: 'Поддръжка на мигли', description: 'Поддръжка и попълване на поставени мигли.', price: 60, duration: 60, categoryIcon: ArrowUpCircle },
 ];
 
 export const mockReviews: Review[] = [
@@ -32,7 +59,7 @@ export const mockSalons: Salon[] = [
       'https://placehold.co/600x400.png',
       'https://placehold.co/600x400.png',
     ],
-    services: [mockServices[0], mockServices[2], mockServices[4], mockServices[6]],
+    services: [mockServices[0], mockServices[2], mockServices[4], mockServices[7], mockServices[8], mockServices[9]], // Example services from the expanded list
     reviews: mockReviews.slice(0, 2),
     heroImage: 'https://placehold.co/1200x400.png',
     availability: {
@@ -54,7 +81,7 @@ export const mockSalons: Salon[] = [
       'https://placehold.co/600x400.png',
     ],
     services: [mockServices[1], mockServices[3]],
-    reviews: [mockReviews[2]],
+    reviews: [mockReviews[1]], // Corrected to use a valid review
     heroImage: 'https://placehold.co/1200x400.png',
      availability: {
       [(new Date(Date.now() + 86400000 * 1)).toISOString().split('T')[0]]: ['10:00', '11:00', '13:00', '14:00'],
@@ -75,7 +102,7 @@ export const mockSalons: Salon[] = [
       'https://placehold.co/600x400.png',
       'https://placehold.co/600x400.png',
     ],
-    services: [mockServices[4], mockServices[5], mockServices[6]],
+    services: [mockServices[4], mockServices[5], mockServices[6], mockServices[10], mockServices[11], mockServices[12], mockServices[13], mockServices[14]], // Example services
     reviews: mockReviews,
     heroImage: 'https://placehold.co/1200x400.png',
     availability: {

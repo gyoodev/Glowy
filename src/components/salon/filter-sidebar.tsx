@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -12,16 +13,24 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ListFilter, X, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// Define the structure for categorized services
+interface CategorizedService {
+  category: string;
+  services: { id: string; name: string }[];
+}
+
 interface FilterSidebarProps {
   onFilterChange: (filters: Record<string, any>) => void;
   cities: string[];
-  serviceTypes: string[];
+  // Updated serviceTypes prop to be an array of CategorizedService
+  serviceTypes: CategorizedService[];
 }
 
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_SERVICES_VALUE = "--all-services--";
 const DEFAULT_MIN_PRICE = 0; 
 const DEFAULT_MAX_PRICE = 500; 
+const ALL_CATEGORIES_VALUE = "--all-categories--";
 
 export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
@@ -29,11 +38,14 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
   const [rating, setRating] = useState([0]); 
   const [maxPriceValue, setMaxPriceValue] = useState<[number]>([DEFAULT_MIN_PRICE]); // Default to 0
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES_VALUE);
+  const [selectedService, setSelectedService] = useState(ALL_SERVICES_VALUE);
 
   const handleApplyFilters = () => {
     onFilterChange({
       location,
-      serviceType,
+      category: selectedCategory === ALL_CATEGORIES_VALUE ? undefined : selectedCategory,
+      serviceId: selectedService === ALL_SERVICES_VALUE ? undefined : selectedService,
       minRating: rating[0],
       maxPrice: maxPriceValue[0] === DEFAULT_MIN_PRICE ? DEFAULT_MAX_PRICE : maxPriceValue[0],
     });
@@ -41,12 +53,14 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
 
   const handleClearFilters = () => {
     setLocation(ALL_CITIES_VALUE);
-    setServiceType(ALL_SERVICES_VALUE);
+    setSelectedCategory(ALL_CATEGORIES_VALUE);
+    setSelectedService(ALL_SERVICES_VALUE);
     setRating([0]);
     setMaxPriceValue([DEFAULT_MIN_PRICE]); // Reset to 0
     onFilterChange({
       location: ALL_CITIES_VALUE,
-      serviceType: ALL_SERVICES_VALUE,
+      category: undefined,
+      serviceId: undefined,
       minRating: 0,
       maxPrice: DEFAULT_MAX_PRICE, // Send DEFAULT_MAX_PRICE to signify "any price"
     });

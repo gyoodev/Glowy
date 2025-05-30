@@ -5,6 +5,7 @@ import {Footer} from '@/components/layout/footer';
 import { Header } from '@/components/layout/header';
 import { Toaster } from "@/components/ui/toaster"; // Toaster needs to be here for useToast
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'; // Import CookieConsentBanner
+import '@/lib/gsap'; // Import GSAP setup
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

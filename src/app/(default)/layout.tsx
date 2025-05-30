@@ -1,6 +1,7 @@
 "use client";
 import { type ReactNode, useEffect } from 'react';
 // Header and Footer, and Toaster are now provided by RootLayout
+import '@/lib/gsap';
 import { gsap } from 'gsap';
 //
 // Toaster is also provided by RootLayout
