@@ -34,9 +34,9 @@ export function mapBooking(raw: any): Booking {
     date: raw.date || new Date().toISOString().split('T')[0],
     time: raw.time || 'N/A',
     status: raw.status as Booking['status'] || 'pending',
-    clientName: raw.clientName || 'N/A', // Ensure this field is included
-    clientEmail: raw.clientEmail || 'N/A', // Ensure this field is included
-    clientPhoneNumber: raw.clientPhoneNumber || 'N/A', // Ensure this field is included
+    clientName: raw.clientName,
+    clientEmail: raw.clientEmail,
+    clientPhoneNumber: raw.clientPhoneNumber,
     createdAt: timestampToISOString(raw.createdAt),
     salonAddress: raw.salonAddress || 'N/A',
     salonPhoneNumber: raw.salonPhoneNumber || 'N/A',
@@ -75,6 +75,7 @@ export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
       favoriteServices: [],
       priceRange: '',
       preferredLocations: [],
+      favoriteSalons: [],
     },
     createdAt: timestampToISOString(raw.createdAt),
     phoneNumber: raw.phoneNumber || '',
@@ -103,20 +104,27 @@ export function mapSalon(raw: any, id?: string): Salon {
         workingHours[dayKey] = {
           open: raw.workingHours[dayKey].open || '',
           close: raw.workingHours[dayKey].close || '',
-          isOff: raw.workingHours[dayKey].isOff ?? true, // Default to off if not specified
+          isOff: raw.workingHours[dayKey].isOff ?? true, 
         };
       } else {
-        // Ensure all days are present, default to closed
         workingHours[dayKey] = { open: '', close: '', isOff: true };
       }
     });
   } else {
-    // Default working hours if none are provided
     daysOrder.forEach(dayKey => {
       workingHours[dayKey] = { open: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '09:00'), close: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '18:00'), isOff: (dayKey === 'saturday' || dayKey === 'sunday') };
       if (dayKey === 'saturday') workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
     });
   }
+
+  let mappedLocation: { lat: number; lng: number } | undefined = undefined;
+  if (raw.location && typeof raw.location.lat === 'number' && typeof raw.location.lng === 'number') {
+    // Only consider it a valid location if coordinates are not (0,0) which might be an uninitialized default
+    // or if you have a different way to signify uninitialized coordinates.
+    // For now, any pair of numbers is accepted, but you might want to refine this.
+     mappedLocation = { lat: raw.location.lat, lng: raw.location.lng };
+  }
+
 
   return {
     id: id || raw.id,
@@ -132,12 +140,21 @@ export function mapSalon(raw: any, id?: string): Salon {
     services: services,
     photos: Array.isArray(raw.photos) ? raw.photos : [],
     heroImage: raw.heroImage || '',
-    location: raw.location || { lat: 0, lng: 0 },
+    location: mappedLocation, // Use the refined mappedLocation
     rating: typeof raw.rating === 'number' ? raw.rating : 0,
+    reviewCount: typeof raw.reviewCount === 'number' ? raw.reviewCount : 0,
     createdAt: timestampToISOString(raw.createdAt),
     availability: raw.availability || {},
     workingHours: workingHours,
-    promotion: raw.promotion,
+    promotion: raw.promotion ? {
+        isActive: raw.promotion.isActive,
+        packageId: raw.promotion.packageId,
+        packageName: raw.promotion.packageName,
+        purchasedAt: raw.promotion.purchasedAt ? timestampToISOString(raw.promotion.purchasedAt) : undefined,
+        expiresAt: raw.promotion.expiresAt ? timestampToISOString(raw.promotion.expiresAt) : undefined,
+        paymentMethod: raw.promotion.paymentMethod,
+        transactionId: raw.promotion.transactionId
+    } : undefined,
     atmosphereForAi: raw.atmosphereForAi || '',
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
