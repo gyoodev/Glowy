@@ -1,13 +1,13 @@
 import {Geist, Geist_Mono} from 'next/font/google';
 import './globals.css';
 import {Footer} from '@/components/layout/footer';
-import { ClerkProvider } from '@clerk/nextjs';
+// import { ClerkProvider } from '@clerk/nextjs'; // ClerkProvider removed if not used
 import { Header } from '@/components/layout/header';
-import LoadingScreenAnimation from '@/components/layout/LoadingScreenAnimation';
+import { Toaster } from "@/components/ui/toaster"; // Toaster needs to be here for useToast
+import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'; // Import CookieConsentBanner
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
-  // weight: 'variable',
   subsets: ['latin'],
 });
 
@@ -24,14 +24,16 @@ export default function RootLayout({
 ) {
   return (
     <html lang="bg">
- <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
- <LoadingScreenAnimation />
- <Header />
- <main className="flex-1 bg-background">
- {children}
- </main>
- <Footer />
- </body>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+        {/* Removed LoadingScreenAnimation as per prior discussion (commented out in its file) */}
+        <Header />
+        <main className="flex-1 bg-background">
+          {children}
+        </main>
+        <Footer />
+        <Toaster />
+        <CookieConsentBanner />
+      </body>
     </html>
   );
 }
