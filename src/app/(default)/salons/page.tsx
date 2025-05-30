@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
-import { Footer } from '@/components/layout/footer';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -189,7 +188,6 @@ export default function SalonsDirectoryPage() {
         </main>
       </div>
     </div>
-    <Footer />
     </>
   );
 }
