@@ -1,3 +1,4 @@
+
 // src/components/layout/CookieConsentBanner.tsx
 'use client';
 
@@ -14,23 +15,28 @@ export function CookieConsentBanner() {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Ensure this effect runs only on the client
-    if (typeof window !== 'undefined') {
-      const consent = getCookie(COOKIE_CONSENT_KEY);
-      if (consent !== 'true') {
-        setIsVisible(true);
-      }
+    const consent = getCookie(COOKIE_CONSENT_KEY);
+    console.log('[CookieConsentBanner] Initial check: cookie value is:', consent);
+    if (consent !== 'true') {
+      console.log('[CookieConsentBanner] Consent not "true", showing banner.');
+      setIsVisible(true);
+    } else {
+      console.log('[CookieConsentBanner] Consent is "true", banner remains hidden.');
     }
-  }, []);
+  }, []); // Empty dependency array means this runs once on mount
 
   const handleAccept = () => {
+    console.log('[CookieConsentBanner] User accepted. Setting cookie:', COOKIE_CONSENT_KEY, 'to "true"');
     setCookie(COOKIE_CONSENT_KEY, 'true', 365); // Consent for 1 year
     setIsVisible(false);
+    // Verify cookie was set
+    setTimeout(() => {
+      console.log('[CookieConsentBanner] After setting, cookie value is:', getCookie(COOKIE_CONSENT_KEY));
+    }, 100);
   };
 
   const handleDecline = () => {
-    // Optionally, set a cookie indicating declined, or just hide
-    // For simplicity, we just hide it. User can re-enable via settings if needed.
+    console.log('[CookieConsentBanner] User declined or closed banner.');
     setIsVisible(false);
      // You might set a cookie like `glowy-cookie-consent=declined`
      // and then handle logic based on that (e.g., don't load certain scripts)
