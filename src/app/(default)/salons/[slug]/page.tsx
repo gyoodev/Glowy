@@ -5,15 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours } from '@/types';
+import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import AddReviewForm from '@/components/salon/AddReviewForm';
-import { ReviewCard } from '@/components/salon/review-card'; // Added this import
+import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
@@ -95,10 +95,10 @@ function generateSalonSchema(salon: Salon) {
     "priceRange": salon.priceRange ? (
         salon.priceRange === 'cheap' ? '$' : salon.priceRange === 'moderate' ? '$$' : salon.priceRange === 'expensive' ? '$$$' : undefined
     ) : undefined,
-    "aggregateRating": salon.rating !== undefined && (salon.reviews?.length || 0) > 0 ? {
+    "aggregateRating": salon.rating !== undefined && (salon.reviewCount || 0) > 0 ? {
       "@type": "AggregateRating",
       "ratingValue": salon.rating.toFixed(1),
-      "reviewCount": (salon.reviews?.length || 0).toString(),
+      "reviewCount": (salon.reviewCount || 0).toString(),
     } : undefined,
   };
 }
@@ -156,11 +156,9 @@ export default function SalonProfilePage() {
           const salonDoc = querySnapshot.docs[0];
           let salonData = mapSalon(salonDoc.data(), salonDoc.id);
           
-          // Ensure services, photos, and reviews are initialized as empty arrays if undefined
           salonData.services = salonData.services || [];
           salonData.photos = salonData.photos || [];
-          // reviews are fetched separately, so salon.reviews might not be directly on the salon doc
-
+          
           setSalon(salonData);
           console.log("[SalonProfilePage] Salon found in Firestore:", salonData);
         } else {
@@ -273,7 +271,6 @@ export default function SalonProfilePage() {
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, firestore]); 
 
 
@@ -305,7 +302,6 @@ export default function SalonProfilePage() {
     if(salon?.id && auth.currentUser?.uid) { 
         fetchUserReviews();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salon?.id, auth.currentUser?.uid, firestore, showReviewForm]);
 
   const handleToggleFavorite = useCallback(async () => {
@@ -326,7 +322,6 @@ export default function SalonProfilePage() {
         return;
       }
 
-      // const currentFavorites = userDocSnap.data()?.preferences?.favoriteSalons || [];
       let updatedFavorites;
       let toastTitle = "";
       let toastMessage = "";
@@ -334,11 +329,11 @@ export default function SalonProfilePage() {
       if (isFavorite) { 
         updatedFavorites = arrayRemove(salon.id);
         toastTitle = "Премахнат от любими!";
-        toastMessage = salon.name + " е премахнат от вашите любими салони.";
+        toastMessage = (salon.name || "Салонът") + " е премахнат от вашите любими салони.";
       } else {
         updatedFavorites = arrayUnion(salon.id);
         toastTitle = "Добавен в любими!";
-        toastMessage = salon.name + " е добавен към вашите любими салони.";
+        toastMessage = (salon.name || "Салонът") + " е добавен към вашите любими салони.";
       }
       await updateDoc(userDocRef, {
         'preferences.favoriteSalons': updatedFavorites
@@ -349,8 +344,8 @@ export default function SalonProfilePage() {
         setUserProfile(prevProfile => {
           if (!prevProfile) return null;
           const currentFavSalons = prevProfile.preferences?.favoriteSalons || [];
-          const newFavoriteSalons = isFavorite
-            ? currentFavSalons.filter(id => id !== salon.id)
+          const newFavoriteSalons = isFavorite // Use the state *before* toggling for this logic
+            ? currentFavSalons.filter(id => id !== salon.id) 
             : [...currentFavSalons, salon.id];
           return {
             ...prevProfile,
@@ -547,7 +542,7 @@ export default function SalonProfilePage() {
 
       const userProfileData = await getUserProfile(userId);
       if (userProfileData && (userProfileData.name || userProfileData.displayName)) {
-        reviewerName = userProfileData.name || userProfileData.displayName || reviewerName;
+        reviewerName = userProfileData.name || userProfileData.displayName || null;
       }
       reviewerName = reviewerName || 'Анонимен потребител';
       const userAvatarUrl = userProfileData?.profilePhotoUrl || auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
@@ -589,7 +584,7 @@ export default function SalonProfilePage() {
           link: `/salons/${salon.name.replace(/\s+/g, '_')}#reviews`,
           read: false,
           createdAt: Timestamp.fromDate(new Date()),
-          type: 'new_review_business',
+          type: 'new_review_business' as NotificationType,
           relatedEntityId: docRef.id,
         });
       }
@@ -679,8 +674,11 @@ export default function SalonProfilePage() {
 
       <div className="container mx-auto py-10 px-6">
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-         <Tabs defaultValue="services" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1">
+         <Tabs defaultValue="info" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1">
             <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
+                <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
+                    <Info className="mr-2 h-4 w-4" />Информация
+                </TabsTrigger>
                 <TabsTrigger value="services" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <Sparkles className="mr-2 h-4 w-4" />Услуги
                 </TabsTrigger>
@@ -689,9 +687,6 @@ export default function SalonProfilePage() {
                 </TabsTrigger>
                 <TabsTrigger value="gallery" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <ImageIcon className="mr-2 h-4 w-4" />Галерия
-                </TabsTrigger>
-                 <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors md:hidden">
-                    <Info className="mr-2 h-4 w-4" />Информация
                 </TabsTrigger>
                 <TabsTrigger value="map" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <MapPin className="mr-2 h-4 w-4" />Карта
@@ -705,7 +700,7 @@ export default function SalonProfilePage() {
                         <div className="flex items-center mb-1">
                             <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
                             <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
-                            <span className="ml-2 text-muted-foreground">({displayedReviews.length || 0} отзива)</span>
+                            <span className="ml-2 text-muted-foreground">({displayedReviews.length || salon.reviewCount || 0} отзива)</span>
                         </div>
                         <div className="flex items-center text-muted-foreground text-sm">
                             <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
@@ -738,6 +733,30 @@ export default function SalonProfilePage() {
                     </div>
                     <p className="text-foreground leading-relaxed">{salon.description}</p>
                     </div>
+                  <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                     <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
+                        <ul className="space-y-2 text-sm text-muted-foreground">
+                            <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
+                            <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
+                            <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
+                        </ul>
+                        {!isPromotionActive && userRole === 'business' && isSalonOwner && (
+                            <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
+                                <CardHeader className="pb-3 pt-4">
+                                <CardTitle className="text-lg text-secondary-foreground flex items-center">
+                                    <Gift className="mr-2 h-5 w-5" />
+                                    Рекламирайте Вашия Салон
+                                </CardTitle>
+                                </CardHeader>
+                                <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80">
+                                <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
+                                <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                                    <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
+                                </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+                   </TabsContent>
                   <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                     <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                       <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
@@ -821,30 +840,6 @@ export default function SalonProfilePage() {
                         )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
                     </div>
                   </TabsContent>
-                  <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md md:hidden">
-                     <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                            <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
-                            <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
-                        </ul>
-                        {!isPromotionActive && userRole === 'business' && isSalonOwner && (
-                            <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                                <CardHeader className="pb-3 pt-4">
-                                <CardTitle className="text-lg text-secondary-foreground flex items-center">
-                                    <Gift className="mr-2 h-5 w-5" />
-                                    Рекламирайте Вашия Салон
-                                </CardTitle>
-                                </CardHeader>
-                                <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80">
-                                <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
-                                <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
-                                </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-                   </TabsContent>
                    <TabsContent value="map" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                     <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                       <MapPin className="mr-2 h-6 w-6 text-primary" /> Местоположение на Картата
@@ -891,22 +886,7 @@ export default function SalonProfilePage() {
                 onTimeSelect={handleTimeSelected}
               />
             </div>
-            {!isPromotionActive && userRole === 'business' && isSalonOwner && (
-              <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                <CardHeader className="pb-3 pt-4">
-                  <CardTitle className="text-lg text-secondary-foreground flex items-center">
-                    <Gift className="mr-2 h-5 w-5" />
-                    Рекламирайте Вашия Салон
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80">
-                  <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
-                  <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                     <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
+            
             {selectedService && selectedBookingDate && selectedBookingTime && (
               <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
                 <CardHeader className="pb-3 pt-4">
@@ -941,14 +921,6 @@ export default function SalonProfilePage() {
                 {auth.currentUser ? "Запази час" : "Влезте за да резервирате"}
               </Button>
             )}
-            <div className="bg-card p-6 rounded-lg shadow-lg">
-              <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
-                <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
-              </ul>
-            </div>
           </aside>
         </div>
       </div>
