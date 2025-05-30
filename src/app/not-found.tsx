@@ -1,5 +1,4 @@
-
-'use client'; // Make it a client component
+'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -14,31 +13,10 @@ export default function NotFound() {
       <p className="mt-3 text-lg text-muted-foreground max-w-md">
         Изглежда, че страницата, която търсите, не съществува или е била преместена.
       </p>
-
-      <div className="mt-8 w-full max-w-lg bg-muted/50 p-4 rounded-lg shadow-md border border-border">
-        <p className="text-sm font-semibold text-muted-foreground mb-2 text-left">Developer Tip:</p>
-        <pre className="text-xs text-left bg-card p-3 rounded-md overflow-x-auto border border-border/50 text-foreground/80">
-          <code>
-            {`// Common checks for 404 errors:\n` +
-             `// 1. Verify the URL path is correct and matches your file structure.\n` +
-             `//    (e.g., /admin corresponds to app/(admin)/page.tsx)\n` +
-             `// 2. Ensure the corresponding page file (page.tsx) exists.\n` +
-             `// 3. Check deployment logs (e.g., Netlify build logs) for errors \n` +
-             `//    that might prevent the page from being built.\n` +
-             `// 4. For dynamic routes [slug], ensure data fetching is successful;\n`+
-             `//    a failure to fetch data might lead to a notFound() call.\n` +
-             `// 5. Check for middleware (middleware.ts in src/ or root) that might be\n` +
-             `//    intercepting the request and redirecting or returning a 404.\n` +
-             `// 6. Check next.config.js for any redirects or rewrites affecting the path.\n` +
-             `// 7. Ensure RootLayout (app/layout.tsx) is error-free and rendering children.`}
-          </code>
-        </pre>
-      </div>
-
+      {/* Developer Tip section removed for simplification */}
       <Button asChild className="mt-8 text-lg py-3 px-6">
         <Link href="/">Обратно към Началната страница</Link>
       </Button>
     </div>
   );
 }
-    
