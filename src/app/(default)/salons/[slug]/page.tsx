@@ -13,7 +13,7 @@ import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
@@ -90,7 +90,7 @@ function generateSalonSchema(salon: Salon) {
       "streetAddress": salon.address || 'Няма предоставен адрес',
       "addressLocality": salon.city || 'Не е посочен град',
     },
-    "telephone": salon.phone || 'Няма предоставен телефон',
+    "telephone": salon.phoneNumber || 'Няма предоставен телефон',
     "openingHoursSpecification": openingHoursSpecification.length > 0 ? openingHoursSpecification : undefined,
     "priceRange": salon.priceRange ? (
         salon.priceRange === 'cheap' ? '$' : salon.priceRange === 'moderate' ? '$$' : salon.priceRange === 'expensive' ? '$$$' : undefined
@@ -125,7 +125,6 @@ export default function SalonProfilePage() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const reminderTimeoutId = useRef<NodeJS.Timeout | null>(null);
 
-  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     let currentSlug: string | undefined;
@@ -252,19 +251,9 @@ export default function SalonProfilePage() {
         if (reviewsData.length > 0) {
             const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
             const newAverageRating = totalRating / reviewsData.length;
-            // Update the rating on the salon object in Firestore if necessary.
-            // This should ideally be done with a server-side trigger/function for accuracy
-            // or batched updates if done client-side. For simplicity here, we'll update local state.
             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: reviewsData.length }) : null);
-            // If you want to update Firestore (be mindful of write costs):
-            // const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
-            // await updateDoc(salonDocRefToUpdate, { rating: newAverageRating, reviewCount: reviewsData.length });
         } else {
              setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
-             // if (salon.id) { // Check if salon.id exists before trying to update
-             //   const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
-             //   await updateDoc(salonDocRefToUpdate, { rating: 0, reviewCount: 0 });
-             // }
         }
       } catch (error) {
         console.error("[SalonProfilePage] Error fetching salon reviews:", error);
@@ -351,7 +340,7 @@ export default function SalonProfilePage() {
         setUserProfile(prevProfile => {
           if (!prevProfile) return null;
           const currentFavSalons = prevProfile.preferences?.favoriteSalons || [];
-          const newFavoriteSalons = isFavorite // Use the state *before* toggling for this logic
+          const newFavoriteSalons = isFavorite 
             ? currentFavSalons.filter(id => id !== salon.id) 
             : [...currentFavSalons, salon.id];
           return {
@@ -425,7 +414,7 @@ export default function SalonProfilePage() {
 
     let clientName = auth.currentUser.displayName || 'Клиент';
     let clientEmail = auth.currentUser.email || 'Няма имейл';
-    let clientPhoneNumber = 'Няма номер'; // Default phone number
+    let clientPhoneNumber = 'Няма номер'; 
 
     try {
       const userId = auth.currentUser.uid;
@@ -452,9 +441,9 @@ export default function SalonProfilePage() {
         time: bookingTime,
         clientName: clientName,
         clientEmail: clientEmail,
-        clientPhoneNumber: clientPhoneNumber, // Pass phone number
-        salonAddress: salon.address,         // Pass salon address
-        salonPhoneNumber: salon.phone,     // Pass salon phone
+        clientPhoneNumber: clientPhoneNumber,
+        salonAddress: salon.address,     
+        salonPhoneNumber: salon.phoneNumber,
       });
 
       toast({
@@ -552,7 +541,7 @@ export default function SalonProfilePage() {
         reviewerName = userProfileData.name || userProfileData.displayName || null;
       }
       reviewerName = reviewerName || 'Анонимен потребител';
-      const userAvatarUrl = userProfileData?.profilePhotoUrl || auth.currentUser.photoURL || 'https://placehold.co/40x40.png?text=A';
+      const userAvatarUrl = userProfileData?.profilePhotoUrl || auth.currentUser.photoURL || 'https://placehold.co/40x40.png';
 
 
       const newReviewData = {
@@ -578,10 +567,8 @@ export default function SalonProfilePage() {
       if (updatedDisplayedReviews.length > 0) {
         const totalRating = updatedDisplayedReviews.reduce((acc, rev) => acc + rev.rating, 0);
         const newAverageRating = totalRating / updatedDisplayedReviews.length;
-        // Update Firestore directly
         const salonDocRefToUpdate = doc(firestore, 'salons', salon.id);
         await updateDoc(salonDocRefToUpdate, { rating: newAverageRating, reviewCount: updatedDisplayedReviews.length });
-        // Update local state
         setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: updatedDisplayedReviews.length }) : null);
       }
 
@@ -652,9 +639,18 @@ export default function SalonProfilePage() {
 
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
-  const mapQuery = salon.address && salon.city && googleMapsApiKey
-    ? `https://www.google.com/maps/embed/v1/place?key=${googleMapsApiKey}&q=${encodeURIComponent(salon.address + ', ' + salon.city)}`
-    : null;
+  let osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?layer=mapnik`;
+  if (salon.location && salon.location.lat && salon.location.lng) {
+    const { lat, lng } = salon.location;
+    osmEmbedUrl += `&bbox=${lng - 0.005},${lat - 0.0025},${lng + 0.005},${lat + 0.0025}&marker=${lat},${lng}`;
+  } else if (salon.address && salon.city) {
+    osmEmbedUrl += `&query=${encodeURIComponent(salon.address + ', ' + salon.city)}`;
+  } else if (salon.city) {
+    osmEmbedUrl += `&query=${encodeURIComponent(salon.city)}`;
+  } else {
+    // Fallback to a general view of Bulgaria if no specific location info
+    osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=22.35,41.23,28.61,44.21&layer=mapnik`;
+  }
 
 
   return (
@@ -744,7 +740,7 @@ export default function SalonProfilePage() {
                      <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                            <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phone || 'Няма предоставен телефон'}</li>
+                            <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
                             <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
                         </ul>
                         {!isPromotionActive && userRole === 'business' && isSalonOwner && (
@@ -767,8 +763,7 @@ export default function SalonProfilePage() {
                           <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
                             <MapPin className="mr-2 h-5 w-5 text-primary" /> Местоположение на Картата
                           </h3>
-                          {googleMapsApiKey ? (
-                            mapQuery ? (
+                          {(salon.location && salon.location.lat && salon.location.lng) || (salon.address && salon.city) ? (
                               <div className="aspect-video w-full rounded-lg overflow-hidden shadow-md border">
                                 <iframe
                                   width="100%"
@@ -776,26 +771,13 @@ export default function SalonProfilePage() {
                                   loading="lazy"
                                   allowFullScreen
                                   referrerPolicy="no-referrer-when-downgrade"
-                                  src={mapQuery}
+                                  src={osmEmbedUrl}
                                   title={`Карта на ${salon.name}`}
                                 ></iframe>
                               </div>
                             ) : (
-                              <p className="text-muted-foreground">Адресът на салона не е достатъчно пълен, за да се покаже на картата.</p>
-                            )
-                          ) : (
-                            <Card className="border-destructive/50 bg-destructive/5 text-center p-6">
-                              <CardHeader className="p-0 mb-2">
-                                <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
-                                <CardTitle className="text-lg text-destructive">API Ключ за Google Maps Липсва</CardTitle>
-                              </CardHeader>
-                              <CardContent className="p-0 text-sm text-destructive-foreground">
-                                <p>За да се покаже картата, е необходимо да конфигурирате `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` във вашите environment variables.</p>
-                                 <p className="mt-2">Моля, добавете го във вашия <code>.env.local</code> файл и в настройките на вашата хостинг платформа (Netlify).</p>
-                                 <pre className="mt-2 text-xs bg-muted text-muted-foreground p-2 rounded-md text-left"><code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=ВАШИЯТ_КЛЮЧ_ТУК</code></pre>
-                              </CardContent>
-                            </Card>
-                          )}
+                              <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
+                            )}
                         </div>
                    </TabsContent>
                   <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
@@ -884,7 +866,7 @@ export default function SalonProfilePage() {
                 </div>
             </Tabs>
 
-          <aside className="lg:col-span-1 space-y-8 sticky top-20 hidden md:block md:w-1/3">
+          <aside className="md:w-1/3 space-y-8 sticky top-20">
              <div id="booking-calendar-section">
               <BookingCalendar
                 salonName={salon.name}
@@ -935,6 +917,6 @@ export default function SalonProfilePage() {
     </>
   );
 }
-
+    
 
     
