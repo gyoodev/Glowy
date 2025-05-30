@@ -5,13 +5,13 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType } from '@/types';
+import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import AddReviewForm from '@/components/salon/AddReviewForm';
 import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger, TabsOrientation } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -639,30 +639,18 @@ export default function SalonProfilePage() {
 
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
-  let osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?layer=mapnik`;
-  if (salon.location && salon.location.lat && salon.location.lng) {
-    const { lat, lng } = salon.location;
-    osmEmbedUrl += `&bbox=${lng - 0.005},${lat - 0.0025},${lng + 0.005},${lat + 0.0025}&marker=${lat},${lng}`;
-  } else if (salon.address && salon.city) {
-    osmEmbedUrl += `&query=${encodeURIComponent(salon.address + ', ' + salon.city)}`;
-  } else if (salon.city) {
-    osmEmbedUrl += `&query=${encodeURIComponent(salon.city)}`;
-  } else {
-    // Fallback to a general view of Bulgaria if no specific location info
-    osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=22.35,41.23,28.61,44.21&layer=mapnik`;
-  }
-
-
   return (
+
     <>
     {salon && (
- <script
+ <script 
  type="application/ld+json"
- dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
+
  /> )}
-    <div className="bg-background">
+ <div className="bg-background">
       <div className="relative h-64 md:h-96 w-full group">
-        <Image
+ <Image
           src={salon.heroImage || 'https://placehold.co/1200x400.png'}
           alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
           layout="fill"
@@ -681,7 +669,7 @@ export default function SalonProfilePage() {
       <div className="container mx-auto py-10 px-6">
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
          <Tabs defaultValue="info" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1">
-            <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
+            <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0" orientation="vertical" >
                 <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <Info className="mr-2 h-4 w-4" />Информация
                 </TabsTrigger>
@@ -737,22 +725,16 @@ export default function SalonProfilePage() {
                     <p className="text-foreground leading-relaxed">{salon.description}</p>
                     </div>
                   <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                     <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
-                        <ul className="space-y-2 text-sm text-muted-foreground">
-                            <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                            <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
-                            <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
-                        </ul>
-                        {!isPromotionActive && userRole === 'business' && isSalonOwner && (
-                            <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                                <CardHeader className="pb-3 pt-4">
-                                <CardTitle className="text-lg text-secondary-foreground flex items-center">
-                                    <Gift className="mr-2 h-5 w-5" />
-                                    Рекламирайте Вашия Салон
-                                </CardTitle>
-                                </CardHeader>
-                                <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80">
-                                <p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
+                      <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
+                      <ul className="space-y-2 text-sm text-muted-foreground">
+                          <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
+                          <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
+                          <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
+                      </ul>
+                      {!isPromotionActive && userRole === 'business' && isSalonOwner && (
+                          <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
+                              <CardHeader className="pb-3 pt-4"><CardTitle className="text-lg text-secondary-foreground flex items-center"><Gift className="mr-2 h-5 w-5" />Рекламирайте Вашия Салон</CardTitle></CardHeader>
+                              <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80"><p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
                                 <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
                                     <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
                                 </Button>
@@ -763,23 +745,13 @@ export default function SalonProfilePage() {
                           <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
                             <MapPin className="mr-2 h-5 w-5 text-primary" /> Местоположение на Картата
                           </h3>
-                          {(salon.location && salon.location.lat && salon.location.lng) || (salon.address && salon.city) ? (
-                              <div className="aspect-video w-full rounded-lg overflow-hidden shadow-md border">
-                                <iframe
-                                  width="100%"
-                                  height="100%"
-                                  loading="lazy"
-                                  allowFullScreen
-                                  referrerPolicy="no-referrer-when-downgrade"
-                                  src={osmEmbedUrl}
-                                  title={`Карта на ${salon.name}`}
-                                ></iframe>
-                              </div>
-                            ) : (
+                            <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
+                             {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( 
                               <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
-                            )}
-                        </div>
-                   </TabsContent>
+ ) }
+                            </div>
+                          </div>
+                          </TabsContent>
                   <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                     <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
                       <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
@@ -915,6 +887,7 @@ export default function SalonProfilePage() {
       </div>
     </div>
     </>
+
   );
 }
     
