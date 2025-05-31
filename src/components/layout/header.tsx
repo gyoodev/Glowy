@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn } from 'lucide-react';
+import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon } from 'lucide-react'; // Added Sun, Moon
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import type { Notification } from '@/types';
@@ -15,6 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
+import { setCookie, getCookie } from '@/lib/cookies'; // Import cookie helpers
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 const navItems = [
   { href: '/salons', label: 'Салони' },
@@ -22,8 +24,11 @@ const navItems = [
   { href: '/contact', label: 'Контакти' },
 ];
 
+const THEME_COOKIE_KEY = 'glowy-theme';
+
 export function Header() {
   const router = useRouter(); 
+  const { toast } = useToast(); // Initialize useToast
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -31,21 +36,27 @@ export function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-
-  const fetchNotificationsContent = async (userId: string) => {
-    if (!userId) return;
-    try {
-        const userNotifications = await getUserNotifications(userId);
-        setNotifications(userNotifications);
-        setUnreadCount(userNotifications.filter(n => !n.read).length);
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
-        setNotifications([]);
-        setUnreadCount(0);
-    }
-  };
+  const [currentTheme, setCurrentTheme] = useState<string | null>(null);
 
   useEffect(() => {
+    // Theme initialization
+    if (typeof window !== 'undefined') {
+      const savedTheme = getCookie(THEME_COOKIE_KEY);
+      if (savedTheme) {
+        setCurrentTheme(savedTheme);
+        document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+      } else {
+        // Default to light theme if no cookie is set or if system prefers dark
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const initialTheme = prefersDark ? 'dark' : 'light';
+        setCurrentTheme(initialTheme);
+        document.documentElement.classList.toggle('dark', initialTheme === 'dark');
+        // Optionally set the cookie here for the default theme
+        // setCookie(THEME_COOKIE_KEY, initialTheme, 365); 
+      }
+    }
+
+    // Auth initialization
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
@@ -76,6 +87,19 @@ export function Header() {
     
     return () => unsubscribeAuth();
   }, []);
+
+  const fetchNotificationsContent = async (userId: string) => {
+    if (!userId) return;
+    try {
+        const userNotifications = await getUserNotifications(userId);
+        setNotifications(userNotifications);
+        setUnreadCount(userNotifications.filter(n => !n.read).length);
+    } catch (error) {
+        console.error("Error fetching notifications:", error);
+        setNotifications([]);
+        setUnreadCount(0);
+    }
+  };
 
   useEffect(() => {
     if (currentUser?.uid) {
@@ -120,15 +144,12 @@ export function Header() {
     if (!notification.read) {
         try {
             await markNotificationAsRead(notification.id);
-            // Re-fetch notifications to update the list and unread count
             fetchNotificationsContent(currentUser.uid);
         } catch (error) {
             console.error("Error marking single notification as read:", error);
         }
     }
     if (notification.link) {
-      // NOTE: A Firebase Cloud Function is needed to listen for new contacts
-      // and create notifications of type 'new_contact_admin' for admin users.
       if (notification.type === 'new_contact_admin') {
         notification.link = '/admin/contacts';
       }
@@ -136,6 +157,17 @@ export function Header() {
     }
     setIsPopoverOpen(false); 
     setIsMobileMenuOpen(false); 
+  };
+
+  const toggleTheme = () => {
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setCookie(THEME_COOKIE_KEY, newTheme, 365);
+    setCurrentTheme(newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+    toast({
+      title: 'Темата е променена',
+      description: `Темата е успешно сменена на ${newTheme === 'dark' ? 'тъмна' : 'светла'}.`,
+    });
   };
 
   if (isLoading) {
@@ -187,6 +219,12 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-initial">
+          {currentTheme !== null && (
+            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Смяна на тема">
+              {currentTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          )}
+
           {isLoggedIn && (
              <Popover open={isPopoverOpen} onOpenChange={(open) => {
                 if (open) {

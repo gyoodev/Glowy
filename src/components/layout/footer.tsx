@@ -1,7 +1,7 @@
 // src/components/layout/footer.tsx
 'use client';
 
-import { Sparkles, Send, Moon, Sun } from 'lucide-react';
+import { Sparkles, Send } from 'lucide-react';
 import Link from 'next/link';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
 import { subscribeToNewsletter } from '@/lib/firebase';
-import { setCookie, getCookie } from '@/lib/cookies'; // Import cookie helpers
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 const newsletterFormSchema = z.object({
   email: z.string().email({ message: "Моля, въведете валиден имейл адрес." }),
@@ -19,27 +18,9 @@ const newsletterFormSchema = z.object({
 
 type NewsletterFormValues = z.infer<typeof newsletterFormSchema>;
 
-const THEME_COOKIE_KEY = 'glowy-theme';
-
 export function Footer() {
   const { toast } = useToast();
   const [isSubscribing, setIsSubscribing] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Ensure this effect runs only on the client
-    if (typeof window !== 'undefined') {
-      const savedTheme = getCookie(THEME_COOKIE_KEY);
-      if (savedTheme) {
-        setCurrentTheme(savedTheme);
-        document.documentElement.classList.toggle('dark', savedTheme === 'dark');
-      } else {
-        // Default to light theme if no cookie is set
-        setCurrentTheme('light');
-        document.documentElement.classList.remove('dark');
-      }
-    }
-  }, []);
 
   const form = useForm<NewsletterFormValues>({
     resolver: zodResolver(newsletterFormSchema),
@@ -65,17 +46,6 @@ export function Footer() {
       });
     }
     setIsSubscribing(false);
-  };
-
-  const toggleTheme = () => {
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setCookie(THEME_COOKIE_KEY, newTheme, 365);
-    setCurrentTheme(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
-    toast({
-      title: 'Темата е променена',
-      description: `Темата е успешно сменена на ${newTheme === 'dark' ? 'тъмна' : 'светла'}.`,
-    });
   };
 
   return (
@@ -134,11 +104,7 @@ export function Footer() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              {currentTheme !== null && (
-                <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Смяна на тема">
-                  {currentTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-                </Button>
-              )}
+              {/* Theme toggle button removed from here */}
               <p className="text-sm text-muted-foreground">
                 Открийте Своя Блясък.
               </p>
