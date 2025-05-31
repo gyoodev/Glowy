@@ -121,7 +121,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       console.log('AdminLayout: useEffect cleanup. Unsubscribing from onAuthStateChanged.');
       unsubscribe();
     };
-  }, [router]); // Removed toast from dependency array
+  }, [router, toast]); 
 
   const handleLogout = async () => {
     try {
@@ -232,17 +232,11 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeftOpen size={24} />}
             </Button>
-            {/* Placeholder for page title and search - to be dynamic later */}
             <h2 className="ml-4 text-xl font-semibold text-foreground">
               {navItems.find(item => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href)))?.label || 'Табло'}
             </h2>
             <div className="ml-auto flex items-center space-x-4">
-              {/* <Input type="search" placeholder="Търсене..." className="md:w-[100px] lg:w-[300px] hidden md:block" /> */}
-              {/* User avatar placeholder */}
-              {/* <Avatar>
-                <AvatarImage src="https://placehold.co/32x32" alt="Admin" />
-                <AvatarFallback>A</AvatarFallback>
-              </Avatar> */}
+              {/* Future placeholder for global search or user avatar */}
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
@@ -253,4 +247,3 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </TooltipProvider>
   );
 }
-
