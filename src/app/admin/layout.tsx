@@ -18,13 +18,13 @@ import {
   Settings,
   CreditCard,
   Menu,
-  PanelLeft, // Using PanelLeft for desktop toggle consistency
+  PanelLeft, 
+  Sparkles as AppIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; // For mobile menu
-import { AppIcon } from '@/components/layout/AppIcon'; // Assuming AppIcon is a custom component like Sparkles
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; 
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -53,8 +53,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // For desktop
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // For mobile
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); 
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -142,26 +142,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </h1>
             <nav className="space-y-1">
               {navItems.map((item) => (
-                <Tooltip key={item.label}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
-                        !isDesktopSidebarOpen && "justify-center",
-                        isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
-                      )}
-                    >
-                      <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
-                      {isDesktopSidebarOpen && <span>{item.label}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {!isDesktopSidebarOpen && (
-                    <TooltipContent side="right" sideOffset={5}>
-                      <p>{item.label}</p>
-                    </TooltipContent>
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
+                    !isDesktopSidebarOpen && "justify-center",
+                    isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
                   )}
-                </Tooltip>
+                  aria-label={isDesktopSidebarOpen ? undefined : item.label} // Add aria-label when collapsed for accessibility
+                >
+                  <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
+                  {isDesktopSidebarOpen && <span>{item.label}</span>}
+                </Link>
               ))}
             </nav>
           </div>
@@ -220,7 +213,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         isActive(item.href) && "text-primary bg-muted"
                       )}
                     >
-                      {/* Icon removed for mobile menu items */}
+                      <item.icon className="h-5 w-5" />
                       {item.label}
                     </Link>
                   ))}
@@ -234,7 +227,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     }}
                     className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive hover:text-destructive-foreground hover:bg-destructive justify-start w-full"
                   >
-                    {/* Icon removed for mobile logout button */}
+                    <LogOut className="h-5 w-5" />
                     Изход
                   </Button>
                 </div>
@@ -267,4 +260,3 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </TooltipProvider>
   );
 }
-
