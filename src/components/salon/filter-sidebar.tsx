@@ -2,10 +2,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import type { Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -13,39 +13,46 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { ListFilter, X, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Define the structure for categorized services
-interface CategorizedService {
+// Define the structure for categorized services, which is now passed directly
+export interface CategorizedService {
   category: string;
-  services: { id: string; name: string }[];
+  services: { id: string; name: string }[]; // Simplified service for display
 }
 
 interface FilterSidebarProps {
   onFilterChange: (filters: Record<string, any>) => void;
   cities: string[];
-  // Updated serviceTypes prop to be an array of CategorizedService
-  serviceTypes: CategorizedService[];
+  categorizedServices: CategorizedService[]; // Expecting categorized services
 }
 
 const ALL_CITIES_VALUE = "--all-cities--";
-const ALL_SERVICES_VALUE = "--all-services--";
-const DEFAULT_MIN_PRICE = 0; 
-const DEFAULT_MAX_PRICE = 500; 
 const ALL_CATEGORIES_VALUE = "--all-categories--";
+const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
+const DEFAULT_MIN_PRICE = 0;
+const DEFAULT_MAX_PRICE = 500;
 
-export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSidebarProps) {
+export function FilterSidebar({ onFilterChange, cities, categorizedServices }: FilterSidebarProps) {
   const [location, setLocation] = useState(ALL_CITIES_VALUE);
-  const [serviceType, setServiceType] = useState(ALL_SERVICES_VALUE);
-  const [rating, setRating] = useState([0]); 
-  const [maxPriceValue, setMaxPriceValue] = useState<[number]>([DEFAULT_MIN_PRICE]); // Default to 0
-  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES_VALUE);
-  const [selectedService, setSelectedService] = useState(ALL_SERVICES_VALUE);
+  const [selectedServiceId, setSelectedServiceId] = useState(ALL_SERVICES_IN_CATEGORY_VALUE);
+  const [rating, setRating] = useState([0]);
+  const [maxPriceValue, setMaxPriceValue] = useState<[number]>([DEFAULT_MIN_PRICE]);
+  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+
+  const servicesForSelectedCategory = selectedCategory === ALL_CATEGORIES_VALUE
+    ? []
+    : categorizedServices.find(cs => cs.category === selectedCategory)?.services || [];
+
+  // Reset selected service when category changes
+  useEffect(() => {
+    setSelectedServiceId(ALL_SERVICES_IN_CATEGORY_VALUE);
+  }, [selectedCategory]);
 
   const handleApplyFilters = () => {
     onFilterChange({
       location,
       category: selectedCategory === ALL_CATEGORIES_VALUE ? undefined : selectedCategory,
-      serviceId: selectedService === ALL_SERVICES_VALUE ? undefined : selectedService,
+      serviceId: selectedServiceId === ALL_SERVICES_IN_CATEGORY_VALUE ? undefined : selectedServiceId,
       minRating: rating[0],
       maxPrice: maxPriceValue[0] === DEFAULT_MIN_PRICE ? DEFAULT_MAX_PRICE : maxPriceValue[0],
     });
@@ -54,15 +61,15 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
   const handleClearFilters = () => {
     setLocation(ALL_CITIES_VALUE);
     setSelectedCategory(ALL_CATEGORIES_VALUE);
-    setSelectedService(ALL_SERVICES_VALUE);
+    setSelectedServiceId(ALL_SERVICES_IN_CATEGORY_VALUE);
     setRating([0]);
-    setMaxPriceValue([DEFAULT_MIN_PRICE]); // Reset to 0
+    setMaxPriceValue([DEFAULT_MIN_PRICE]);
     onFilterChange({
       location: ALL_CITIES_VALUE,
       category: undefined,
       serviceId: undefined,
       minRating: 0,
-      maxPrice: DEFAULT_MAX_PRICE, // Send DEFAULT_MAX_PRICE to signify "any price"
+      maxPrice: DEFAULT_MAX_PRICE,
     });
   };
   
@@ -149,19 +156,36 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
         </div>
 
         <div>
-          <Label htmlFor="serviceType" className="text-sm font-medium">Тип услуга</Label>
-          <Select value={serviceType} onValueChange={setServiceType}>
-            <SelectTrigger id="serviceType">
-              <SelectValue placeholder="Изберете услуга" />
+          <Label htmlFor="category-filter" className="text-sm font-medium">Категория услуги</Label>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger id="category-filter">
+              <SelectValue placeholder="Изберете категория" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ALL_SERVICES_VALUE}>Всички услуги</SelectItem>
-               {serviceTypes.map(type => (
-                <SelectItem key={type} value={type}>{type}</SelectItem>
+              <SelectItem value={ALL_CATEGORIES_VALUE}>Всички категории</SelectItem>
+              {categorizedServices.map(cs => (
+                <SelectItem key={cs.category} value={cs.category}>{cs.category}</SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
+        {selectedCategory !== ALL_CATEGORIES_VALUE && servicesForSelectedCategory.length > 0 && (
+          <div>
+            <Label htmlFor="service-filter" className="text-sm font-medium">Конкретна услуга</Label>
+            <Select value={selectedServiceId} onValueChange={setSelectedServiceId}>
+              <SelectTrigger id="service-filter">
+                <SelectValue placeholder="Изберете услуга" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_SERVICES_IN_CATEGORY_VALUE}>Всички услуги в категорията</SelectItem>
+                {servicesForSelectedCategory.map(service => (
+                  <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div>
           <Label htmlFor="rating" className="text-sm font-medium">Рейтинг: {rating[0] === 0 ? 'Всякакъв' : `${rating[0]}+ Звезди`}</Label>
@@ -184,7 +208,7 @@ export function FilterSidebar({ onFilterChange, cities, serviceTypes }: FilterSi
             id="priceSlider"
             min={DEFAULT_MIN_PRICE}
             max={DEFAULT_MAX_PRICE}
-            step={10} // You can adjust the step for price
+            step={10}
             value={maxPriceValue}
             onValueChange={(value) => setMaxPriceValue(value as [number])}
             className="mt-2"

@@ -2,12 +2,12 @@
 'use client';
 
 import { gsap } from 'gsap';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { collection, getDocs, query, orderBy, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
-import type { Salon, HeroImage } from '@/types';
+import type { Salon, HeroImage, Service } from '@/types'; // Added Service
 import { SalonCard } from '@/components/salon/salon-card';
-import { FilterSidebar } from '@/components/salon/filter-sidebar';
+import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar'; // Added CategorizedService
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
@@ -15,11 +15,14 @@ import { Search } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
-// Removed Footer import as it's handled by RootLayout
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
 const DEFAULT_MIN_PRICE = 0;
+const ALL_CITIES_VALUE = "--all-cities--";
+const ALL_CATEGORIES_VALUE = "--all-categories--";
+const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
+
 
 const staticHeroImages: HeroImage[] = [
   { id: 'barber_large', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon', priority: true },
@@ -34,13 +37,28 @@ export default function SalonDirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    location: '--all-cities--',
-    serviceType: '--all-services--',
+    location: ALL_CITIES_VALUE,
+    category: ALL_CATEGORIES_VALUE, // For service category
+    serviceId: ALL_SERVICES_IN_CATEGORY_VALUE, // For specific service ID
     minRating: DEFAULT_MIN_RATING,
     maxPrice: DEFAULT_MIN_PRICE,
   });
 
-  const uniqueServiceTypes = Array.from(new Set(allMockServices.map(service => service.name)));
+  const categorizedServices = useMemo((): CategorizedService[] => {
+    const categoriesMap: Record<string, { id: string; name: string }[]> = {};
+    allMockServices.forEach(service => {
+      if (service.category) {
+        if (!categoriesMap[service.category]) {
+          categoriesMap[service.category] = [];
+        }
+        categoriesMap[service.category].push({ id: service.id, name: service.name });
+      }
+    });
+    return Object.keys(categoriesMap).map(categoryName => ({
+      category: categoryName,
+      services: categoriesMap[categoryName],
+    })).sort((a,b) => a.category.localeCompare(b.category));
+  }, []);
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -55,7 +73,6 @@ export default function SalonDirectoryPage() {
           return {
             id: doc.id,
             ...data,
-            // Ensure createdAt is consistently a string for client-side processing
             createdAt: data.createdAt instanceof FirestoreTimestamp ? data.createdAt.toDate().toISOString() : typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
             promotion: data.promotion ? {
                 ...data.promotion,
@@ -99,14 +116,23 @@ export default function SalonDirectoryPage() {
       );
     }
 
-    if (filters.location !== '--all-cities--') {
+    if (filters.location !== ALL_CITIES_VALUE) {
       tempSalons = tempSalons.filter(salon => salon.city === filters.location);
     }
 
-    if (filters.serviceType !== '--all-services--') {
-      tempSalons = tempSalons.filter(salon =>
-        salon.services?.some(service => service.name === filters.serviceType)
-      );
+    // Category and Service filtering
+    if (filters.category && filters.category !== ALL_CATEGORIES_VALUE) {
+      if (filters.serviceId && filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE) {
+        // Filter by specific service ID
+        tempSalons = tempSalons.filter(salon =>
+          salon.services?.some(service => service.id === filters.serviceId)
+        );
+      } else {
+        // Filter by category only
+        tempSalons = tempSalons.filter(salon =>
+          salon.services?.some(service => service.category === filters.category)
+        );
+      }
     }
 
     if (filters.minRating > DEFAULT_MIN_RATING) {
@@ -130,10 +156,7 @@ export default function SalonDirectoryPage() {
   };
   
   useEffect(() => {
-    // Ensure ScrollTrigger is registered (should be in global setup, but good to double-check)
     gsap.registerPlugin(ScrollTrigger);
-
-    // Target all images within the hero section
     gsap.utils.toArray('.hero-image').forEach((image: any) => {
       gsap.fromTo(image, {
         opacity: 0,
@@ -145,14 +168,13 @@ export default function SalonDirectoryPage() {
         ease: 'power3.out',
         scrollTrigger: {
           trigger: image,
-          start: 'top 80%', // Animation starts when the top of the image is 80% down the viewport
-          end: 'bottom 20%', // Animation ends when the bottom of the image is 20% up the viewport
-          toggleActions: 'play none none none', // Play animation once when scrolling down
-          // markers: true, // Uncomment for debugging ScrollTrigger
+          start: 'top 80%',
+          end: 'bottom 20%',
+          toggleActions: 'play none none none',
         },
       });
     });
-  }, [isLoading]); // Run this effect when the loading state changes and salons are potentially rendered
+  }, [isLoading]);
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -182,8 +204,8 @@ export default function SalonDirectoryPage() {
                     width={560}
                     height={320}
                     priority={staticHeroImages[0].priority}
-                    className="w-full h-auto object-cover rounded-lg shadow-xl"
-                    data-ai-hint={staticHeroImages[0].dataAiHint} // Added class for targeting
+                    className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
+                    data-ai-hint={staticHeroImages[0].dataAiHint}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -195,8 +217,8 @@ export default function SalonDirectoryPage() {
                       width={270}
                       height={270}
                       loading="lazy"
-                      className="w-full h-auto object-cover rounded-lg shadow-xl"
-                      data-ai-hint={staticHeroImages[1].dataAiHint} // Added class for targeting
+                      className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
+                      data-ai-hint={staticHeroImages[1].dataAiHint}
                     />
                   </div>
                   <div>
@@ -207,8 +229,8 @@ export default function SalonDirectoryPage() {
                       width={270}
                       height={270}
                       loading="lazy"
-                      className="w-full h-auto object-cover rounded-lg shadow-xl"
-                      data-ai-hint={staticHeroImages[2].dataAiHint} // Added class for targeting
+                      className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
+                      data-ai-hint={staticHeroImages[2].dataAiHint}
                     />
                   </div>
                 </div>
@@ -221,7 +243,7 @@ export default function SalonDirectoryPage() {
           <FilterSidebar 
             onFilterChange={handleFilterChange} 
             cities={allBulgarianCities} 
-            serviceTypes={uniqueServiceTypes}
+            categorizedServices={categorizedServices}
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">

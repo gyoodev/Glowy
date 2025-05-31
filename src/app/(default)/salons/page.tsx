@@ -1,20 +1,24 @@
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import type { Salon } from '@/types';
+import type { Salon, Service } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
-import { FilterSidebar } from '@/components/salon/filter-sidebar';
+import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
+import { Search } from 'lucide-react';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
 const DEFAULT_MIN_PRICE = 0;
+const ALL_CATEGORIES_VALUE = "--all-categories--";
+const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
 
 export default function SalonsDirectoryPage() {
@@ -23,13 +27,29 @@ export default function SalonsDirectoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
-    location: '--all-cities--',
-    serviceType: '--all-services--',
+    location: ALL_CITIES_VALUE,
+    category: ALL_CATEGORIES_VALUE, // Changed from serviceType
+    serviceId: ALL_SERVICES_IN_CATEGORY_VALUE, // For specific service ID
     minRating: DEFAULT_MIN_RATING,
     maxPrice: DEFAULT_MIN_PRICE,
   });
 
-  const uniqueServiceTypes = Array.from(new Set(allMockServices.map(service => service.name)));
+  const categorizedServices = useMemo((): CategorizedService[] => {
+    const categoriesMap: Record<string, { id: string; name: string }[]> = {};
+    allMockServices.forEach(service => {
+      if (service.category) {
+        if (!categoriesMap[service.category]) {
+          categoriesMap[service.category] = [];
+        }
+        categoriesMap[service.category].push({ id: service.id, name: service.name });
+      }
+    });
+    return Object.keys(categoriesMap).map(categoryName => ({
+      category: categoryName,
+      services: categoriesMap[categoryName],
+    })).sort((a,b) => a.category.localeCompare(b.category));
+  }, []);
+
 
   useEffect(() => {
     const fetchSalons = async () => {
@@ -74,21 +94,31 @@ export default function SalonsDirectoryPage() {
       );
     }
 
-    if (filters.location !== '--all-cities--') {
+    if (filters.location !== ALL_CITIES_VALUE) {
       tempSalons = tempSalons.filter(salon => salon.city === filters.location);
     }
-
-    if (filters.serviceType !== '--all-services--') {
-      tempSalons = tempSalons.filter(salon =>
-        salon.services?.some(service => service.name === filters.serviceType)
-      );
+    
+    // Category and Service filtering
+    if (filters.category && filters.category !== ALL_CATEGORIES_VALUE) {
+      if (filters.serviceId && filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE) {
+        // Filter by specific service ID
+        tempSalons = tempSalons.filter(salon =>
+          salon.services?.some(service => service.id === filters.serviceId)
+        );
+      } else {
+        // Filter by category only
+        tempSalons = tempSalons.filter(salon =>
+          salon.services?.some(service => service.category === filters.category)
+        );
+      }
     }
+
 
     if (filters.minRating > DEFAULT_MIN_RATING) {
       tempSalons = tempSalons.filter(salon => (salon.rating || 0) >= filters.minRating);
     }
 
-    if (filters.maxPrice > DEFAULT_MIN_PRICE) { // Only apply maxPrice filter if it's greater than 0
+    if (filters.maxPrice > DEFAULT_MIN_PRICE) {
         tempSalons = tempSalons.filter(salon =>
             salon.services?.some(service => service.price <= filters.maxPrice)
         );
@@ -125,8 +155,6 @@ export default function SalonsDirectoryPage() {
                 Разгледайте всички салони, налични в платформата и намерете подходящия за Вас.
                 </p>
             </div>
-             {/* Add an image section here if desired, similar to the home page */}
-             {/* For now, leaving the second column empty or for potential future use */}
             <div className="relative z-10 md:col-span-1 space-y-4">
                 {/* Placeholder for image or other content */}
             </div>
@@ -137,7 +165,7 @@ export default function SalonsDirectoryPage() {
           <FilterSidebar
             onFilterChange={handleFilterChange}
             cities={allBulgarianCities}
-            serviceTypes={uniqueServiceTypes}
+            categorizedServices={categorizedServices}
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
@@ -149,7 +177,7 @@ export default function SalonsDirectoryPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 text-base py-6 rounded-lg shadow-sm border-border/80 focus:border-primary focus:ring-primary"
             />
-            {/* <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" /> */}
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           </div>
 
           {isLoading ? (
@@ -178,7 +206,7 @@ export default function SalonsDirectoryPage() {
             </div>
           ) : (
             <div className="text-center py-12">
-              {/* <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> */}
+              <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
               <h3 className="text-xl font-semibold text-foreground">Няма намерени салони</h3>
               <p className="text-muted-foreground mt-2">
                 Опитайте да промените Вашите филтри или термина за търсене.
