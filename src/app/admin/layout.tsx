@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation'; // Added usePathname
+import { usePathname, useRouter } from 'next/navigation';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, getUserProfile } from '@/lib/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -15,14 +15,16 @@ import {
   LogOut,
   Newspaper,
   CalendarCheck,
-  PanelLeftClose,
-  PanelLeftOpen,
   Settings,
-  CreditCard, // Added CreditCard
+  CreditCard,
+  Menu,
+  PanelLeft, // Using PanelLeft for desktop toggle consistency
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; // For mobile menu
+import { AppIcon } from '@/components/layout/AppIcon'; // Assuming AppIcon is a custom component like Sparkles
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -41,72 +43,45 @@ const navItems: NavItem[] = [
   { href: '/admin/bookings', label: 'Резервации', icon: CalendarCheck },
   { href: '/admin/contacts', label: 'Запитвания', icon: Mail },
   { href: '/admin/newsletter', label: 'Бюлетин', icon: Newspaper },
-  { href: '/admin/payments', label: 'Плащания', icon: CreditCard }, // Added Payments
-  { href: '/admin/settings', label: 'Настройки', icon: Settings }, // Added Settings
+  { href: '/admin/payments', label: 'Плащания', icon: CreditCard },
+  { href: '/admin/settings', label: 'Настройки', icon: Settings },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
-  const pathname = usePathname(); // Get current path
+  const pathname = usePathname();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(true); // For desktop
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // For mobile
 
   useEffect(() => {
-    console.log('AdminLayout (/admin/layout.tsx): useEffect triggered for auth check.');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('AdminLayout (/admin/layout.tsx): Auth state changed. User UID:', user ? user.uid : 'null');
       if (user) {
         try {
-          console.log('AdminLayout (/admin/layout.tsx): User authenticated. Fetching profile for UID:', user.uid);
           const profile = await getUserProfile(user.uid);
-          if (profile) {
-            console.log('AdminLayout (/admin/layout.tsx): User profile fetched:', profile);
-            if (profile.role === 'admin') {
-              console.log('AdminLayout (/admin/layout.tsx): User is admin. Authorizing access.');
-              setIsAuthorized(true);
-            } else {
-              const roleDetected = profile.role || 'неопределена';
-              console.log('AdminLayout (/admin/layout.tsx): User is NOT admin. Role:', roleDetected, '. Redirecting to home.');
-              toast({
-                title: 'Достъп отказан',
-                description: `Нямате права за достъп до административния панел. Вашата роля е: ${roleDetected}.`,
-                variant: 'destructive',
-              });
-              router.push('/');
-            }
+          if (profile?.role === 'admin') {
+            setIsAuthorized(true);
           } else {
-            console.error('AdminLayout (/admin/layout.tsx): User profile not found in Firestore for UID:', user.uid, '. Redirecting to home.');
             toast({
-              title: 'Грешка при проверка на права',
-              description: 'Потребителският Ви профил не беше намерен или нямате зададена роля.',
+              title: 'Достъп отказан',
+              description: `Нямате права за достъп до административния панел.`,
               variant: 'destructive',
             });
             router.push('/');
           }
-        } catch (error: any) {
-          console.error('AdminLayout (/admin/layout.tsx): Error fetching user profile:', error);
-          let errorMessage = 'Неуспешно извличане на потребителски данни.';
-          if (error.message) {
-            errorMessage += `: ${error.message}`;
-          }
-          if (error.code === 'permission-denied') {
-            errorMessage = "Грешка с правата за достъп до базата данни. Проверете Firestore правилата.";
-            console.error("AdminLayout (/admin/layout.tsx): Firestore permission denied while fetching user profile for admin check. Ensure admins can read their own profiles.");
-          }
+        } catch (error) {
           toast({
             title: 'Грешка при проверка на права',
-            description: errorMessage,
+            description: 'Неуспешно извличане на потребителски данни.',
             variant: 'destructive',
           });
           router.push('/');
         } finally {
-          console.log('AdminLayout (/admin/layout.tsx): Setting isLoading to false in auth success/role check path.');
           setIsLoading(false);
         }
       } else {
-        console.log('AdminLayout (/admin/layout.tsx): User is not authenticated. Redirecting to login.');
         toast({
           title: 'Необходимо е удостоверяване',
           description: 'Моля, влезте, за да достъпите административния панел.',
@@ -115,27 +90,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         setIsLoading(false);
       }
     });
-
-    return () => {
-      console.log('AdminLayout (/admin/layout.tsx): useEffect cleanup. Unsubscribing from onAuthStateChanged.');
-      unsubscribe();
-    };
-  }, [router, toast]); 
+    return () => unsubscribe();
+  }, [router, toast]);
 
   const handleLogout = async () => {
     try {
       await auth.signOut();
       toast({ title: 'Успешен изход', description: 'Излязохте от системата.' });
-      console.log('AdminLayout (/admin/layout.tsx): User signed out.');
       router.push('/login');
     } catch (error) {
-      console.error('AdminLayout (/admin/layout.tsx): Error signing out:', error);
       toast({ title: 'Грешка при изход', variant: 'destructive' });
     }
   };
 
+  const isActive = (href: string) => pathname === href || (href !== '/admin' && pathname.startsWith(href));
+
   if (isLoading) {
-    console.log('AdminLayout (/admin/layout.tsx): Rendering loading state...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <p className="text-lg">Glowy - Зареждане на административен панел...</p>
@@ -144,7 +114,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   if (!isAuthorized) {
-    console.log('AdminLayout (/admin/layout.tsx): Rendering unauthorized state (should be redirecting or access denied)...');
     return (
       <div className="flex h-screen items-center justify-center bg-background text-destructive">
         <p className="text-lg">Нямате достъп до тази страница или се пренасочвате...</p>
@@ -152,51 +121,48 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
-  console.log('AdminLayout (/admin/layout.tsx): Rendering authorized admin content. Sidebar open state:', isSidebarOpen);
   return (
     <TooltipProvider delayDuration={0}>
       <div className="flex h-screen bg-background text-foreground">
+        {/* Desktop Sidebar */}
         <aside
           className={cn(
-            "bg-admin-sidebar-background border-r border-border shadow-md flex flex-col justify-between transition-all duration-300 ease-in-out",
-            isSidebarOpen ? "w-64 p-5" : "w-20 p-3 items-center"
+            "hidden md:flex bg-admin-sidebar-background border-r border-border shadow-md flex-col justify-between transition-all duration-300 ease-in-out",
+            isDesktopSidebarOpen ? "w-64 p-5" : "w-20 p-3 items-center"
           )}
         >
           <div>
             <h1
               className={cn(
                 "text-2xl font-bold mb-10 text-primary text-center",
-                !isSidebarOpen && "sr-only" 
+                !isDesktopSidebarOpen && "sr-only"
               )}
             >
               Glowy Админ
             </h1>
             <nav className="space-y-1">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
-                return (
-                  <Tooltip key={item.label}>
-                    <TooltipTrigger asChild>
-                      <Link
-                        href={item.href}
-                        className={cn(
-                          "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
-                          !isSidebarOpen && "justify-center",
-                          isActive && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
-                        )}
-                      >
-                        <item.icon size={isSidebarOpen ? 20 : 24} />
-                        {isSidebarOpen && <span>{item.label}</span>}
-                      </Link>
-                    </TooltipTrigger>
-                    {!isSidebarOpen && (
-                      <TooltipContent side="right" sideOffset={5}>
-                        <p>{item.label}</p>
-                      </TooltipContent>
-                    )}
-                  </Tooltip>
-                );
-              })}
+              {navItems.map((item) => (
+                <Tooltip key={item.label}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
+                        !isDesktopSidebarOpen && "justify-center",
+                        isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
+                      )}
+                    >
+                      <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
+                      {isDesktopSidebarOpen && <span>{item.label}</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  {!isDesktopSidebarOpen && (
+                    <TooltipContent side="right" sideOffset={5}>
+                      <p>{item.label}</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              ))}
             </nav>
           </div>
           <Tooltip>
@@ -205,14 +171,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 onClick={handleLogout}
                 className={cn(
                   "flex items-center space-x-3 p-3 rounded-lg w-full text-left text-admin-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-colors font-medium mt-auto",
-                  !isSidebarOpen && "justify-center" 
+                  !isDesktopSidebarOpen && "justify-center"
                 )}
               >
-                <LogOut size={isSidebarOpen ? 20 : 24} />
-                {isSidebarOpen && <span>Изход</span>}
+                <LogOut size={isDesktopSidebarOpen ? 20 : 24} />
+                {isDesktopSidebarOpen && <span>Изход</span>}
               </button>
             </TooltipTrigger>
-            {!isSidebarOpen && (
+            {!isDesktopSidebarOpen && (
               <TooltipContent side="right" sideOffset={5}>
                 <p>Изход</p>
               </TooltipContent>
@@ -221,21 +187,76 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         </aside>
 
         <div className="flex-1 flex flex-col overflow-hidden bg-admin-content-background">
+          {/* Header with Mobile Menu Trigger */}
           <header className="h-16 flex items-center px-4 border-b border-border shrink-0 bg-admin-topbar-background">
+            {/* Mobile Menu Trigger (Sheet) */}
+            <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0 md:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                  <span className="sr-only">Toggle navigation menu</span>
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="flex flex-col">
+                <nav className="grid gap-2 text-lg font-medium">
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 text-lg font-semibold mb-4"
+                  >
+                    <AppIcon className="h-6 w-6 text-primary" />
+                    <span>Glowy Админ</span>
+                  </Link>
+                  {navItems.map((item) => (
+                    <Link
+                      key={item.label}
+                      href={item.href}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                        isActive(item.href) && "text-primary bg-muted"
+                      )}
+                    >
+                      {/* Icon removed for mobile menu items */}
+                      {item.label}
+                    </Link>
+                  ))}
+                </nav>
+                <div className="mt-auto">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-destructive hover:text-destructive-foreground hover:bg-destructive justify-start w-full"
+                  >
+                    {/* Icon removed for mobile logout button */}
+                    Изход
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+
+            {/* Desktop Sidebar Toggle Button */}
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-              aria-label={isSidebarOpen ? "Затвори страничната лента" : "Отвори страничната лента"}
-              className="text-muted-foreground hover:text-foreground"
+              onClick={() => setIsDesktopSidebarOpen(!isDesktopSidebarOpen)}
+              aria-label={isDesktopSidebarOpen ? "Затвори страничната лента" : "Отвори страничната лента"}
+              className="text-muted-foreground hover:text-foreground hidden md:flex ml-2"
             >
-              {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeftOpen size={24} />}
+              <PanelLeft size={24} />
             </Button>
+            
             <h2 className="ml-4 text-xl font-semibold text-foreground">
-              {navItems.find(item => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href)))?.label || 'Табло'}
+              {navItems.find(item => isActive(item.href))?.label || 'Табло'}
             </h2>
             <div className="ml-auto flex items-center space-x-4">
-              {/* Future placeholder for global search or user avatar */}
+              {/* Future placeholder */}
             </div>
           </header>
           <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
@@ -246,3 +267,4 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     </TooltipProvider>
   );
 }
+
