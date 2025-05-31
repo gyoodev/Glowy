@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon } from 'lucide-react'; // Added Sun, Moon
+import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard } from 'lucide-react'; // Added LayoutDashboard
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import type { Notification } from '@/types';
@@ -15,8 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { setCookie, getCookie } from '@/lib/cookies'; // Import cookie helpers
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { setCookie, getCookie } from '@/lib/cookies'; 
+import { useToast } from '@/hooks/use-toast'; 
 
 const navItems = [
   { href: '/salons', label: 'Салони' },
@@ -28,7 +28,7 @@ const THEME_COOKIE_KEY = 'glowy-theme';
 
 export function Header() {
   const router = useRouter(); 
-  const { toast } = useToast(); // Initialize useToast
+  const { toast } = useToast(); 
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -211,11 +211,6 @@ export function Header() {
               <Link href="/business/manage">Управление на Бизнеса</Link>
             </Button>
           )}
-           {isLoggedIn && userRole === 'admin' && (
-             <Button variant="ghost" asChild>
-               <Link href="/admin">Админ панел</Link>
-             </Button>
-           )}
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-initial">
@@ -293,6 +288,13 @@ export function Header() {
                   <User className="mr-2 h-4 w-4" /> Профил
                 </Link>
               </Button>
+              {userRole === 'admin' && (
+                <Button variant="outline" asChild className="hidden md:inline-flex">
+                  <Link href="/admin">
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Админ панел
+                  </Link>
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -366,3 +368,4 @@ export function Header() {
     </header>
   );
 }
+
