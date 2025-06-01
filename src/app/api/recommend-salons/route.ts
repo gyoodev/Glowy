@@ -1,10 +1,17 @@
 
-import { recommendSalons, type RecommendSalonsInput, type RecommendSalonsOutput } from '@/ai/flows/recommend-salons';
+import { recommendSalons, RecommendSalonsInputSchema, type RecommendSalonsInput, type RecommendSalonsOutput } from '@/ai/flows/recommend-salons';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
   try {
-    const data = await req.json() as RecommendSalonsInput;
+    const rawData = await req.json();
+    const parseResult = RecommendSalonsInputSchema.safeParse(rawData);
+
+    if (!parseResult.success) {
+      return NextResponse.json({ success: false, error: "Invalid input provided.", details: parseResult.error.format() }, { status: 400 });
+    }
+    
+    const data: RecommendSalonsInput = parseResult.data;
     // console.log('API Route: Received data for salon recommendations:', data); // Optional: for detailed input logging
 
     const result: RecommendSalonsOutput = await recommendSalons(data);
@@ -21,15 +28,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, recommendations: result.recommendations }, { status: 200 });
 
-  } catch (error: any) {
-    console.error('API Route: Uncaught error in POST /api/recommend-salons:', error); // Log unexpected errors
+  } catch (e: unknown) {
     let errorMessage = 'An unexpected error occurred in the API route for salon recommendations.';
-    if (typeof error?.message === 'string') {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      errorMessage = error;
-    } else if (error && typeof error.toString === 'function') {
-      errorMessage = error.toString();
+    if (e instanceof Error) {
+        errorMessage = e.message;
+        console.error('API Route: Uncaught error in POST /api/recommend-salons:', e.message, e.stack);
+    } else if (typeof e === 'string') {
+        errorMessage = e;
+        console.error('API Route: Uncaught string error in POST /api/recommend-salons:', e);
+    } else {
+        console.error('API Route: Uncaught non-Error object in POST /api/recommend-salons:', e);
     }
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }

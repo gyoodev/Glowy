@@ -33,34 +33,35 @@ export async function generateSalonDescription(
 ): Promise<GenerateSalonDescriptionOutput> {
   try {
     const result = await generateSalonDescriptionFlow(input);
-    // The flow itself now throws an error if the output schema is not met.
-    // So, a successful result here implies salonDescription is present.
     return { salonDescription: result.salonDescription };
-  } catch (e: any) {
-    console.error("Error in generateSalonDescription flow execution. Type:", typeof e, "Content:", e);
+  } catch (e: unknown) {
+    console.error("Error in generateSalonDescription flow execution.");
+    let errorMessage = "An unexpected error occurred during salon description generation.";
+
     if (e instanceof Error) {
-      console.error("Error name:", e.name);
-      console.error("Error message:", e.message);
-      console.error("Error stack:", e.stack);
-    } else if (typeof e === 'object' && e !== null) {
-      // Attempt to stringify, but be cautious with circular references or huge objects
-      try {
-        console.error("Full error object (stringified):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
-      } catch (stringifyError) {
-        console.error("Could not stringify the full error object:", stringifyError);
-        console.error("Fallback error toString():", e.toString());
-      }
+      console.error("Error Type:", e.name);
+      console.error("Error Message:", e.message);
+      console.error("Error Stack:", e.stack);
+      errorMessage = e.message; // Use the error's message
+    } else if (typeof e === 'string') {
+      console.error("Error (string):", e);
+      errorMessage = e;
+    } else {
+      console.error("Error (unknown type):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
     }
-    // Re-throw the error so the caller can handle it appropriately.
-    // This aligns with the flow's expectation of always returning a description or throwing.
-    throw e;
+    // Re-throw or return an error object as per contract
+    // For now, let's stick to returning an error in the output schema
+    return { error: errorMessage }; 
+    // If the intention is to always throw, then:
+    // if (e instanceof Error) throw e;
+    // throw new Error(errorMessage);
   }
 }
 
 const prompt = ai.definePrompt({
   name: 'generateSalonDescriptionPrompt',
   input: {schema: GenerateSalonDescriptionInputSchema},
-  output: {schema: z.object({ salonDescription: z.string().optional() })}, // Allow optional here, flow will handle if required
+  output: {schema: z.object({ salonDescription: z.string().optional() })}, 
   prompt: `You are an expert marketing copywriter for beauty salons. Your task is to create a compelling and attractive description for a salon based on the information provided.
 
 Salon Name: {{salonName}}
@@ -77,7 +78,7 @@ const generateSalonDescriptionFlow = ai.defineFlow(
   {
     name: 'generateSalonDescriptionFlow',
     inputSchema: GenerateSalonDescriptionInputSchema,
-    outputSchema: z.object({ salonDescription: z.string() }), // Flow requires a description
+    outputSchema: z.object({ salonDescription: z.string() }), 
   },
   async (input): Promise<{ salonDescription: string }> => {
     const {output} = await prompt(input);

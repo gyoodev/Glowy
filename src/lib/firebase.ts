@@ -120,8 +120,15 @@ export const getUserBookings = async (userId: string): Promise<Booking[]> => {
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => mapBooking({ id: docSnap.id, ...docSnap.data() }));
-  } catch (error) {
-    console.error(`Error fetching bookings for user ${userId}:`, error);
+  } catch (e: unknown) {
+    let errorMessage = `Error fetching bookings for user ${userId}`;
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+      if ((e as any).code === 'permission-denied') {
+        console.error(`Firestore permission denied when fetching bookings for user ${userId}. Check Firestore rules for /bookings collection.`);
+      }
+    }
+    console.error(errorMessage, e);
     return [];
   }
 };
@@ -140,11 +147,15 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       console.log(`No Firestore profile found for UID: ${userId} in getUserProfile.`);
       return null;
     }
-  } catch (error: any) {
-    console.error(`Error fetching user profile for UID ${userId}:`, error);
-    if (error.code === 'permission-denied') {
-      console.error(`Firestore permission denied when fetching profile for user ${userId}. Check Firestore rules for /users/{userId}.`);
+  } catch (e: unknown) {
+    let errorMessage = `Error fetching user profile for UID ${userId}`;
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+      if ((e as any).code === 'permission-denied') {
+        console.error(`Firestore permission denied when fetching profile for user ${userId}. Ensure Firestore rules allow the authenticated user to read their own profile in /users/{userId}. Common rule: 'allow read: if request.auth != null && request.auth.uid == userId;'`);
+      }
     }
+    console.error(errorMessage, e);
     return null;
   }
 };
@@ -171,11 +182,15 @@ export const getUserNotifications = async (userId: string): Promise<Notification
     );
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => mapNotification({ id: docSnap.id, ...docSnap.data() }));
-  } catch (error: any) {
-    console.error("Error fetching user notifications:", error);
-    if (error.code === 'permission-denied') {
-      console.error(`Firestore permission denied when fetching notifications for user ${userId}. Check Firestore rules for /notifications collection for read access where userId matches.`);
+  } catch (e: unknown) {
+    let errorMessage = `Error fetching user notifications for ${userId}`;
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+      if ((e as any).code === 'permission-denied') {
+        console.error(`Firestore permission denied when fetching notifications for user ${userId}. Check Firestore rules for /notifications collection for read access where userId matches.`);
+      }
     }
+    console.error(errorMessage, e);
     return [];
   }
 };
@@ -185,11 +200,15 @@ export const markNotificationAsRead = async (notificationId: string): Promise<vo
   try {
     const notificationRef = doc(firestoreInstance, 'notifications', notificationId);
     await updateDoc(notificationRef, { read: true });
-  } catch (error: any) {
-    console.error("Error marking notification as read:", error);
-    if (error.code === 'permission-denied') {
-      console.error(`Firestore permission denied when marking notification ${notificationId} as read. Check Firestore rules for /notifications/{notificationId} for update access where userId matches.`);
+  } catch (e: unknown) {
+    let errorMessage = `Error marking notification ${notificationId} as read`;
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+      if ((e as any).code === 'permission-denied') {
+        console.error(`Firestore permission denied when marking notification ${notificationId} as read. Check Firestore rules for /notifications/{notificationId} for update access where userId matches.`);
+      }
     }
+     console.error(errorMessage, e);
   }
 };
 
@@ -210,11 +229,15 @@ export const markAllUserNotificationsAsRead = async (userId: string): Promise<vo
       await Promise.all(batchPromises);
       console.log(`Marked ${batchPromises.length} unread notifications as read for user ${userId}`);
     }
-  } catch (error: any) {
-    console.error("Error marking all user notifications as read:", error);
-    if (error.code === 'permission-denied') {
-      console.error(`Firestore permission denied when marking all notifications as read for user ${userId}. Check Firestore rules for batch updates or individual updates on /notifications.`);
+  } catch (e: unknown) {
+    let errorMessage = `Error marking all user notifications as read for ${userId}`;
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+       if ((e as any).code === 'permission-denied') {
+        console.error(`Firestore permission denied when marking all notifications as read for user ${userId}. Check Firestore rules for batch updates or individual updates on /notifications.`);
+      }
     }
+    console.error(errorMessage, e);
   }
 };
 
@@ -223,18 +246,22 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
-    // No longer querying for existing subscriptions to avoid permission issues for non-admins
     await addDoc(collection(firestoreInstance, 'newsletterSubscribers'), {
       email: email,
       subscribedAt: serverTimestamp(),
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
-  } catch (error: any) {
-    console.error('Error subscribing to newsletter:', error);
-    if (error.code === 'permission-denied') {
-      return { success: false, message: 'Грешка: Нямате права да извършите тази операция.' };
+  } catch (e: unknown) {
+    let userMessage = 'Възникна грешка при абонирането. Моля, опитайте отново.';
+    if (e instanceof Error) {
+        console.error('Error subscribing to newsletter:', e.message, e);
+        if ((e as any).code === 'permission-denied') {
+             userMessage = 'Грешка: Нямате права да извършите тази операция.';
+        }
+    } else {
+        console.error('Unknown error subscribing to newsletter:', e);
     }
-    return { success: false, message: 'Възникна грешка при абонирането. Моля, опитайте отново.' };
+    return { success: false, message: userMessage };
   }
 }
 
@@ -244,11 +271,15 @@ export async function getNewsletterSubscribers(): Promise<NewsletterSubscriber[]
     const q = query(subscribersRef, orderBy('subscribedAt', 'desc'));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(docSnap => mapNewsletterSubscriber({ id: docSnap.id, ...docSnap.data() }));
-  } catch (error: any) {
-    console.error("Error fetching newsletter subscribers:", error);
-    if (error.code === 'permission-denied') {
-      console.error('Firestore permission denied when fetching newsletter subscribers. Ensure admin has read/list access to newsletterSubscribers collection.');
+  } catch (e: unknown) {
+    let errorMessage = "Error fetching newsletter subscribers";
+    if (e instanceof Error) {
+      errorMessage += `: ${e.message}`;
+      if ((e as any).code === 'permission-denied') {
+        console.error('Firestore permission denied when fetching newsletter subscribers. Ensure admin has read/list access to newsletterSubscribers collection.');
+      }
     }
+    console.error(errorMessage, e);
     return [];
   }
 }
@@ -260,11 +291,15 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
     const q = query(subscribersRef, where('email', '==', email), limit(1));
     const querySnapshot = await getDocs(q);
     return !querySnapshot.empty;
-  } catch (error: any) {
-    if (error.code === 'permission-denied') {
-      // console.warn(`Permission denied for user to check newsletter status for email: ${email}. This is expected if user is not admin.`);
+  } catch (e: unknown) {
+    if (e instanceof Error) {
+        if ((e as any).code === 'permission-denied') {
+            // console.warn(`Permission denied for user to check newsletter status for email: ${email}. This is expected if user is not admin.`);
+        } else {
+            console.error('Could not check newsletter subscription status:', e.message, e);
+        }
     } else {
-      console.error('Could not check newsletter subscription status:', error.message || error);
+        console.error('Unknown error checking newsletter subscription status:', e);
     }
     return false;
   }

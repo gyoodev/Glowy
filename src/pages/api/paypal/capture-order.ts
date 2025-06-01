@@ -1,7 +1,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
-import { adminDb } from '@/lib/firebaseAdmin'; // Import centralized adminDb
+import { adminDb } from '@/lib/firebaseAdmin';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
@@ -13,11 +13,8 @@ if (!clientId || !clientSecret) {
   console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set for capture API.");
 }
 
-// Always use LiveEnvironment
 const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
 const client = new paypal.core.PayPalHttpClient(environment);
-
-// Removed local Firebase Admin initialization
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5 },
@@ -43,7 +40,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const request = new paypal.orders.OrdersCaptureRequest(orderID);
-  request.requestBody({} as any); // For standard capture, empty body is usually fine, using 'as any' to bypass strict SDK types if necessary
+  request.requestBody({} as any);
 
   try {
     const capture = await client.execute(request);
@@ -82,21 +79,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactionId: transactionId,
       };
 
-      const salonRef = adminDb.collection('salons').doc(businessId); // Use adminDb
+      const salonRef = adminDb.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
 
-      // Notify admins
-      const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin'); // Use adminDb
+      const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
       const adminUsersSnapshot = await adminUsersQuery.get();
       if (!adminUsersSnapshot.empty) {
         const salonDoc = await salonRef.get();
         const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
         const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
         const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
-          return adminDb.collection('notifications').add({ // Use adminDb
+          return adminDb.collection('notifications').add({
             userId: adminDoc.id,
             message: notificationMessage,
-            link: '/admin/payments', // Link to admin payments page
+            link: '/admin/payments',
             read: false,
             createdAt: FieldValue.serverTimestamp(),
             type: 'new_payment_admin',
@@ -112,21 +108,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       console.error('PayPal capture status not COMPLETED for order ' + orderID + ': ' + captureResult.status, captureResult);
       res.status(400).json({ success: false, message: 'PayPal плащането не е завършено: ' + captureResult.status, details: captureResult });
     }
-  } catch (error: any) {
-    console.error('PayPal Capture Order Error for orderID ' + orderID + ':', JSON.stringify(error, null, 2));
+  } catch (e: unknown) {
     let errorMessage = 'Failed to capture PayPal order.';
     let errorDetails = null;
-
-    if (error.isAxiosError && error.response && error.response.data) { // PayPal SDK v1.x uses Axios-like errors
-        errorMessage = error.response.data.message || errorMessage;
-        errorDetails = error.response.data.details;
-        if (error.response.data.details && error.response.data.details.length > 0) {
-            const detailsString = error.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
-            errorMessage += ' Details: ' + detailsString;
+    
+    if (e instanceof Error) {
+        errorMessage = e.message;
+        // Check for PayPal specific error structure
+        const paypalError = e as any;
+        if (paypalError.isAxiosError && paypalError.response && paypalError.response.data) {
+            errorMessage = paypalError.response.data.message || errorMessage;
+            errorDetails = paypalError.response.data.details;
+            if (paypalError.response.data.details && paypalError.response.data.details.length > 0) {
+                const detailsString = paypalError.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
+                errorMessage += ' Details: ' + detailsString;
+            }
+            console.error('PayPal Capture Error Details:', paypalError.response.data);
+        } else {
+           console.error('PayPal Capture Order Error for orderID ' + orderID + ':', e.message, e.stack);
         }
-        console.error('PayPal Capture Error Details:', error.response.data);
-    } else if (error.message) { // Fallback for other error types
-        errorMessage = error.message;
+    } else {
+        console.error('PayPal Capture Order Error (unknown type) for orderID ' + orderID + ':', e);
     }
     res.status(500).json({ success: false, message: errorMessage, details: errorDetails });
   }

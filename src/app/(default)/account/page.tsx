@@ -19,7 +19,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
 import { mapSalon } from '@/utils/mappers';
 
-interface FirebaseError extends Error {
+interface AccountPageError extends Error {
   code?: string;
   customMessage?: string;
   details?: string;
@@ -45,7 +45,7 @@ export default function AccountPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
-  const [fetchError, setFetchError] = useState<FirebaseError | null>(null);
+  const [fetchError, setFetchError] = useState<AccountPageError | null>(null);
   const [newsletterSubscriptionStatus, setNewsletterStatus] = useState<boolean | null>(null);
   const [favoriteSalonDetails, setFavoriteSalonDetails] = useState<Salon[]>([]);
   const [isLoadingFavorites, setIsLoadingFavorites] = useState(false);
@@ -136,14 +136,14 @@ export default function AccountPage() {
           }));
           setBookings(mappedBookings);
 
-        } catch (error: any) {
-          console.error("Error fetching/creating user profile or bookings:", error);
-          const typedError = error as FirebaseError;
+        } catch (e: unknown) {
+          console.error("Error fetching/creating user profile or bookings:", e);
+          const typedError = e as AccountPageError;
           setFetchError(typedError);
 
-          if (error.code) console.error("Firebase error code:", error.code);
-          if (error.message) console.error("Firebase error message:", error.message);
-          if (error.details) console.error("Firebase error details:", error.details);
+          if (typedError.code) console.error("Firebase error code:", typedError.code);
+          if (typedError.message) console.error("Firebase error message:", typedError.message);
+          if (typedError.details) console.error("Firebase error details:", typedError.details);
           
           if (typedError.code === 'failed-precondition') {
              setFetchError({ name: "FirestoreIndexError", message: "A database index is required for this operation. Please check the browser console for a link from Firebase to create it, then refresh the page.", customMessage: "Грешка с базата данни: Необходим е индекс за тази операция. Моля, проверете конзолата на браузъра за линк от Firebase, за да го създадете, след което презаредете страницата." });
@@ -151,6 +151,10 @@ export default function AccountPage() {
             const specificMessage = "ГРЕШКА: Липсват права за достъп до Firestore! Моля, проверете Firestore Security Rules във Вашия Firebase проект. Уверете се, че правилото 'match /users/{userId} { allow read, write: if request.auth != null && request.auth.uid == userId; }' е активно. За повече информация, вижте конзолата на браузъра.";
             console.error(specificMessage);
             setFetchError({ name: "FirestorePermissionError", message: specificMessage, customMessage: specificMessage });
+          } else if (e instanceof Error) {
+             setFetchError({ name: e.name, message: e.message, customMessage: "Възникна неочаквана грешка при зареждане на данните за профила." });
+          } else {
+             setFetchError({ name: "UnknownError", message: String(e), customMessage: "Възникна неочаквана грешка при зареждане на данните за профила." });
           }
           setUserProfile(null);
           setBookings([]);
@@ -175,7 +179,7 @@ export default function AccountPage() {
     });
 
     return () => unsubscribe();
-  }, [db, router, toast]); // Updated dependency array
+  }, [db, router, toast]);
 
   useEffect(() => {
     const fetchUserWrittenReviews = async () => {
@@ -255,7 +259,7 @@ export default function AccountPage() {
 
     const userDocRef = doc(db, 'users', currentUser.uid);
     try {
-      const userDocSnap = await getFirestoreDoc(userDocRef); // Use getFirestoreDoc
+      const userDocSnap = await getFirestoreDoc(userDocRef); 
       if (!userDocSnap.exists()) {
         toast({ title: "Грешка", description: "Потребителският профил не е намерен.", variant: "destructive"});
         return;
@@ -265,11 +269,11 @@ export default function AccountPage() {
       let toastMessage = "";
       let toastTitle = "";
 
-      if (isCurrentlyFavorite) { // Trying to unfavorite
+      if (isCurrentlyFavorite) { 
         updatedFavorites = arrayRemove(salonId);
         toastTitle = "Премахнат от любими!";
         toastMessage = "Салонът е премахнат от вашите любими.";
-      } else { // Trying to favorite
+      } else { 
         updatedFavorites = arrayUnion(salonId);
         toastTitle = "Добавен в любими!";
         toastMessage = "Салонът е добавен към вашите любими.";
@@ -281,7 +285,6 @@ export default function AccountPage() {
 
       toast({ title: toastTitle, description: toastMessage });
 
-      // Update local state to reflect change immediately
       setUserProfile(prevProfile => {
         if (!prevProfile) return null;
         const newFavoriteSalons = isCurrentlyFavorite
@@ -295,7 +298,6 @@ export default function AccountPage() {
           },
         };
       });
-       // This will trigger the useEffect to re-fetch favorite salon details
     } catch (error) {
       console.error("Error toggling favorite status:", error);
       toast({
@@ -389,7 +391,7 @@ export default function AccountPage() {
                       <CardTitle className="text-xl font-semibold text-destructive mt-3">Грешка при достъп до данни</CardTitle>
                   </CardHeader>
                   <CardContent className="text-sm text-destructive-foreground">
-                    {fetchError?.code === 'permission-denied' ? (
+                    {fetchError?.code === 'permission-denied' || fetchError?.name === "FirestorePermissionError" ? (
                       <div className="text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md mt-4">
                           <p className="font-bold text-base">ГРЕШКА: Липсват права за достъп до Firestore!</p>
                           <p>
@@ -404,10 +406,57 @@ export default function AccountPage() {
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Allow users to read and write their own profile data
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null; // Allow creating new user profiles
     }
-    // ... (keep your other rules for salons, bookings, etc.)
+    // Allow users to read and write their own notifications
+    match /notifications/{notificationId} {
+      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+    // Allow users to read and write their own bookings
+    match /bookings/{bookingId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      // Business owners can manage bookings for their salon
+      // allow read, update: if request.auth != null && get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid;
+      allow create: if request.auth != null;
+    }
+     // Allow users to read and write their own reviews
+    match /reviews/{reviewId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+    }
+    // Public read for salons, only owners can write
+    match /salons/{salonId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+    }
+    // Newsletter subscriptions can be created by anyone, reading might be restricted
+    match /newsletterSubscribers/{subscriberId} {
+        allow create: if true; // Anyone can subscribe
+        allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Admins can read/list
+    }
+    // Promotions payments can be read by admins
+    match /promotionsPayments/{paymentId} {
+        allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        allow create: if request.auth != null; // Business users might create these indirectly
+    }
+     // Contact messages can be created by anyone, read by admins
+    match /contacts/{contactId} {
+      allow create: if true;
+      allow read, list, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    // Counters can be updated by authenticated users (e.g., for numeric IDs)
+    match /counters/{counterName} {
+        allow read, write: if request.auth != null;
+    }
+    // Ensure settings can be read by all but written only by admins
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }`}
                           </code>

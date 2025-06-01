@@ -21,15 +21,16 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, salonDescription: result.salonDescription }, { status: 200 });
 
-  } catch (error: any) {
-    console.error('API Route: Uncaught error in POST /api/generate-description:', error); // Log unexpected errors
+  } catch (e: unknown) {
     let errorMessage = "An unexpected error occurred in the API route for description generation.";
-    if (typeof error?.message === 'string') {
-      errorMessage = error.message;
-    } else if (typeof error === 'string') {
-      errorMessage = error;
-    } else if (error && typeof error.toString === 'function') {
-      errorMessage = error.toString();
+    if (e instanceof Error) {
+        errorMessage = e.message;
+        console.error('API Route: Uncaught error in POST /api/generate-description:', e.message, e.stack);
+    } else if (typeof e === 'string') {
+        errorMessage = e;
+        console.error('API Route: Uncaught string error in POST /api/generate-description:', e);
+    } else {
+        console.error('API Route: Uncaught non-Error object in POST /api/generate-description:', e);
     }
     return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }

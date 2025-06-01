@@ -9,7 +9,6 @@ if (!clientId || !clientSecret) {
   console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set for create-order API.");
 }
 
-// Always use LiveEnvironment
 const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
 const client = new paypal.core.PayPalHttpClient(environment);
 
@@ -48,21 +47,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const order = await client.execute(request);
     res.status(200).json({ success: true, orderID: order.result.id });
-  } catch (error: any) {
-    console.error('PayPal Create Order Error:', JSON.stringify(error, null, 2));
+  } catch (e: unknown) {
     let errorMessage = 'Failed to create PayPal order.';
     let errorDetails = null;
 
-    if (error.isAxiosError && error.response && error.response.data) { // PayPal SDK v1.x uses Axios-like errors
-        errorMessage = error.response.data.message || errorMessage;
-        errorDetails = error.response.data.details;
-        if (error.response.data.details && error.response.data.details.length > 0) {
-            const detailsString = error.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
-            errorMessage += ' Details: ' + detailsString;
+    if (e instanceof Error) {
+        errorMessage = e.message;
+        // Check for PayPal specific error structure
+        const paypalError = e as any;
+        if (paypalError.isAxiosError && paypalError.response && paypalError.response.data) {
+            errorMessage = paypalError.response.data.message || errorMessage;
+            errorDetails = paypalError.response.data.details;
+            if (paypalError.response.data.details && paypalError.response.data.details.length > 0) {
+                const detailsString = paypalError.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
+                errorMessage += ' Details: ' + detailsString;
+            }
+            console.error('PayPal Create Order Error Details:', paypalError.response.data);
+        } else {
+           console.error('PayPal Create Order Error:', e.message, e.stack);
         }
-        console.error('PayPal Create Order Error Details:', error.response.data);
-    } else if (error.message) { // Fallback for other error types
-        errorMessage = error.message;
+    } else {
+        console.error('PayPal Create Order Error (unknown type):', e);
     }
     res.status(500).json({ success: false, message: errorMessage, details: errorDetails });
   }

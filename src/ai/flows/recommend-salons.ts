@@ -12,15 +12,17 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const RecommendSalonsInputSchema = z.object({
+export const RecommendSalonsInputSchema = z.object({
   userPreferences: z
     .string()
     .describe('The user preferences for salon services, e.g., preferred service types, price range, location.'),
   pastBookings: z
     .string()
+    .optional() // Marking as optional based on schema
     .describe('The user past booking history with salon, including salon names, services, and dates.'),
   trendingChoices: z
     .string()
+    .optional() // Marking as optional based on schema
     .describe('Trending salon choices among other users, including popular services and salons in specific locations.'),
 });
 export type RecommendSalonsInput = z.infer<typeof RecommendSalonsInputSchema>;
@@ -37,30 +39,21 @@ export type RecommendSalonsOutput = z.infer<typeof RecommendSalonsOutputSchema>;
 export async function recommendSalons(input: RecommendSalonsInput): Promise<RecommendSalonsOutput> {
   try {
     const result = await recommendSalonsFlow(input);
-    // The flow itself now throws an error if the output schema is not met.
     return { recommendations: result.recommendations };
-  } catch (e: any) {
-    console.error("Error in recommendSalons flow execution. Type:", typeof e, "Content:", e);
-    if (e instanceof Error) {
-      console.error("Error name:", e.name);
-      console.error("Error message:", e.message);
-      console.error("Error stack:", e.stack);
-    } else if (typeof e === 'object' && e !== null) {
-      try {
-        console.error("Full error object (stringified):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
-      } catch (stringifyError) {
-        console.error("Could not stringify the full error object:", stringifyError);
-        console.error("Fallback error toString():", e.toString());
-      }
-    }
-    
+  } catch (e: unknown) {
+    console.error("Error in recommendSalons flow execution.");
     let errorMessage = "Failed to generate recommendations due to an unexpected error.";
-    if (e instanceof Error && typeof e.message === 'string') {
-      errorMessage = e.message;
+
+    if (e instanceof Error) {
+      console.error("Error Type:", e.name);
+      console.error("Error Message:", e.message);
+      console.error("Error Stack:", e.stack);
+      errorMessage = e.message; // Use the error's message
     } else if (typeof e === 'string') {
-      errorMessage = e;
-    } else if (e && typeof e.toString === 'function') {
-      errorMessage = e.toString();
+        console.error("Error (string):", e);
+        errorMessage = e;
+    } else {
+      console.error("Error (unknown type):", JSON.stringify(e, Object.getOwnPropertyNames(e), 2));
     }
     return { error: errorMessage };
   }
@@ -69,12 +62,12 @@ export async function recommendSalons(input: RecommendSalonsInput): Promise<Reco
 const prompt = ai.definePrompt({
   name: 'recommendSalonsPrompt',
   input: {schema: RecommendSalonsInputSchema},
-  output: {schema: z.object({ recommendations: z.string().optional() })}, // Allow optional here, flow will handle if required
+  output: {schema: z.object({ recommendations: z.string().optional() })}, 
   prompt: `You are an AI beauty consultant. Based on user preferences, past bookings and current trending choices, recommend salons and services to the user.
 
 User Preferences: {{{userPreferences}}}
-Past Bookings: {{{pastBookings}}}
-Trending Choices: {{{trendingChoices}}}
+{{#if pastBookings}}Past Bookings: {{{pastBookings}}}{{/if}}
+{{#if trendingChoices}}Trending Choices: {{{trendingChoices}}}{{/if}}
 
 Recommendations:`,
 });
@@ -83,7 +76,7 @@ const recommendSalonsFlow = ai.defineFlow(
   {
     name: 'recommendSalonsFlow',
     inputSchema: RecommendSalonsInputSchema,
-    outputSchema: z.object({ recommendations: z.string() }), // Flow requires recommendations
+    outputSchema: z.object({ recommendations: z.string() }), 
   },
   async (input): Promise<{ recommendations: string }> => {
     const {output} = await prompt(input);
