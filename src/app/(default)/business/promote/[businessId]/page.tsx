@@ -43,7 +43,6 @@ export default function PromoteBusinessPage() {
   const [error, setError] = useState<string | null>(null);
 
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-  // stripePublishableKey removed
 
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
@@ -98,7 +97,7 @@ export default function PromoteBusinessPage() {
     }
   };
 
-  const handlePaymentSuccess = async (details: any, packageId: string, paymentMethod: 'paypal' | 'stripe') => {
+  const handlePaymentSuccess = async (details: any, packageId: string, paymentMethod: 'paypal') => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon || !currentUser) {
         setIsProcessing(null);
@@ -115,7 +114,7 @@ export default function PromoteBusinessPage() {
         purchasedAt: FirestoreTimestamp.fromDate(now) as any, 
         expiresAt: expiryDate.toISOString(),
         paymentMethod: paymentMethod,
-        transactionId: details.id || (details.orderID ? details.orderID : 'N/A'), // orderID for PayPal, id for Stripe
+        transactionId: details.id || (details.orderID ? details.orderID : 'N/A'), // orderID for PayPal
     };
 
     try {
