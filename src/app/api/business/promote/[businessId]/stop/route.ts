@@ -2,15 +2,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 
-interface StopRouteContext {
-  params: {
-    businessId: string;
-  };
-}
-
 export async function POST(
   request: NextRequest,
-  context: StopRouteContext
+  context: { params: { businessId: string } }
 ) {
   const businessId = context.params.businessId;
 
@@ -21,7 +15,7 @@ export async function POST(
   console.log('Received request to stop promotion for businessId: ' + businessId);
 
   try {
-    const businessRef = adminDb.collection('salons').doc(businessId); 
+    const businessRef = adminDb.collection('salons').doc(businessId);
     const docSnap = await businessRef.get();
 
     if (!docSnap.exists()) {
@@ -36,7 +30,7 @@ export async function POST(
     });
     console.log('Promotion stopped for businessId: ' + businessId);
     return NextResponse.json({ success: true, message: 'Promotion stopped successfully' });
-  } catch (error: any) { 
+  } catch (error: any) {
     console.error('Error stopping promotion for businessId ' + businessId + ':', error);
     // Return a more specific error message if needed
     return NextResponse.json({ success: false, message: 'Failed to stop promotion', error: error.message }, { status: 500 });
