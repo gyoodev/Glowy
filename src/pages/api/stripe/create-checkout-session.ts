@@ -6,8 +6,6 @@ import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, 
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, firestore } from '@/lib/firebase';
 import type { Salon, Promotion } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, CheckCircle, Gift, Loader2, ArrowLeft, XCircle, CreditCard } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +13,8 @@ import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 // Stripe imports removed: loadStripe, Stripe, Elements, CardElement, useStripe, useElements, StripeCardElementOptions
 // PayPal specific imports (if any were here, they would remain or be handled by @paypal/react-paypal-js which is already a dependency)
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
 
@@ -42,7 +42,6 @@ export default function PromoteBusinessPage() {
   const [error, setError] = useState<string | null>(null);
 
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-  // stripePublishableKey removed
 
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
@@ -97,7 +96,7 @@ export default function PromoteBusinessPage() {
     }
   };
 
-  const handlePaymentSuccess = async (details: any, packageId: string, paymentMethod: 'paypal' | 'stripe') => {
+  const handlePaymentSuccess = async (details: any, packageId: string, paymentMethod: 'paypal') => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon || !currentUser) {
         setIsProcessing(null);
