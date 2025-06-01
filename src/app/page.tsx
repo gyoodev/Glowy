@@ -5,13 +5,15 @@ import { gsap } from 'gsap';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Image from 'next/image';
 import { collection, getDocs, query, orderBy, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
-import type { Salon, HeroImage, Service } from '@/types'; // Added Service
+import type { Salon, HeroImage, Service } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
-import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar'; // Added CategorizedService
+import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
-import { Search } from 'lucide-react';
+import { Search, ListOrdered } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
@@ -38,11 +40,12 @@ export default function SalonDirectoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     location: ALL_CITIES_VALUE,
-    category: ALL_CATEGORIES_VALUE, // For service category
-    serviceId: ALL_SERVICES_IN_CATEGORY_VALUE, // For specific service ID
+    category: ALL_CATEGORIES_VALUE,
+    serviceId: ALL_SERVICES_IN_CATEGORY_VALUE,
     minRating: DEFAULT_MIN_RATING,
     maxPrice: DEFAULT_MIN_PRICE,
   });
+  const [sortOrder, setSortOrder] = useState<string>('default');
 
   const categorizedServices = useMemo((): CategorizedService[] => {
     const categoriesMap: Record<string, { id: string; name: string }[]> = {};
@@ -81,20 +84,6 @@ export default function SalonDirectoryPage() {
             } : undefined,
           } as Salon;
         });
-
-        salonsList.sort((a, b) => {
-          const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
-          const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
-
-          if (aIsPromoted && !bIsPromoted) return -1;
-          if (!aIsPromoted && bIsPromoted) return 1;
-          
-          if ((a.rating ?? 0) !== (b.rating ?? 0)) {
-            return (b.rating ?? 0) - (a.rating ?? 0);
-          }
-          
-          return a.name.localeCompare(b.name);
-        });
         
         setSalons(salonsList);
       } catch (error) {
@@ -106,50 +95,66 @@ export default function SalonDirectoryPage() {
     fetchSalons();
   }, []);
 
-  const applyFilters = useCallback(() => {
+  const applyFiltersAndSort = useCallback(() => {
     let tempSalons = [...salons];
 
+    // Filtering logic
     if (searchTerm) {
       tempSalons = tempSalons.filter(salon =>
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (salon.description && salon.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
-
     if (filters.location !== ALL_CITIES_VALUE) {
       tempSalons = tempSalons.filter(salon => salon.city === filters.location);
     }
-
-    // Category and Service filtering
     if (filters.category && filters.category !== ALL_CATEGORIES_VALUE) {
       if (filters.serviceId && filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE) {
-        // Filter by specific service ID
         tempSalons = tempSalons.filter(salon =>
           salon.services?.some(service => service.id === filters.serviceId)
         );
       } else {
-        // Filter by category only
         tempSalons = tempSalons.filter(salon =>
           salon.services?.some(service => service.category === filters.category)
         );
       }
     }
-
     if (filters.minRating > DEFAULT_MIN_RATING) {
       tempSalons = tempSalons.filter(salon => (salon.rating || 0) >= filters.minRating);
     }
-    
     if (filters.maxPrice > DEFAULT_MIN_PRICE) {
       tempSalons = tempSalons.filter(salon =>
         salon.services?.some(service => service.price <= filters.maxPrice)
       );
     }
+
+    // Sorting logic
+    if (sortOrder === 'rating_desc') {
+      tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
+    } else if (sortOrder === 'rating_asc') {
+      tempSalons.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
+    } else if (sortOrder === 'name_asc') {
+      tempSalons.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortOrder === 'name_desc') {
+      tempSalons.sort((a, b) => b.name.localeCompare(a.name));
+    } else if (sortOrder === 'default') {
+      // Default sort: Promoted first, then by rating (desc), then by name (asc)
+      tempSalons.sort((a, b) => {
+        const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
+        const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
+        if (aIsPromoted && !bIsPromoted) return -1;
+        if (!aIsPromoted && bIsPromoted) return 1;
+        if ((b.rating ?? 0) !== (a.rating ?? 0)) return (b.rating ?? 0) - (a.rating ?? 0);
+        return a.name.localeCompare(b.name);
+      });
+    }
     setFilteredSalons(tempSalons);
-  }, [salons, searchTerm, filters]);
+  }, [salons, searchTerm, filters, sortOrder]);
+
 
   useEffect(() => {
-    applyFilters();
-  }, [salons, searchTerm, filters, applyFilters]);
+    applyFiltersAndSort();
+  }, [salons, searchTerm, filters, sortOrder, applyFiltersAndSort]);
 
   const handleFilterChange = (newFilters: Record<string, any>) => {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
@@ -174,7 +179,7 @@ export default function SalonDirectoryPage() {
         },
       });
     });
-  }, [isLoading]);
+  }, [isLoading]); // Re-run animations when loading state changes (e.g., after data is loaded)
 
   return (
     <div className="container mx-auto py-10 px-6">
@@ -248,15 +253,33 @@ export default function SalonDirectoryPage() {
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
           <div id="loading-screen"></div>
-          <div className="mb-8 relative">
-            <Input
-              type="text"
-              placeholder="Търсене на салон по име или описание..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 text-base py-6 rounded-lg shadow-sm border-border/80 focus:border-primary focus:ring-primary"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center">
+            <div className="relative flex-grow w-full sm:w-auto">
+              <Input
+                type="text"
+                placeholder="Търсене на салон по име или описание..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 text-base py-6 rounded-lg shadow-sm border-border/80 focus:border-primary focus:ring-primary"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            </div>
+            <div className="w-full sm:w-auto sm:min-w-[200px]">
+              <Label htmlFor="sortOrder" className="sr-only">Подреди по</Label>
+              <Select value={sortOrder} onValueChange={setSortOrder}>
+                <SelectTrigger id="sortOrder" className="text-base py-3 rounded-lg shadow-sm border-border/80 focus:border-primary focus:ring-primary h-auto">
+                   <ListOrdered className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Подреди по..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="default">По подразбиране</SelectItem>
+                  <SelectItem value="rating_desc">Рейтинг (най-висок)</SelectItem>
+                  <SelectItem value="rating_asc">Рейтинг (най-нисък)</SelectItem>
+                  <SelectItem value="name_asc">Име (А-Я)</SelectItem>
+                  <SelectItem value="name_desc">Име (Я-А)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {isLoading ? (
