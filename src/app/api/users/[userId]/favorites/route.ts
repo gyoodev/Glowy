@@ -1,11 +1,12 @@
+
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase'; // Assuming you have firebaseApp initialized and exported from here
+import { app } from '@/lib/firebase'; // Correctly import 'app'
 
-const firestore = getFirestore(firebaseApp);
+const firestoreInstance = getFirestore(app); // Use 'app' to initialize Firestore
 
 // Helper function to get user document reference
-const getUserDocRef = (userId: string) => doc(firestore, 'users', userId);
+const getUserDocRef = (userId: string) => doc(firestoreInstance, 'users', userId);
 
 export async function POST(
   req: NextRequest,
@@ -26,9 +27,16 @@ export async function POST(
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    await updateDoc(userDocRef, {
-      favoriteSalons: arrayUnion(salonId),
-    });
+    // Ensure preferences and favoriteSalons array exist, and only add if not already present
+    const userData = userDocSnap.data();
+    const currentPreferences = userData?.preferences || {};
+    const favoriteSalons = currentPreferences.favoriteSalons || [];
+
+    if (!favoriteSalons.includes(salonId)) {
+      await updateDoc(userDocRef, {
+        'preferences.favoriteSalons': arrayUnion(salonId),
+      });
+    }
 
     return NextResponse.json({ message: 'Salon added to favorites' }, { status: 200 });
 
@@ -58,7 +66,7 @@ export async function DELETE(
     }
 
     await updateDoc(userDocRef, {
-      favoriteSalons: arrayRemove(salonId),
+      'preferences.favoriteSalons': arrayRemove(salonId),
     });
 
     return NextResponse.json({ message: 'Salon removed from favorites' }, { status: 200 });
