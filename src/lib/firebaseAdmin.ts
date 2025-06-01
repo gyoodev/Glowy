@@ -28,9 +28,5 @@ if (!admin.apps.length) {
 // For Realtime Database:
 // const adminDb = admin.database();
 
-// Placeholder export - replace with your actual initialized database object
-export const adminDb = {}; // Replace {} with your initialized admin.firestore() or admin.database() instance
-
-
 // Export the initialized Firestore instance
 export const adminDb = admin.firestore();
