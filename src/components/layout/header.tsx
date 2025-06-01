@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useEffect, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard } from 'lucide-react'; // Added LayoutDashboard
+import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import type { Notification } from '@/types';
@@ -15,8 +15,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { setCookie, getCookie } from '@/lib/cookies'; 
-import { useToast } from '@/hooks/use-toast'; 
+import { setCookie, getCookie } from '@/lib/cookies';
+import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { href: '/salons', label: 'Салони' },
@@ -27,8 +28,8 @@ const navItems = [
 const THEME_COOKIE_KEY = 'glowy-theme';
 
 export function Header() {
-  const router = useRouter(); 
-  const { toast } = useToast(); 
+  const router = useRouter();
+  const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export function Header() {
         setCurrentTheme(initialTheme);
         document.documentElement.classList.toggle('dark', initialTheme === 'dark');
         // Optionally set the cookie here for the default theme
-        // setCookie(THEME_COOKIE_KEY, initialTheme, 365); 
+        // setCookie(THEME_COOKIE_KEY, initialTheme, 365);
       }
     }
 
@@ -84,7 +85,7 @@ export function Header() {
       }
       setIsLoading(false);
     });
-    
+
     return () => unsubscribeAuth();
   }, []);
 
@@ -113,7 +114,7 @@ export function Header() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      setUserRole(null); 
+      setUserRole(null);
       setNotifications([]);
       setUnreadCount(0);
       setIsMobileMenuOpen(false);
@@ -132,7 +133,7 @@ export function Header() {
     if (unreadCount > 0 && currentUser?.uid) {
       try {
         await markAllUserNotificationsAsRead(currentUser.uid);
-        fetchNotificationsContent(currentUser.uid); 
+        fetchNotificationsContent(currentUser.uid);
       } catch (error) {
           console.error("Error marking notifications as read:", error);
       }
@@ -155,8 +156,8 @@ export function Header() {
       }
       router.push(notification.link);
     }
-    setIsPopoverOpen(false); 
-    setIsMobileMenuOpen(false); 
+    setIsPopoverOpen(false);
+    setIsMobileMenuOpen(false);
   };
 
   const toggleTheme = () => {
@@ -198,7 +199,7 @@ export function Header() {
         <nav className="hidden flex-1 items-center space-x-1 md:flex">
           {navItems.map((item) => {
              if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
-              return null; 
+              return null;
             }
             return (
               <Button key={item.label} variant="ghost" asChild>
@@ -217,6 +218,14 @@ export function Header() {
           {currentTheme !== null && (
             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Смяна на тема">
               {currentTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+          )}
+
+          {isLoggedIn && userRole === 'admin' && (
+            <Button variant="ghost" size="icon" asChild className="hidden md:inline-flex">
+              <Link href="/admin" aria-label="Админ панел">
+                <LayoutDashboard className="h-5 w-5" />
+              </Link>
             </Button>
           )}
 
@@ -282,26 +291,37 @@ export function Header() {
           )}
 
           {isLoggedIn ? (
-            <>
-              <Button variant="outline" asChild className="hidden md:inline-flex">
-                <Link href="/account">
-                  <User className="mr-2 h-4 w-4" /> Профил
-                </Link>
-              </Button>
-              {userRole === 'admin' && (
-                <Button variant="outline" asChild className="hidden md:inline-flex">
-                  <Link href="/admin">
-                    <LayoutDashboard className="mr-2 h-4 w-4" /> Админ панел
-                  </Link>
-                </Button>
-              )}
-            </>
+             <div className="hidden md:inline-flex">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">
+                    <User className="mr-2 h-4 w-4" /> Профил
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuItem asChild>
+                    <Link href="/account" className="flex items-center w-full cursor-pointer">
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Моят Профил</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-destructive focus:bg-destructive/10 focus:text-destructive-foreground cursor-pointer flex items-center w-full"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Изход</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           ) : (
             <>
-              <Button variant="outline" asChild>
+              <Button variant="outline" asChild className="hidden md:inline-flex">
                 <Link href="/login"><LogIn className="mr-2 h-4 w-4" />Вход</Link>
               </Button>
-              <Button variant="default" asChild className="hidden sm:inline-flex">
+              <Button variant="default" asChild className="hidden md:inline-flex">
                 <Link href="/register">Регистрация</Link>
               </Button>
             </>
@@ -318,7 +338,7 @@ export function Header() {
               <nav className="flex flex-col space-y-2 mt-6">
                 {navItems.map((item) => {
                   if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
-                    return null; 
+                    return null;
                   }
                   return (
                     <Button key={item.label} variant="ghost" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
@@ -336,9 +356,9 @@ export function Header() {
                     <Link href="/admin">Админ панел</Link>
                   </Button>
                 )}
-                
+
                 <hr className="my-2"/>
-                
+
                 {isLoggedIn ? (
                   <>
                     <Button variant="outline" asChild className="justify-start text-base py-3" onClick={() => setIsMobileMenuOpen(false)}>
@@ -368,4 +388,3 @@ export function Header() {
     </header>
   );
 }
-
