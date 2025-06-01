@@ -212,7 +212,7 @@ export default function EditBusinessPage() {
             services: businessData.services?.map(s => ({ 
                 id: s.id || `service_existing_${Math.random().toString(36).substr(2, 9)}`, 
                 name: s.name,
- description: s.description || '',
+                description: s.description || '',
                 price: s.price,
                 duration: s.duration,
             })) || [],
@@ -618,203 +618,89 @@ export default function EditBusinessPage() {
                     <Card key={item.id} className="p-4 space-y-3 relative">
                        <div className="space-y-1">
                         <Label htmlFor={`services.${index}.name`}>Име на услугата</Label>
- <Controller
- name={`services.${index}.name`}
- control={form.control}
- render={({ field }) => (
- <Input
- id={`services.${index}.name`}
- {...field}
- placeholder="Име на услуга"
- onChange={(e) => {
- field.onChange(e);
- // Generate a new ID if the name changes and it's not a predefined service
- const matchedService = mockServices.find(ms => ms.name.toLowerCase() === e.target.value.toLowerCase());
- if (!matchedService) {
- form.setValue(`services.${index}.id`, `custom_${Date.now()}_${index}`, { shouldValidate: true });
- }
- }}
- />
- )}
- />
+                        <Controller
+                          name={`services.${index}.name`}
+                          control={form.control}
+                          render={({ field }) => (
+                            <Input
+                              id={`services.${index}.name`}
+                              {...field}
+                              placeholder="Име на услуга"
+                              onChange={(e) => {
+                                field.onChange(e);
+                                const matchedService = mockServices.find(ms => ms.name.toLowerCase() === e.target.value.toLowerCase());
+                                if (!matchedService) {
+                                  form.setValue(`services.${index}.id`, `custom_${Date.now()}_${index}`, { shouldValidate: true });
+                                } else {
+                                  form.setValue(`services.${index}.id`, matchedService.id, { shouldValidate: true });
+                                }
+                              }}
+                            />
+                          )}
+                        />
                         {form.formState.errors.services?.[index]?.name && <p className="text-sm text-destructive mt-1">{form.formState.errors.services?.[index]?.name?.message}</p>}
- </div>
- <div className="space-y-1">
+                      </div>
+                      <div className="space-y-1">
                         <Label htmlFor={`services.${index}.description`}>Описание (по избор)</Label>
                         <Controller
- name={`services.${index}.description`}
- control={form.control}
- render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} />}
- />
- </div>
- <div className="grid grid-cols-2 gap-4">
- <div className="space-y-1">
- <Label htmlFor={`services.${index}.price`}>Цена (лв.)</Label>
- <Controller
- name={`services.${index}.price`}
- control={form.control}
- render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} />}
- />
- {form.formState.errors.services?.[index]?.price && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.price?.message}</p>}
- </div>
- <div className="space-y-1">
- <Label htmlFor={`services.${index}.duration`}>Продължителност (мин.)</Label>
- <Controller
- name={`services.${index}.duration`}
- control={form.control}
- render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} />}
- />
- {form.formState.errors.services?.[index]?.duration && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.duration?.message}</p>}
- </div>
- </div>
-                      <Button
- type="button"
- variant="destructive"
- size="icon"
- onClick={() => removeService(index)}
- className="absolute top-2 right-2 h-7 w-7"
- title="Премахни услугата"
-                      >
- <Trash2 size={16} />
- </Button>
- </Card>
-                  ))}
- </TabsContent>
-
-
-                <TabsContent value="availability" className="mt-0 md:mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
-                   <section>
-                    <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
-                      <CalendarDays className="mr-2 h-5 w-5 text-primary" />
-                      Наличност за Резервации
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-6 items-start">
-                      <div>
-                        <Label className="block mb-2 font-medium">Изберете дата от календара:</Label>
-                        <Calendar
- mode="single"
- selected={selectedAvailabilityDate}
- onSelect={handleAvailabilityDateSelect}
- disabled={(date) => date < today}
- className="rounded-md border shadow-sm p-0"
- modifiers={availableDaysModifier}
- modifiersStyles={{
- available: { fontWeight: 'bold', border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)' }
- }}
- locale={bg}
+                          name={`services.${index}.description`}
+                          control={form.control}
+                          render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} />}
                         />
                       </div>
-                      
-                      {selectedAvailabilityDate && (
- <div className="space-y-4">
- <div>
-                            <Label className="font-medium text-base">
-                              Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
- </Label>
-                            
-                            <div className="mt-3 space-y-3">
- <div>
-                                <Label htmlFor="predefinedTimeSlot" className="font-medium text-sm text-muted-foreground">
-                                  Избери готов час:
- </Label>
- <Select
- onValueChange={(value) => {
- if (value) setNewTimeForSelectedDate(value);
-                                  }}
- value={newTimeForSelectedDate} 
- >
- <SelectTrigger id="predefinedTimeSlot" className="mt-1">
- <SelectValue placeholder="Избери от списъка" />
- </SelectTrigger>
- <SelectContent>
-                                    {predefinedTimeSlots.map(slot => (
- <SelectItem key={slot} value={slot}>{slot}</SelectItem>
-                                    ))}
- </SelectContent>
- </Select>
- </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <Label htmlFor={`services.${index}.price`}>Цена (лв.)</Label>
+                          <Controller
+                            name={`services.${index}.price`}
+                            control={form.control}
+                            render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} />}
+                          />
+                           {form.formState.errors.services?.[index]?.price && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.price?.message}</p>}
+                        </div>
+                        <div className="space-y-1">
+                          <Label htmlFor={`services.${index}.duration`}>Продължителност (мин.)</Label>
+                          <Controller
+                            name={`services.${index}.duration`}
+                            control={form.control}
+                            render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} />}
+                          />
+                          {form.formState.errors.services?.[index]?.duration && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.duration?.message}</p>}
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => removeService(index)}
+                        className="absolute top-2 right-2 h-7 w-7"
+                        title="Премахни услугата"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </Card>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => appendService({ 
+                      id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                      name: '', 
+                      description: '', 
+                      price: 0, 
+                      duration: 30 
+                    })}
+                    className="mt-4"
+                  >
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Добави Нова Услуга
+                  </Button>
+                   {form.formState.errors.services && typeof form.formState.errors.services === 'object' && !Array.isArray(form.formState.errors.services) && form.formState.errors.services.root && (
+                    <p className="text-sm text-destructive mt-2">{form.formState.errors.services.root.message}</p>
+                  )}
+                </TabsContent>
 
- <div>
-                                <Label htmlFor="newTimeSlot" className="font-medium text-sm text-muted-foreground">
-                                  Или въведи ръчно (HH:MM):
- </Label>
- <div className="flex items-center gap-2 mt-1">
- <Input
- id="newTimeSlot"
- type="text"
- placeholder="HH:MM (напр. 09:30)"
- value={newTimeForSelectedDate}
- onChange={(e) => setNewTimeForSelectedDate(e.target.value)}
- className="flex-grow"
- />
- <Button type="button" onClick={handleAddTimeSlot} size="sm">
- <PlusCircle size={16} className="mr-1" /> Добави
- </Button>
- </div>
- </div>
- </div>
- </div>
-                          {currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')] && currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')].length > 0 ? (
- <div className="space-y-2 pt-3">
- <h4 className="text-sm font-medium text-muted-foreground">Записани часове:</h4>
- <div className="flex flex-wrap gap-2">
-                                {currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
- <Badge key={time} variant="secondary" className="text-base py-1 px-2">
- {time}
- <Button 
- type="button" 
- variant="ghost" 
- size="icon" 
- className="ml-1.5 h-4 w-4 p-0 hover:bg-destructive/20"
- onClick={() => handleRemoveTimeSlot(format(selectedAvailabilityDate, 'yyyy-MM-dd'), time)}
- >
- <Trash2 size={12} className="text-destructive" />
- </Button>
- </Badge>
-                                ))}
- </div>
- <Button 
- type="button" 
- variant="destructive" 
- size="sm" 
- className="mt-2 w-full"
- onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
-                                >
- <Trash2 size={16} className="mr-1" /> Премахни всички часове за тази дата
- </Button>
- </div>
-                          ) : (
- <p className="text-sm text-muted-foreground text-center py-2 pt-3">Няма добавени часове за тази дата.</p>
-                          )}
- </div>
-                      )}
-                      {!selectedAvailabilityDate && (
- <div className="md:col-span-1 flex items-center justify-center text-muted-foreground h-full p-4 border border-dashed rounded-md">
- <p className="text-center">Изберете дата от календара, за да управлявате свободните часове.</p>
- </div>
-                      )}
- </div>
- </section>
- </TabsContent>
- </div>
- </Tabs>
- </CardContent>
- <CardFooter className="border-t pt-6">
- <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting}>
-              {saving || form.formState.isSubmitting ? 'Запазване...' : 'Запази Промените'}
- </Button>
- </CardFooter>
- </form>
- </Card>
-
- </div>
- );
-}
- 
-
-/* This block was duplicated */
-/*
- <TabsContent value="workingHours" className="mt-0 md:mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+                <TabsContent value="workingHours" className="mt-0 md:mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                   <h3 className="text-xl font-semibold mb-4 border-b pb-2">Работно Време по Дни</h3>
                   {daysOfWeek.map(day => (
                     <div key={day.key} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-4 border rounded-md">
@@ -897,7 +783,7 @@ export default function EditBusinessPage() {
                 </TabsContent>
 
                 <TabsContent value="availability" className="mt-0 md:mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
-                  <section>
+                   <section>
                     <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
                       <CalendarDays className="mr-2 h-5 w-5 text-primary" />
                       Наличност за Резервации
@@ -993,7 +879,7 @@ export default function EditBusinessPage() {
                                 size="sm" 
                                 className="mt-2 w-full"
                                 onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
-                              >
+                                >
                                 <Trash2 size={16} className="mr-1" /> Премахни всички часове за тази дата
                               </Button>
                             </div>
@@ -1023,80 +909,3 @@ export default function EditBusinessPage() {
     </div>
   );
 }
-*/
-                      <div className="space-y-1">
-                        <Label htmlFor={`services.${index}.description`}>Описание (по избор)</Label>
-                        <Controller
-                          name={`services.${index}.description`}
-                          control={form.control}
-                          render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} />}
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label htmlFor={`services.${index}.price`}>Цена (лв.)</Label>
-                          <Controller
-                            name={`services.${index}.price`}
-                            control={form.control}
-                            render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} />}
-                          />
-                           {form.formState.errors.services?.[index]?.price && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.price?.message}</p>}
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor={`services.${index}.duration`}>Продължителност (мин.)</Label>
-                          <Controller
-                            name={`services.${index}.duration`}
-                            control={form.control}
-                            render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} />}
-                          />
-                          {form.formState.errors.services?.[index]?.duration && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.duration?.message}</p>}
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => removeService(index)}
-                        className="absolute top-2 right-2 h-7 w-7"
-                        title="Премахни услугата"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </Card>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => appendService({ 
-                      id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                      name: '', 
-                      description: '', 
-                      price: 0, 
-                      duration: 30 
-                    })}
-                    className="mt-4"
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Добави Нова Услуга
-                  </Button>
-                   {form.formState.errors.services && typeof form.formState.errors.services === 'object' && !Array.isArray(form.formState.errors.services) && form.formState.errors.services.root && (
-                    <p className="text-sm text-destructive mt-2">{form.formState.errors.services.root.message}</p>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="workingHours" className="mt-0 md:mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
-
-              </div>
-            </Tabs>
-          </CardContent>
-          <CardFooter className="border-t pt-6">
-            <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting}>
-              {saving || form.formState.isSubmitting ? 'Запазване...' : 'Запази Промените'}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </div>
-  );
-}
-
