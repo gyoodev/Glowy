@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,7 +29,7 @@ export default function AdminSettingsPage() {
       adminEmail,
       apiKey1,
       apiKey2,
-    });
+    };
     // Add success/error feedback
 
     try {

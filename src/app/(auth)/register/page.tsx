@@ -263,9 +263,9 @@ export default function RegisterPage() {
         description: error.message || 'Възникна неочаквана грешка.',
         variant: 'destructive',
       });
+    }
     } finally {
       setIsSubmitting(false);
-    }
     }
   };
 
