@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '../../../../../../lib/firebaseAdmin'; // Adjusted to relative path
+import { adminDb } from '@/lib/firebaseAdmin'; // Corrected import path
 
 export async function POST(
   req: NextRequest,

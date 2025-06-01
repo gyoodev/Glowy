@@ -2,6 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button'; // Import Button
 import { Sparkles, Info, Link as LinkIconLucide, MessageSquare } from 'lucide-react'; // Renamed Link to LinkIconLucide
 import Link from 'next/link';
 
@@ -36,7 +37,9 @@ export default function AboutGlowyPage() {
                 <p>
                   Ние вярваме, че всеки заслужава да се чувства и изглежда по най-добрия начин. Затова създадохме Glowy -
                   за да ви помогнем да откриете своя перфектен стил и да се насладите на моменти на релаксация и преобразяване.
-                </p><div className="pt-4">
+                </p>
+                <div className="pt-4">
+                  <Button asChild>
                     <Link href="/">Разгледайте Салони</Link>
                   </Button>
                 </div>
