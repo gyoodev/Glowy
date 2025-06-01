@@ -10,7 +10,7 @@ const getUserDocRef = (userId: string) => doc(firestoreInstance, 'users', userId
 
 export async function POST(
   request: NextRequest,
-  context: { params: { userId: string } } // Explicit context typing
+  context: any // Changed to any for diagnostic purposes
 ) {
   const userId = context.params.userId;
   let salonId;
@@ -57,7 +57,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { userId: string } } // Explicit context typing
+  context: any // Changed to any for diagnostic purposes
 ) {
   const userId = context.params.userId;
   let salonId;
