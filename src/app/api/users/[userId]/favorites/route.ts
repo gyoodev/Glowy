@@ -7,6 +7,7 @@ const firestoreInstance = getFirestore(app);
 
 interface UserRouteContextParams {
   userId: string;
+  dummy?: string; // Added dummy property
 }
 
 // Helper function to get user document reference
