@@ -1,8 +1,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
-import { initializeApp, getApps, cert, type App as AdminApp } from 'firebase-admin/app';
-import { getFirestore as getAdminFirestore, FieldValue } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebaseAdmin'; // Import centralized adminDb
+import { FieldValue } from 'firebase-admin/firestore';
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
 
@@ -17,32 +17,7 @@ if (!clientId || !clientSecret) {
 const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
 const client = new paypal.core.PayPalHttpClient(environment);
 
-let adminApp: AdminApp;
-if (!getApps().length) {
-  const serviceAccountEnv = process.env.FIREBASE_ADMIN_SDK_CONFIG;
-  if (!serviceAccountEnv) {
-    console.warn("FIREBASE_ADMIN_SDK_CONFIG environment variable is not set. PayPal capture API might not update Firestore correctly.");
-    adminApp = initializeApp();
-  } else {
-    try {
-      const serviceAccount = JSON.parse(serviceAccountEnv);
-      adminApp = initializeApp({
-        credential: cert(serviceAccount),
-      }, 'paypalCaptureAdminApp'); // Give a unique name to avoid conflict if default app is also initialized
-    } catch (e) {
-      console.error("Error parsing FIREBASE_ADMIN_SDK_CONFIG for paypalCaptureAdminApp:", e);
-      if (!getApps().find(app => app?.name === 'paypalCaptureAdminApp')) {
-        adminApp = initializeApp({}, 'paypalCaptureAdminApp'); // Initialize with default for this specific use if parsing failed
-        console.warn("Initialized paypalCaptureAdminApp with default credentials after failed FIREBASE_ADMIN_SDK_CONFIG parse.");
-      } else {
-        adminApp = getApps().find(app => app?.name === 'paypalCaptureAdminApp')!;
-      }
-    }
-  }
-} else {
-  adminApp = getApps().find(app => app?.name === 'paypalCaptureAdminApp') || initializeApp({}, 'paypalCaptureAdminApp');
-}
-const adminFirestore = getAdminFirestore(adminApp);
+// Removed local Firebase Admin initialization
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5 },
@@ -107,18 +82,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         transactionId: transactionId,
       };
 
-      const salonRef = adminFirestore.collection('salons').doc(businessId);
+      const salonRef = adminDb.collection('salons').doc(businessId); // Use adminDb
       await salonRef.update({ promotion: newPromotion });
 
       // Notify admins
-      const adminUsersQuery = adminFirestore.collection('users').where('role', '==', 'admin');
+      const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin'); // Use adminDb
       const adminUsersSnapshot = await adminUsersQuery.get();
       if (!adminUsersSnapshot.empty) {
         const salonDoc = await salonRef.get();
         const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
         const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
         const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
-          return adminFirestore.collection('notifications').add({
+          return adminDb.collection('notifications').add({ // Use adminDb
             userId: adminDoc.id,
             message: notificationMessage,
             link: '/admin/payments', // Link to admin payments page

@@ -1,20 +1,11 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getFirestore, doc, updateDoc, Timestamp } from 'firebase/firestore';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebaseAdmin'; // Import centralized adminDb
+import { Timestamp as AdminTimestamp } from 'firebase-admin/firestore'; // Use AdminTimestamp for server-side
 import { buffer } from 'micro'; // Required for reading the raw body
-import type { Promotion } from '@/types'; // Assuming your types are in '@/types'
-import { format, addDays } from 'date-fns';
+import type { Promotion } from '@/types';
+import { addDays } from 'date-fns';
 
-// Initialize Firebase Admin if it hasn't been already
-if (!getApps().length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_ADMIN_SDK_CONFIG!);
-  initializeApp({
-    credential: cert(serviceAccount),
-  });
-}
-
-const adminFirestore = getAdminFirestore();
+// Removed local Firebase Admin initialization
 
 // Stripe requires the raw body to verify the webhook signature.
 // Configure Next.js to disable body parsing for this route.
@@ -67,14 +58,14 @@ const updatePromotionInFirestore = async (paymentDetails: { packageId: string; b
     isActive: true,
     packageId: selectedPackage.id,
     packageName: selectedPackage.name,
-    purchasedAt: Timestamp.fromDate(purchasedAt).toDate().toISOString(), // Store as ISO string
+    purchasedAt: AdminTimestamp.fromDate(purchasedAt), // Use AdminTimestamp
     expiresAt: expiresAt.toISOString(),
     paymentMethod: paymentDetails.paymentMethod,
     transactionId: paymentDetails.transactionId, // Store transaction ID
   };
 
   try {
-    const salonRef = adminFirestore.collection('salons').doc(paymentDetails.businessId);
+    const salonRef = adminDb.collection('salons').doc(paymentDetails.businessId); // Use adminDb
     await salonRef.update({ promotion: newPromotion });
     console.log(`Salon promotion updated successfully for business ${paymentDetails.businessId} after PayPal payment.`);
   } catch (err) {
