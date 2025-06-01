@@ -13,7 +13,7 @@ interface UserRouteContextParams {
 const getUserDocRef = (userId: string) => doc(firestoreInstance, 'users', userId);
 
 export async function POST(
-  req: Request, // Changed from NextRequest
+  req: NextRequest, // Changed from NextRequest
   context: { params: UserRouteContextParams }
 ) {
   const userId = context.params.userId;
@@ -58,7 +58,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: Request, // Changed from NextRequest
+  req: NextRequest, // Changed from NextRequest
   context: { params: UserRouteContextParams }
 ) {
   const userId = context.params.userId;
