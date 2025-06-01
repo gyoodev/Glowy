@@ -1,19 +1,30 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import { app } from '@/lib/firebase'; // Correctly import 'app'
+import { app } from '@/lib/firebase';
 
-const firestoreInstance = getFirestore(app); // Use 'app' to initialize Firestore
+const firestoreInstance = getFirestore(app);
+
+interface UserRouteContextParams {
+  userId: string;
+}
 
 // Helper function to get user document reference
 const getUserDocRef = (userId: string) => doc(firestoreInstance, 'users', userId);
 
 export async function POST(
-  req: NextRequest,
-  context: { params: { userId: string } }
+  req: Request, // Changed from NextRequest
+  context: { params: UserRouteContextParams }
 ) {
   const userId = context.params.userId;
-  const { salonId } = await req.json();
+  let salonId;
+  try {
+    const body = await req.json();
+    salonId = body.salonId;
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
+
 
   if (!userId || !salonId) {
     return NextResponse.json({ error: 'Missing userId or salonId' }, { status: 400 });
@@ -26,8 +37,7 @@ export async function POST(
     if (!userDocSnap.exists()) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
-
-    // Ensure preferences and favoriteSalons array exist, and only add if not already present
+    
     const userData = userDocSnap.data();
     const currentPreferences = userData?.preferences || {};
     const favoriteSalons = currentPreferences.favoriteSalons || [];
@@ -38,6 +48,7 @@ export async function POST(
       });
     }
 
+
     return NextResponse.json({ message: 'Salon added to favorites' }, { status: 200 });
 
   } catch (error) {
@@ -47,11 +58,17 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: NextRequest,
-  context: { params: { userId: string } }
+  req: Request, // Changed from NextRequest
+  context: { params: UserRouteContextParams }
 ) {
   const userId = context.params.userId;
-  const { salonId } = await req.json();
+  let salonId;
+  try {
+    const body = await req.json();
+    salonId = body.salonId;
+  } catch (e) {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+  }
 
   if (!userId || !salonId) {
     return NextResponse.json({ error: 'Missing userId or salonId' }, { status: 400 });

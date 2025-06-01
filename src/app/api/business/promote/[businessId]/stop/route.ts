@@ -1,10 +1,14 @@
 
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 
+interface RouteContextParams {
+  businessId: string;
+}
+
 export async function POST(
-  request: NextRequest,
-  context: { params: { businessId: string } }
+  request: Request, // Changed from NextRequest
+  context: { params: RouteContextParams }
 ) {
   const businessId = context.params.businessId;
 
@@ -25,14 +29,11 @@ export async function POST(
 
     await businessRef.update({
       'promotion.isActive': false,
-      // Optionally set expiresAt to null or a past date if you want to clear it
-      // 'promotion.expiresAt': null,
     });
     console.log('Promotion stopped for businessId: ' + businessId);
     return NextResponse.json({ success: true, message: 'Promotion stopped successfully' });
   } catch (error: any) {
     console.error('Error stopping promotion for businessId ' + businessId + ':', error);
-    // Return a more specific error message if needed
     return NextResponse.json({ success: false, message: 'Failed to stop promotion', error: error.message }, { status: 500 });
   }
 }
