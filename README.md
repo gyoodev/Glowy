@@ -25,13 +25,11 @@ Personalized Recommendations: Offer tailored suggestions to users based on their
 
 Next.js: Framework for building the user interface.
 
-Firebase: Backend services including authentication and database.
+Firebase: Backend services including authentication (Firebase Authentication) and database (Firestore).
 
 Tailwind CSS: Utility-first CSS framework for styling.
 
 TypeScript: Typed superset of JavaScript for improved developer experience.
-
-Clerk: Authentication and user management.
 
 Netlify: Deployment and hosting platform. 
 
@@ -60,7 +58,7 @@ npm install
 
 3. Configure environment variables:
 
-Create a .env.local file and add your Firebase and Clerk credentials.
+Create a .env.local file and add your Firebase credentials.
 
 
 4. Run the development server:
@@ -121,4 +119,3 @@ Check out the live application: Glowy on Netlify
 ---
 
 Feel free to customize this README further to match your project's branding and specific details.
-
