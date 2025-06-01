@@ -1,5 +1,5 @@
 import type {NextConfig} from 'next';
-// import path from 'path'; // No longer needed as webpack block is removed
+import path from 'path'; // Import path
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -25,17 +25,21 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // webpack: (config, {isServer}) => { // Webpack configuration removed
-  //   // Add alias for @ to resolve to src directory
-  //   // config.resolve.alias['@'] = path.resolve(__dirname, 'src'); // Handled by tsconfig.json paths
+  webpack: (config, {isServer}) => {
+    // Add alias for @ to resolve to src directory
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@': path.resolve(__dirname, 'src'),
+    };
 
-  //   if (isServer) {
-  //     config.externals.push('@paypal/paypal-js');
-  //   }
+    // Add externals for server-side builds if needed
+    if (isServer) {
+      config.externals.push('@paypal/paypal-js');
+    }
 
-  //   // Preserve existing webpack configuration
-  //   return config;
-  // },
+    // Preserve existing webpack configuration
+    return config;
+  },
 };
 
 export default nextConfig;
