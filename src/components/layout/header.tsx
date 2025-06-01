@@ -17,7 +17,8 @@ import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { setCookie, getCookie } from '@/lib/cookies';
 import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+// DropdownMenu components are no longer needed here for profile
+// import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { href: '/salons', label: 'Салони' },
@@ -291,31 +292,16 @@ export function Header() {
           )}
 
           {isLoggedIn ? (
-             <div className="hidden md:inline-flex">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline">
-                    <User className="mr-2 h-4 w-4" /> Профил
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/account" className="flex items-center w-full cursor-pointer">
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Моят Профил</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleLogout}
-                    className="text-destructive focus:bg-destructive/10 focus:text-destructive-foreground cursor-pointer flex items-center w-full"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Изход</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <>
+              <Button variant="outline" asChild className="hidden md:inline-flex">
+                <Link href="/account">
+                  <User className="mr-2 h-4 w-4" /> Профил
+                </Link>
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleLogout} className="hidden md:inline-flex" aria-label="Изход">
+                <LogOut className="h-5 w-5 text-destructive" />
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="outline" asChild className="hidden md:inline-flex">
