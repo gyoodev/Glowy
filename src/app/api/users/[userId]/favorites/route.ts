@@ -8,11 +8,17 @@ const firestoreInstance = getFirestore(app); // Use 'app' to initialize Firestor
 // Helper function to get user document reference
 const getUserDocRef = (userId: string) => doc(firestoreInstance, 'users', userId);
 
+interface FavoritesRouteContext {
+  params: {
+    userId: string;
+  };
+}
+
 export async function POST(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  context: FavoritesRouteContext
 ) {
-  const userId = params.userId;
+  const userId = context.params.userId;
   const { salonId } = await req.json();
 
   if (!userId || !salonId) {
@@ -48,9 +54,9 @@ export async function POST(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  context: FavoritesRouteContext
 ) {
-  const userId = params.userId;
+  const userId = context.params.userId;
   const { salonId } = await req.json();
 
   if (!userId || !salonId) {
