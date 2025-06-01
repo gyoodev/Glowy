@@ -271,17 +271,7 @@ export default function CreateBusinessPage() {
                       name={`services.${index}.name`}
                       render={({ field }) => (
                         <FormItem className="md:col-span-3">
-                          <FormLabel className="text-xs">Име на услугата</FormLabel>
-                           <Select 
-                             onValueChange={(value) => {
-                               field.onChange(value);
-                               const selectedMockService = mockServices.find(s => s.name === value);
-                               if (selectedMockService) {
-                                 form.setValue(`services.${index}.description`, selectedMockService.description || '', {shouldValidate: true});
-                                 form.setValue(`services.${index}.price`, selectedMockService.price, {shouldValidate: true});
-                                 form.setValue(`services.${index}.duration`, selectedMockService.duration, {shouldValidate: true});
-                               }
-                             }} 
+                          <FormLabel className="text-xs">Име на услугата</FormLabel>                           <Select 
                              defaultValue={field.value}
                            >
                             <FormControl>
@@ -302,6 +292,18 @@ export default function CreateBusinessPage() {
                       )}
                     />
                      <FormField
+ control={form.control}
+ name={`services.${index}.name`}
+ render={({ field }) => (
+ <FormItem className="md:col-span-3">
+ <FormLabel className="text-xs">Име на услугата</FormLabel>
+ <FormControl>
+ <Input placeholder="напр. Подстригване" {...field} className="text-xs min-h-[2.25rem] py-1.5" />
+ </FormControl>
+ <FormMessage />
+ </FormItem>
+ )}
+ />                     <FormField
                       control={form.control}
                       name={`services.${index}.description`}
                       render={({ field }) => (
