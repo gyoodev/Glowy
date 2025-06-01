@@ -1,12 +1,18 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin'; // Corrected import path
+import { adminDb } from '@/lib/firebaseAdmin';
+
+interface StopRouteContext {
+  params: {
+    businessId: string;
+  };
+}
 
 export async function POST(
-  req: NextRequest,
-  { params }: { params: { businessId: string } }
+  request: NextRequest,
+  context: StopRouteContext
 ) {
-  const businessId = params.businessId;
+  const businessId = context.params.businessId;
 
   if (!businessId) {
     return NextResponse.json({ success: false, message: 'Business ID is required' }, { status: 400 });
@@ -15,10 +21,10 @@ export async function POST(
   console.log('Received request to stop promotion for businessId: ' + businessId);
 
   try {
-    const businessRef = adminDb.collection('salons').doc(businessId); // Adjust collection name if needed
+    const businessRef = adminDb.collection('salons').doc(businessId); 
     const docSnap = await businessRef.get();
 
-    if (!docSnap.exists) {
+    if (!docSnap.exists()) {
         console.log('No such business found for ID: ' + businessId);
         return NextResponse.json({ success: false, message: 'Business not found' }, { status: 404 });
     }
