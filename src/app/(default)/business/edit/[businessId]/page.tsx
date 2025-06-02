@@ -19,7 +19,7 @@ import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; 
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { allBulgarianCities, mockServices } from '@/lib/mock-data';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -73,7 +73,7 @@ const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) 
 }, {} as WorkingHoursStructure);
 
 const serviceSchema = z.object({
-  id: z.string().optional(), 
+  id: z.string().optional(),
   name: z.string().min(1, "Името на услугата е задължително."),
   description: z.string().optional(),
   price: z.coerce.number({ invalid_type_error: "Цената трябва да е число." }).min(0, "Цената трябва да е положително число."),
@@ -99,7 +99,7 @@ const editBusinessSchema = z.object({
   newHeroImageUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
   newGalleryPhotoUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
   availability: z.record(z.string(), z.array(z.string())).optional(),
-  services: z.array(serviceSchema).min(0, "Моля, добавете поне една услуга.").optional(), 
+  services: z.array(serviceSchema).min(0, "Моля, добавете поне една услуга.").optional(),
 });
 
 type EditBusinessFormValues = z.infer<typeof editBusinessSchema>;
@@ -116,11 +116,11 @@ export default function EditBusinessPage() {
   const [business, setBusiness] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
-  
+
   const [serviceNameSearch, setServiceNameSearch] = useState("");
   const [openServicePopovers, setOpenServicePopovers] = useState<Record<number, boolean>>({});
 
@@ -141,7 +141,7 @@ export default function EditBusinessPage() {
       workingHours: defaultWorkingHours,
       heroImage: '',
       photos: [],
-      newHeroImageUrl: '', 
+      newHeroImageUrl: '',
       newGalleryPhotoUrl: '',
       availability: {},
       services: [],
@@ -164,7 +164,7 @@ export default function EditBusinessPage() {
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, router, authInstance]); 
+  }, [businessId, router, authInstance]);
 
   const fetchBusiness = async (userId: string) => {
     if (!businessId) {
@@ -193,7 +193,7 @@ export default function EditBusinessPage() {
             }
           }
         }
-        
+
         form.reset({
             name: businessData.name,
             description: businessData.description,
@@ -206,11 +206,11 @@ export default function EditBusinessPage() {
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
-            newHeroImageUrl: businessData.heroImage || '', 
+            newHeroImageUrl: businessData.heroImage || '',
             newGalleryPhotoUrl: '',
             availability: businessData.availability || {},
-            services: businessData.services?.map(s => ({ 
-                id: s.id || `service_existing_${Math.random().toString(36).substr(2, 9)}`, 
+            services: businessData.services?.map(s => ({
+                id: s.id || `service_existing_${Math.random().toString(36).substr(2, 9)}`,
                 name: s.name,
                 description: s.description || '',
                 price: s.price,
@@ -228,14 +228,14 @@ export default function EditBusinessPage() {
       setLoading(false);
     }
   };
-  
+
   const handleAddGalleryPhotoUrl = () => {
     const newGalleryPhotoUrl = form.getValues('newGalleryPhotoUrl');
     if (newGalleryPhotoUrl && newGalleryPhotoUrl.trim() !== '') {
       const currentPhotos = form.getValues('photos') || [];
       if (!currentPhotos.includes(newGalleryPhotoUrl.trim())) {
         form.setValue('photos', [...currentPhotos, newGalleryPhotoUrl.trim()]);
-        form.setValue('newGalleryPhotoUrl', ''); 
+        form.setValue('newGalleryPhotoUrl', '');
       } else {
         toast({ title: 'Дублиран URL', description: 'Този URL вече е добавен в галерията.', variant: 'default' });
         form.setValue('newGalleryPhotoUrl', '');
@@ -275,14 +275,14 @@ export default function EditBusinessPage() {
     }
     const updatedTimes = [...currentTimes, newTimeForSelectedDate].sort();
     form.setValue(`availability.${dateKey}`, updatedTimes);
-    setNewTimeForSelectedDate(''); 
+    setNewTimeForSelectedDate('');
   };
 
   const handleRemoveTimeSlot = (dateKey: string, timeToRemove: string) => {
     const currentAvailability = form.getValues('availability') || {};
     const currentTimes = currentAvailability[dateKey] || [];
     const updatedTimes = currentTimes.filter(time => time !== timeToRemove);
-    
+
     if (updatedTimes.length === 0) {
       const newAvailability = { ...currentAvailability };
       delete newAvailability[dateKey];
@@ -291,7 +291,7 @@ export default function EditBusinessPage() {
       form.setValue(`availability.${dateKey}`, updatedTimes);
     }
   };
-  
+
   const handleRemoveAllTimesForDate = (dateKey: string) => {
     const currentAvailability = form.getValues('availability') || {};
     const newAvailability = { ...currentAvailability };
@@ -310,7 +310,7 @@ export default function EditBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        phone: data.phone,
+        phoneNumber: data.phone, // Corrected: map form's 'phone' to Salon's 'phoneNumber'
         email: data.email,
         website: data.website,
         workingHours: data.workingHours,
@@ -328,7 +328,7 @@ export default function EditBusinessPage() {
 
     try {
       const businessRef = doc(firestore, 'salons', businessId);
-      await updateDoc(businessRef, dataToUpdate as any); 
+      await updateDoc(businessRef, dataToUpdate as any);
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
       router.push('/business/manage');
     } catch (error: any) {
@@ -368,7 +368,7 @@ export default function EditBusinessPage() {
   const availableDaysModifier = {
     available: Object.keys(currentAvailability).filter(dateKey => (currentAvailability[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
   };
-  
+
   const filteredMockServices = serviceNameSearch
     ? mockServices.filter(service =>
         service.name.toLowerCase().includes(serviceNameSearch.toLowerCase())
@@ -429,7 +429,7 @@ export default function EditBusinessPage() {
                           render={({ field }) => <Input id="address" {...field} />}
                         />
                       </div>
-                      
+
                       <div className="space-y-2">
                         <Label htmlFor="city">Град</Label>
                         <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
@@ -527,7 +527,7 @@ export default function EditBusinessPage() {
                             )}
                           />
                       </div>
-                      
+
                       <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="description">Описание</Label>
                          <Controller
@@ -683,12 +683,12 @@ export default function EditBusinessPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => appendService({ 
+                    onClick={() => appendService({
                       id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                      name: '', 
-                      description: '', 
-                      price: 0, 
-                      duration: 30 
+                      name: '',
+                      description: '',
+                      price: 0,
+                      duration: 30
                     })}
                     className="mt-4"
                   >
@@ -728,7 +728,7 @@ export default function EditBusinessPage() {
                         />
                         <Label htmlFor={`isOff-${day.key}`} className="text-sm">Почивен ден</Label>
                       </div>
-                      
+
                       {!form.watch(`workingHours.${day.key}.isOff`) && (
                         <>
                           <div className="md:col-start-2 md:col-span-1">
@@ -804,14 +804,14 @@ export default function EditBusinessPage() {
                           locale={bg}
                         />
                       </div>
-                      
+
                       {selectedAvailabilityDate && (
                         <div className="space-y-4">
                           <div>
                             <Label className="font-medium text-base">
                               Часове за: <span className="font-bold text-primary">{format(selectedAvailabilityDate, "PPP", { locale: bg })}</span>
                             </Label>
-                            
+
                             <div className="mt-3 space-y-3">
                               <div>
                                 <Label htmlFor="predefinedTimeSlot" className="font-medium text-sm text-muted-foreground">
@@ -821,7 +821,7 @@ export default function EditBusinessPage() {
                                   onValueChange={(value) => {
                                     if (value) setNewTimeForSelectedDate(value);
                                   }}
-                                  value={newTimeForSelectedDate} 
+                                  value={newTimeForSelectedDate}
                                 >
                                   <SelectTrigger id="predefinedTimeSlot" className="mt-1">
                                     <SelectValue placeholder="Избери от списъка" />
@@ -861,10 +861,10 @@ export default function EditBusinessPage() {
                                 {currentAvailability[format(selectedAvailabilityDate, 'yyyy-MM-dd')]?.map(time => (
                                   <Badge key={time} variant="secondary" className="text-base py-1 px-2">
                                     {time}
-                                    <Button 
-                                      type="button" 
-                                      variant="ghost" 
-                                      size="icon" 
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="icon"
                                       className="ml-1.5 h-4 w-4 p-0 hover:bg-destructive/20"
                                       onClick={() => handleRemoveTimeSlot(format(selectedAvailabilityDate, 'yyyy-MM-dd'), time)}
                                     >
@@ -873,10 +873,10 @@ export default function EditBusinessPage() {
                                   </Badge>
                                 ))}
                               </div>
-                              <Button 
-                                type="button" 
-                                variant="destructive" 
-                                size="sm" 
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
                                 className="mt-2 w-full"
                                 onClick={() => handleRemoveAllTimesForDate(format(selectedAvailabilityDate, 'yyyy-MM-dd'))}
                                 >
@@ -909,3 +909,5 @@ export default function EditBusinessPage() {
     </div>
   );
 }
+
+    
