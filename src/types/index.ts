@@ -5,4 +5,6 @@ export * from './review';
 export * from './salon';
 export * from './service';
 export * from './notification';
-export *
+export * from './location'; // Added this line
+export * from './promotion';
+export * from './newsletter';
