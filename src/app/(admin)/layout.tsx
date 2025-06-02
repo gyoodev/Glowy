@@ -174,7 +174,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </h1>
             <nav className="space-y-1">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+                const isActive = pathname === item.href || (item.href !== '/admin' && pathname != null && pathname.startsWith(item.href));
                 return (
                   <Tooltip key={item.label}>
                     <TooltipTrigger asChild>
@@ -233,7 +233,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               {isSidebarOpen ? <PanelLeftClose size={24} /> : <PanelLeftOpen size={24} />}
             </Button>
             <h2 className="ml-4 text-xl font-semibold text-foreground">
-              {navItems.find(item => pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href)))?.label || 'Табло'}
+              {navItems.find(item => pathname === item.href || (item.href !== '/admin' && pathname != null && pathname.startsWith(item.href)))?.label || 'Табло'}
             </h2>
             <div className="ml-auto flex items-center space-x-4">
               {/* Future placeholder for global search or user avatar */}
