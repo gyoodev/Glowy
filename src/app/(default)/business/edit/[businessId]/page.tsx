@@ -200,7 +200,7 @@ export default function EditBusinessPage() {
             address: businessData.address || '',
             city: businessData.city || '',
             priceRange: businessData.priceRange || 'moderate',
-            phone: businessData.phone || '',
+            phone: businessData.phoneNumber || '',
             email: businessData.email || '',
             website: businessData.website || '',
             workingHours: initialWorkingHours,
