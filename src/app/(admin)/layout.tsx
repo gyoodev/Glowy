@@ -164,7 +164,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           )}
         >
           <div>
-            <h1
+            <h1 
               className={cn(
                 "text-2xl font-bold mb-10 text-primary text-center",
                 !isSidebarOpen && "sr-only" 
