@@ -121,7 +121,10 @@ export default function AdminIndexPage() {
         const usersSnapshot = await getDocs(usersRef);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt && (typeof user.createdAt === 'string' || (user.createdAt as any).toDate !== undefined));
+        const validUsersWithDate = usersList.filter(user => {
+ return user.createdAt && (typeof user.createdAt === 'string' || (user.createdAt && typeof user.createdAt === 'object' && 'toDate' in user.createdAt && typeof (user.createdAt as any).toDate === 'function'));
+});
+
         setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
@@ -148,7 +151,10 @@ export default function AdminIndexPage() {
         const salonsSnapshot = await getDocs(salonsRef);
         const salonsList = salonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
         
-        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && (typeof salon.createdAt === 'string' || (salon.createdAt as any).toDate !== undefined));
+        const validSalonsWithDate = salonsList.filter(salon => {
+ const createdAt = salon.createdAt;
+ return createdAt && (typeof createdAt === 'string' || (createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && typeof (createdAt as any).toDate === 'function'));
+});
         setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
@@ -175,8 +181,11 @@ export default function AdminIndexPage() {
         const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); 
         const paymentsSnapshot = await getDocs(paymentsQuery);
         const paymentsList = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
-        
-        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && (p.createdAt as any).toDate !== undefined);
+
+        const validPaymentsWithDate = paymentsList.filter(p => {
+ const createdAt = p.createdAt;
+ return createdAt && (typeof createdAt === 'string' || (createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && typeof (createdAt as any).toDate === 'function'));
+});
         setLatestPayments(validPaymentsWithDate.slice(0, 10));
 
         const aggregatedMonthlyPayments: { [key: string]: number } = {};
