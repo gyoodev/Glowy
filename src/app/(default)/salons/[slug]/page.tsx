@@ -11,7 +11,7 @@ import { ServiceListItem } from '@/components/salon/service-list-item';
 import AddReviewForm from '@/components/salon/AddReviewForm';
 import { ReviewCard } from '@/components/salon/review-card';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
-import { Tabs, TabsContent, TabsList, TabsTrigger, TabsOrientation } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -890,6 +890,8 @@ export default function SalonProfilePage() {
 
   );
 }
+    
+
     
 
     
