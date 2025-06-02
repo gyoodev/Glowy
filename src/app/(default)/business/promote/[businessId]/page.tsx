@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, FieldValue } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, FieldValue, addDoc, collection } from 'firebase/firestore'; // Added addDoc and collection
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, firestore } from '@/lib/firebase';
 import type { Salon, Promotion } from '@/types';
@@ -363,3 +363,4 @@ export default function PromoteBusinessPage() {
       </div>
   );
 }
+
