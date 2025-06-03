@@ -22,17 +22,16 @@ export interface Salon {
   services?: Service[];
   photos?: string[];
   heroImage?: string;
-  location?: { lat: number; lng: number }; // Made optional
+  location?: { lat: number; lng: number };
   rating?: number;
-  createdAt: string; // Changed from Timestamp
+  reviewCount?: number; // Added optional reviewCount property
+  createdAt: string; 
   priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
-  availability?: Record<string, string[]>; // Date string -> array of time slots "HH:mm"
+  availability?: Record<string, string[]>; 
   workingHours?: WorkingHoursStructure;
   promotion?: Promotion;
-  // AI generation helper fields - optional as they might not always be present
   atmosphereForAi?: string;
   targetCustomerForAi?: string;
   isFavorite?: boolean;
   uniqueSellingPointsForAi?: string;
-  // reviews array is usually fetched separately, not stored directly on salon doc for scalability
 }
