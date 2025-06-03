@@ -9,7 +9,7 @@ import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWor
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import AddReviewForm from '@/components/salon/AddReviewForm';
-import { ReviewCard } from '@/components/salon/review-card';
+import { ReviewCard } from '@/components/salon/review-card'; // Keep this
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +17,8 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
+// Add TabsTrigger here
+import { TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -670,19 +672,19 @@ export default function SalonProfilePage() {
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
          <Tabs defaultValue="info" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1">
             <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0" orientation="vertical" >
-                <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
+ <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <Info className="mr-2 h-4 w-4" />Информация
                 </TabsTrigger>
-                <TabsTrigger value="services" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
+ <TabsTrigger value="services" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <Sparkles className="mr-2 h-4 w-4" />Услуги
                 </TabsTrigger>
-                <TabsTrigger value="reviews" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
+ <TabsTrigger value="reviews" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <MessageSquare className="mr-2 h-4 w-4" />Отзиви
                 </TabsTrigger>
-                <TabsTrigger value="gallery" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
+ <TabsTrigger value="gallery" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
                     <ImageIcon className="mr-2 h-4 w-4" />Галерия
                 </TabsTrigger>
-              </TabsList>
+ </TabsList>
 
               <div className="flex-1 min-w-0">
                   <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
@@ -887,13 +889,5 @@ export default function SalonProfilePage() {
       </div>
     </div>
     </>
-
   );
 }
-    
-
-    
-
-    
-
-    

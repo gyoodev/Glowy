@@ -330,7 +330,7 @@ export default function AccountPage() {
       </header>
 
       <Tabs defaultValue="profile" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10">
-        <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
+        <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent shadow-none custom-scrollbar pb-2 md:pb-0 pr-4">
           <TabsTrigger
             value="profile"
             className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors"
@@ -358,7 +358,7 @@ export default function AccountPage() {
         </TabsList>
 
         <div className="flex-1 min-w-0">
-          <TabsContent value="profile" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+          <TabsContent value="profile" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
             {isLoading ? (
               <div className="space-y-4 max-w-2xl mx-auto p-6">
                 <div className="flex items-center space-x-4 mb-6">
@@ -479,7 +479,7 @@ service cloud.firestore {
             )}
           </TabsContent>
 
-          <TabsContent value="bookings" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+          <TabsContent value="bookings" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
             <div className="max-w-3xl mx-auto">
               <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">История на Вашите Резервации</h2>
               {isLoading && bookings.length === 0 ? (
@@ -509,7 +509,7 @@ service cloud.firestore {
             </div>
           </TabsContent>
 
-          <TabsContent value="reviews" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+          <TabsContent value="reviews" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
              <div className="max-w-3xl mx-auto">
               <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
                 Вашите Отзиви
@@ -540,7 +540,7 @@ service cloud.firestore {
               )}
             </div>
           </TabsContent>
-          <TabsContent value="favorites" className="mt-0 md:mt-0 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+          <TabsContent value="favorites" className="bg-card p-4 sm:p-6 rounded-lg shadow-md">
             <div className="max-w-3xl mx-auto">
               <h2 className="text-2xl font-semibold mb-6 text-foreground text-center">
                 Вашите Любими Салони
@@ -583,3 +583,5 @@ service cloud.firestore {
     </div>
   );
 }
+
+    
