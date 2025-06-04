@@ -10,7 +10,8 @@ export type NotificationType =
   | 'new_payment_admin'
   | 'welcome_user'
   | 'new_user_admin'       // For admin when a new user registers
-  | 'new_salon_admin';     // For admin when a new salon is created
+  | 'new_salon_admin'      // For admin when a new salon is created
+  | 'new_contact_admin';   // For admin when a new contact form is submitted
 
 export interface Notification {
   id: string;
