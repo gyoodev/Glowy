@@ -123,13 +123,13 @@ export default function AdminIndexPage() {
         const usersSnapshot = await getDocs(usersRef);
         const usersList = usersSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt); // createdAt is now always a string from mapper
+        const validUsersWithDate = usersList.filter(user => user.createdAt); // Corrected filter
         setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
         validUsersWithDate.forEach(user => {
           try {
-            const date = new Date(user.createdAt); // user.createdAt is string
+            const date = new Date(user.createdAt); 
             if (!isNaN(date.getTime())) { 
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyUsers[monthKey] = (aggregatedMonthlyUsers[monthKey] || 0) + 1;
@@ -150,13 +150,13 @@ export default function AdminIndexPage() {
         const salonsSnapshot = await getDocs(salonsRef);
         const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
-        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); // createdAt is now always a string
+        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); 
         setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
          validSalonsWithDate.forEach(salon => {
           try {
-            const date = new Date(salon.createdAt); // salon.createdAt is string
+            const date = new Date(salon.createdAt); 
              if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
@@ -176,16 +176,15 @@ export default function AdminIndexPage() {
         const paymentsRef = collection(firestore, 'promotionsPayments');
         const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); 
         const paymentsSnapshot = await getDocs(paymentsQuery);
-        // PromotionPayment type handles Timestamp correctly, no specific mapper needed here for now
         const paymentsList = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
 
-        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && p.createdAt.toDate); // Firestore Timestamp check
+        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && p.createdAt.toDate); 
         setLatestPayments(validPaymentsWithDate.slice(0, 10));
 
         const aggregatedMonthlyPayments: { [key: string]: number } = {};
         validPaymentsWithDate.forEach(payment => {
           try {
-            const date = payment.createdAt.toDate(); // Convert Timestamp to Date
+            const date = payment.createdAt.toDate(); 
             if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyPayments[monthKey] = (aggregatedMonthlyPayments[monthKey] || 0) + (payment.amount || 0);
@@ -538,3 +537,5 @@ export default function AdminIndexPage() {
   );
 }
 
+
+    
