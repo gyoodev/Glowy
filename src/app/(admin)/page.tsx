@@ -52,6 +52,7 @@ import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { auth } from '@/lib/firebase';
 import Link from 'next/link';
+import { mapUserProfile, mapSalon } from '@/utils/mappers';
 
 interface PromotionPayment {
   id: string;
@@ -120,18 +121,15 @@ export default function AdminIndexPage() {
         // Fetch Users
         const usersRef = collection(firestore, 'users');
         const usersSnapshot = await getDocs(usersRef);
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        const usersList = usersSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
         
-        const validUsersWithDate = usersList.filter(user => {
- return user.createdAt && (typeof user.createdAt === 'string' || (user.createdAt && typeof user.createdAt === 'object' && 'toDate' in user.createdAt && typeof (user.createdAt as any).toDate === 'function'));
-});
-
-        setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
+        const validUsersWithDate = usersList.filter(user => user.createdAt); // createdAt is now always a string from mapper
+        setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
         validUsersWithDate.forEach(user => {
           try {
-            const date = typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate();
+            const date = new Date(user.createdAt); // user.createdAt is string
             if (!isNaN(date.getTime())) { 
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyUsers[monthKey] = (aggregatedMonthlyUsers[monthKey] || 0) + 1;
@@ -150,18 +148,15 @@ export default function AdminIndexPage() {
         // Fetch Salons
         const salonsRef = collection(firestore, 'salons');
         const salonsSnapshot = await getDocs(salonsRef);
-        const salonsList = salonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
+        const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
-        const validSalonsWithDate = salonsList.filter(salon => {
- const createdAt = salon.createdAt;
- return createdAt && (typeof createdAt === 'string' || (createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && typeof (createdAt as any).toDate === 'function'));
-});
-        setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
+        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); // createdAt is now always a string
+        setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
          validSalonsWithDate.forEach(salon => {
           try {
-            const date = typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate();
+            const date = new Date(salon.createdAt); // salon.createdAt is string
              if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
@@ -181,18 +176,16 @@ export default function AdminIndexPage() {
         const paymentsRef = collection(firestore, 'promotionsPayments');
         const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); 
         const paymentsSnapshot = await getDocs(paymentsQuery);
+        // PromotionPayment type handles Timestamp correctly, no specific mapper needed here for now
         const paymentsList = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
 
-        const validPaymentsWithDate = paymentsList.filter(p => {
- const createdAt = p.createdAt;
- return createdAt && (typeof createdAt === 'string' || (createdAt && typeof createdAt === 'object' && 'toDate' in createdAt && typeof (createdAt as any).toDate === 'function'));
-});
+        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && p.createdAt.toDate); // Firestore Timestamp check
         setLatestPayments(validPaymentsWithDate.slice(0, 10));
 
         const aggregatedMonthlyPayments: { [key: string]: number } = {};
         validPaymentsWithDate.forEach(payment => {
           try {
-            const date = payment.createdAt.toDate(); 
+            const date = payment.createdAt.toDate(); // Convert Timestamp to Date
             if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyPayments[monthKey] = (aggregatedMonthlyPayments[monthKey] || 0) + (payment.amount || 0);
@@ -231,13 +224,13 @@ export default function AdminIndexPage() {
         const newActivityFeed = [];
         if (usersList.length > 0 && validUsersWithDate[0]?.createdAt) {
             try {
-                const userDate = typeof validUsersWithDate[0].createdAt === 'string' ? new Date(validUsersWithDate[0].createdAt) : (validUsersWithDate[0].createdAt as Timestamp).toDate();
+                const userDate = new Date(validUsersWithDate[0].createdAt);
                 newActivityFeed.push({ id: 'activity-user', icon: UserPlus, text: `Нов потребител: ${validUsersWithDate[0].name || validUsersWithDate[0].displayName || 'N/A'}`, time: format(userDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'user' });
             } catch (e) { console.warn("Error formatting user activity time", e); }
         }
         if (salonsList.length > 0 && validSalonsWithDate[0]?.createdAt) {
             try {
-                 const salonDate = typeof validSalonsWithDate[0].createdAt === 'string' ? new Date(validSalonsWithDate[0].createdAt) : (validSalonsWithDate[0].createdAt as Timestamp).toDate();
+                 const salonDate = new Date(validSalonsWithDate[0].createdAt);
                  newActivityFeed.push({ id: 'activity-salon', icon: Building, text: `Нов салон: ${validSalonsWithDate[0].name || 'N/A'}`, time: format(salonDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'salon' });
             } catch (e) { console.warn("Error formatting salon activity time", e); }
         }
@@ -459,7 +452,7 @@ export default function AdminIndexPage() {
                       <TableCell>{user.displayName || user.name || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'business' ? 'secondary' : 'outline'}>{getRoleDisplayName(user.role)}</Badge></TableCell>
-                      <TableCell>{user.createdAt ? format(typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{user.createdAt ? format(new Date(user.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -489,7 +482,7 @@ export default function AdminIndexPage() {
                       <TableCell>{salon.name}</TableCell>
                       <TableCell>{salon.city || 'N/A'}</TableCell>
                       <TableCell className="text-xs">{salon.ownerId || 'N/A'}</TableCell>
-                      <TableCell>{salon.createdAt ? format(typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{salon.createdAt ? format(new Date(salon.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

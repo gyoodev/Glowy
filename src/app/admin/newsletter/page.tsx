@@ -2,18 +2,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getNewsletterSubscribers } from '@/lib/firebase'; // Changed to alias
-import type { NewsletterSubscriber } from '@/types'; // Changed to alias
+import { getNewsletterSubscribers } from '@/lib/firebase'; 
+import type { NewsletterSubscriber } from '@/types'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast'; // Changed to alias
+import { useToast } from '@/hooks/use-toast'; 
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Newspaper, Send, Loader2, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { mapNewsletterSubscriber } from '@/utils/mappers';
 
 interface EmailFormData {
   subject: string;
@@ -31,6 +32,7 @@ export default function AdminNewsletterPage() {
     const fetchSubscribers = async () => {
       setIsLoadingSubscribers(true);
       try {
+        // getNewsletterSubscribers already uses the mapper internally
         const fetchedSubscribers = await getNewsletterSubscribers();
         setSubscribers(fetchedSubscribers);
       } catch (error) {
@@ -127,8 +129,8 @@ export default function AdminNewsletterPage() {
                       <TableRow key={subscriber.id}>
                         <TableCell className="font-medium">{subscriber.email}</TableCell>
                         <TableCell>
-                          {subscriber.subscribedAt?.seconds 
-                            ? format(new Date(subscriber.subscribedAt.seconds * 1000), 'PPP p', { locale: bg }) 
+                          {subscriber.subscribedAt 
+                            ? format(new Date(subscriber.subscribedAt), 'PPP p', { locale: bg }) 
                             : 'N/A'}
                         </TableCell>
                       </TableRow>
@@ -196,3 +198,4 @@ export default function AdminNewsletterPage() {
     </div>
   );
 }
+

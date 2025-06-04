@@ -3,8 +3,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc, deleteDoc } from 'firebase/firestore';
-import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; // Changed to alias
-import type { Booking, UserProfile } from '@/types'; // Changed to alias
+import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; 
+import type { Booking, UserProfile } from '@/types'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { AlertTriangle, CalendarX2, Info, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { mapBooking } from '@/utils/mappers';
 
 interface ExtendedBooking extends Booking {
   clientProfile?: UserProfile | null;
@@ -25,7 +26,7 @@ export default function AdminBookingManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [isUpdatingStatusFor, setIsUpdatingStatusFor] = useState<string | null>(null);
   const { toast } = useToast();
-  const firestoreInstance = getFirestore(auth.app); // Use firestoreInstance consistently
+  const firestoreInstance = getFirestore(auth.app); 
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -37,23 +38,22 @@ export default function AdminBookingManagementPage() {
         const bookingsSnapshot = await getDocs(q);
         
         const bookingsListPromises = bookingsSnapshot.docs.map(async (bookingDoc) => {
-          const data = bookingDoc.data() as Omit<Booking, 'id'>;
+          const mappedBooking = mapBooking({ id: bookingDoc.id, ...bookingDoc.data() });
           let clientProfile: UserProfile | null = null;
-          if (data.userId) {
+          if (mappedBooking.userId) {
             try {
-              clientProfile = await getUserProfile(data.userId);
+              clientProfile = await getUserProfile(mappedBooking.userId);
             } catch (profileError) {
-              console.warn(`Could not fetch profile for userId ${data.userId}:`, profileError);
+              console.warn(`Could not fetch profile for userId ${mappedBooking.userId}:`, profileError);
             }
           }
           return {
-            id: bookingDoc.id,
-            ...data,
-            clientName: clientProfile?.name || clientProfile?.displayName || data.clientName || 'Клиент',
-            clientEmail: clientProfile?.email || data.clientEmail || 'Няма имейл',
-            clientPhoneNumber: clientProfile?.phoneNumber || data.clientPhoneNumber || 'Няма номер',
+            ...mappedBooking,
+            clientName: clientProfile?.name || clientProfile?.displayName || mappedBooking.clientName || 'Клиент',
+            clientEmail: clientProfile?.email || mappedBooking.clientEmail || 'Няма имейл',
+            clientPhoneNumber: clientProfile?.phoneNumber || mappedBooking.clientPhoneNumber || 'Няма номер',
             clientProfile,
-          } as ExtendedBooking;
+          };
         });
         const resolvedBookings = await Promise.all(bookingsListPromises);
         setBookings(resolvedBookings);
@@ -95,7 +95,7 @@ export default function AdminBookingManagementPage() {
       // Notify customer about status change
       if (newStatus !== oldStatus && booking.userId && booking.serviceName && booking.salonName && booking.date && booking.time) {
         const notificationMessage = `Статусът на Вашата резервация за '${booking.serviceName}' в '${booking.salonName}' на ${format(new Date(booking.date), 'dd.MM.yyyy', { locale: bg })} в ${booking.time} беше променен на '${statusTranslations[newStatus]}'.`;
-        await addDoc(collection(db, 'notifications'), { // db is the exported firestore from @/lib/firebase
+        await addDoc(collection(db, 'notifications'), { 
           userId: booking.userId,
           message: notificationMessage,
           link: `/account`,
@@ -124,7 +124,7 @@ export default function AdminBookingManagementPage() {
     }
 
     try {
-      setIsLoading(true); // Or a specific loading state for deletion if preferred
+      setIsLoading(true); 
       const bookingRef = doc(firestoreInstance, 'bookings', bookingId);
       await deleteDoc(bookingRef);
 
@@ -137,7 +137,7 @@ export default function AdminBookingManagementPage() {
       console.error('Error deleting booking:', err);
       toast({ title: 'Грешка при изтриване', description: err.message, variant: 'destructive' });
     } finally {
-      setIsLoading(false); // Reset loading state
+      setIsLoading(false); 
     }
   };
 
@@ -244,6 +244,17 @@ export default function AdminBookingManagementPage() {
                         </Select>
                       )}
                   </TableCell>
+                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                     <Button
+                        variant="destructive"
+                        size="icon"
+                        onClick={() => handleDeleteBooking(booking.id)}
+                        disabled={isLoading}
+                        title="Изтрий резервация"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -253,3 +264,4 @@ export default function AdminBookingManagementPage() {
     </div>
   );
 }
+

@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import type { Salon } from '@/types';
 import Link from 'next/link';
@@ -14,6 +14,7 @@ import { AlertTriangle, List } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { mapSalon } from '@/utils/mappers';
 
 interface NewBusinessFormState {
   name: string;
@@ -43,10 +44,7 @@ export default function AdminBusinessPage() {
       const salonsCollectionRef = collection(firestoreInstance, 'salons');
       const q = query(salonsCollectionRef, orderBy('name', 'asc'));
       const salonsSnapshot = await getDocs(q);
-      const salonsList = salonsSnapshot.docs.map(docSnap => ({ // Renamed doc to docSnap
-        id: docSnap.id,
-        ...docSnap.data()
-      })) as Salon[];
+      const salonsList = salonsSnapshot.docs.map(docSnap => mapSalon(docSnap.data(), docSnap.id));
       setSalons(salonsList);
     } catch (err: any) {
       console.error('Error fetching salons:', err);
@@ -69,7 +67,14 @@ export default function AdminBusinessPage() {
       const salonsCollectionRef = collection(firestoreInstance, 'salons');
       const docRef = await addDoc(salonsCollectionRef, {
         ...newBusiness,
-        createdAt: new Date(), // Add a timestamp
+        createdAt: serverTimestamp(), // Use serverTimestamp
+        // Add other default fields for a new salon if necessary
+        description: 'Новосъздаден салон. Моля, редактирайте детайлите.',
+        rating: 0,
+        reviewCount: 0,
+        photos: [],
+        services: [],
+        // Add more default fields as per your Salon type
       });
       toast({
         title: 'Бизнесът е създаден',
@@ -90,17 +95,17 @@ export default function AdminBusinessPage() {
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете бизнес "${businessName}"? Тази операция е необратима.`)) {
       return;
     }
-    setIsSubmitting(true); // Set loading state for delete
+    setIsSubmitting(true); 
     try {
       const businessDocRef = doc(firestoreInstance, 'salons', businessId);
       await deleteDoc(businessDocRef);
       toast({ title: 'Бизнесът е изтрит', description: `Бизнесът "${businessName}" беше успешно изтрит.` });
-      fetchSalons(); // Refresh the list
+      fetchSalons(); 
     } catch (err: any) {
       console.error('Error deleting business:', err);
       toast({ title: 'Грешка', description: 'Неуспешно изтриване на бизнеса.', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false); // Reset loading state
+      setIsSubmitting(false); 
     }
   };
 

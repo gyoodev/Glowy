@@ -17,6 +17,7 @@ import { Search, ListOrdered } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
+import { mapSalon } from '@/utils/mappers';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -71,19 +72,7 @@ export default function SalonDirectoryPage() {
         const q = query(salonsCollectionRef, orderBy('name'));
         
         const salonsSnapshot = await getDocs(q);
-        let salonsList = salonsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            createdAt: data.createdAt instanceof FirestoreTimestamp ? data.createdAt.toDate().toISOString() : typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
-            promotion: data.promotion ? {
-                ...data.promotion,
-                purchasedAt: data.promotion.purchasedAt instanceof FirestoreTimestamp ? data.promotion.purchasedAt.toDate().toISOString() : typeof data.promotion.purchasedAt === 'string' ? data.promotion.purchasedAt : undefined,
-                expiresAt: data.promotion.expiresAt instanceof FirestoreTimestamp ? data.promotion.expiresAt.toDate().toISOString() : typeof data.promotion.expiresAt === 'string' ? data.promotion.expiresAt : undefined,
-            } : undefined,
-          } as Salon;
-        });
+        let salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
         setSalons(salonsList);
       } catch (error) {
@@ -320,3 +309,4 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
+

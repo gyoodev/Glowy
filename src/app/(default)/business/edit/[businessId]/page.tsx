@@ -31,6 +31,7 @@ import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
 import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
+import { mapSalon } from '@/utils/mappers';
 
 
 const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
@@ -159,14 +160,14 @@ export default function EditBusinessPage() {
       if (!user) {
         router.push('/login');
       } else {
-        fetchBusiness(user.uid);
+        fetchBusinessData(user.uid); // Renamed to avoid conflict with component name
       }
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, router, authInstance]);
 
-  const fetchBusiness = async (userId: string) => {
+  const fetchBusinessData = async (userId: string) => { // Renamed
     if (!businessId) {
       setLoading(false);
       toast({ title: 'Грешка', description: 'Липсва ID на бизнеса.', variant: 'destructive' });
@@ -177,7 +178,7 @@ export default function EditBusinessPage() {
       const businessRef = doc(firestore, 'salons', businessId);
       const docSnap = await getDoc(businessRef);
       if (docSnap.exists()) {
-        const businessData = { id: docSnap.id, ...docSnap.data() } as Salon;
+        const businessData = mapSalon(docSnap.data(), docSnap.id); // Use mapper
         if (businessData.ownerId !== userId) {
           toast({ title: 'Неоторизиран достъп', description: 'Нямате права да редактирате този бизнес.', variant: 'destructive' });
           router.push('/business/manage');
@@ -310,7 +311,7 @@ export default function EditBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        phoneNumber: data.phone, // Corrected: map form's 'phone' to Salon's 'phoneNumber'
+        phoneNumber: data.phone, 
         email: data.email,
         website: data.website,
         workingHours: data.workingHours,

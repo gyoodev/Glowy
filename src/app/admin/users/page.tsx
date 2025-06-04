@@ -2,24 +2,25 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore'; // Added setDoc, deleteDoc
-import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions'; // Added HttpsCallableResult type
-import { auth } from '@/lib/firebase'; // Changed to alias
-import type { UserProfile } from '@/types'; // Changed to alias
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore'; 
+import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions'; 
+import { auth } from '@/lib/firebase'; 
+import type { UserProfile } from '@/types'; 
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Skeleton } from '@/components/ui/skeleton'; 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { mapUserProfile } from '@/utils/mappers';
 
 interface NewUserFormState {
   email: string;
-  password?: string; // Password only needed for email/pass creation, not for updating role or if function handles it
+  password?: string; 
   displayName: string;
   phoneNumber: string;
   role: 'user' | 'business' | 'admin';
@@ -48,7 +49,7 @@ export default function AdminUsersPage() {
     try {
       const usersCollection = collection(firestoreInstance, 'users');
       const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+      const usersList = userSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
       setUsers(usersList);
     } catch (err: any) {
       console.error("Error fetching users:", err);
@@ -73,28 +74,28 @@ export default function AdminUsersPage() {
     const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
 
     try {
-      setIsSubmitting(true); // Use general submitting state for now
+      setIsSubmitting(true); 
  await deleteUserAdminFunction({ uid: userId });
- fetchUsers(); // Refresh list
+ fetchUsers(); 
       toast({ title: "Успех", description: "Потребителят е изтрит." });
     } catch (err: any) {
  toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'business' | 'admin') => {
-    setIsSubmitting(true); // Use general submitting state for now
+    setIsSubmitting(true); 
     setError(null);
     const functions = getFunctions();
-    // This function would need to be implemented on the backend using Firebase Admin SDK
-    // to update the custom claims for the user and optionally update the Firestore document.
     const updateUserRoleAdminFunction = httpsCallable(functions, 'updateUserRoleAdmin');
 
     try {
       await updateUserRoleAdminFunction({ uid: userId, role: newRole });
       toast({ title: "Успех", description: `Ролята на потребител ${userId} е актуализирана.` });
-      setEditingUserId(null); // Exit editing mode
-      await fetchUsers(); // Refresh list to show updated role
+      setEditingUserId(null); 
+      await fetchUsers(); 
     } catch (err: any) {
       console.error('Error updating user role via function:', err);
       setError('Грешка при актуализация на ролята: ' + err.message + '. Уверете се, че Cloud Function "updateUserRoleAdmin" е deploy-ната и работи коректно.');
@@ -115,7 +116,6 @@ export default function AdminUsersPage() {
     const createUserAdminFunction = httpsCallable(functions, 'createUserAdmin');
 
     try {
-      // Pass only necessary fields, especially avoid sending undefined password
       const userDataToSend: any = {
         email: newUser.email,
         displayName: newUser.displayName,
@@ -143,7 +143,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  if (isLoading && users.length === 0) { // Show detailed skeleton only on initial load
+  if (isLoading && users.length === 0) { 
     return (
        <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <Skeleton className="h-8 w-1/3 mb-6" />
@@ -173,7 +173,7 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (error && users.length === 0) { // Show error primarily if initial load fails
+  if (error && users.length === 0) { 
      return (
       <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 text-center">
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
@@ -274,7 +274,7 @@ export default function AdminUsersPage() {
             <CardTitle className="text-2xl font-semibold">Списък с потребители ({users.length})</CardTitle>
          </CardHeader>
          <CardContent>
-            {isLoading && users.length > 0 ? ( // Show spinner only if reloading data
+            {isLoading && users.length > 0 ? ( 
                 <div className="flex justify-center items-center py-4">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2">Обновяване на списъка...</p>

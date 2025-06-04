@@ -15,6 +15,7 @@ import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 import { Search, ListOrdered } from 'lucide-react';
+import { mapSalon } from '@/utils/mappers';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -60,23 +61,9 @@ export default function SalonsDirectoryPage() {
       setIsLoading(true);
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
-        // Keep initial fetch simple, sorting will be applied later or by default sort logic
-        const q = query(salonsCollectionRef, orderBy('name'));
+        const q = query(salonsCollectionRef, orderBy('name')); 
         const salonsSnapshot = await getDocs(q);
-        const salonsList = salonsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            // Ensure timestamps are converted correctly if they exist
-             createdAt: data.createdAt instanceof FirestoreTimestamp ? data.createdAt.toDate().toISOString() : typeof data.createdAt === 'string' ? data.createdAt : new Date().toISOString(),
-            promotion: data.promotion ? {
-                ...data.promotion,
-                purchasedAt: data.promotion.purchasedAt instanceof FirestoreTimestamp ? data.promotion.purchasedAt.toDate().toISOString() : typeof data.promotion.purchasedAt === 'string' ? data.promotion.purchasedAt : undefined,
-                expiresAt: data.promotion.expiresAt instanceof FirestoreTimestamp ? data.promotion.expiresAt.toDate().toISOString() : typeof data.promotion.expiresAt === 'string' ? data.promotion.expiresAt : undefined,
-            } : undefined,
-          } as Salon;
-        });
+        const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         setSalons(salonsList);
       } catch (error) {
         console.error("Error fetching salons:", error);
@@ -252,3 +239,4 @@ export default function SalonsDirectoryPage() {
     </>
   );
 }
+

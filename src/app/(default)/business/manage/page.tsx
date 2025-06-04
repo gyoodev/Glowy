@@ -28,6 +28,7 @@ import {
 } from 'recharts';
 import { format, subMonths, startOfMonth } from 'date-fns';
 import { bg } from 'date-fns/locale';
+import { mapSalon, mapBooking } from '@/utils/mappers';
 
 const NUM_MONTHS_FOR_CHARTS = 6; // Display data for the last 6 months
 
@@ -80,10 +81,7 @@ export default function BusinessManagePage() {
           
           try {
             const querySnapshot = await getDocs(q);
-            const businesses: Salon[] = [];
-            querySnapshot.forEach((doc) => {
-              businesses.push({ id: doc.id, ...doc.data() } as Salon);
-            });
+            const businesses: Salon[] = querySnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
             setUserBusinesses(businesses);
 
             if (businesses.length > 0) {
@@ -92,13 +90,13 @@ export default function BusinessManagePage() {
               const bookingsRef = collection(firestore, 'bookings');
               const bookingsQuery = query(bookingsRef, where('salonId', 'in', salonIds));
               const bookingsSnapshot = await getDocs(bookingsQuery);
-              const allBookings: Booking[] = bookingsSnapshot.docs.map(docSnap => ({id: docSnap.id, ...docSnap.data()}) as Booking);
+              const allBookings: Booking[] = bookingsSnapshot.docs.map(docSnap => mapBooking(docSnap.data()));
 
               const monthlyPlaceholders = generateMonthlyPlaceholders(NUM_MONTHS_FOR_CHARTS);
 
               const aggregatedTotal: Record<string, number> = {};
               allBookings.forEach(booking => {
-                if (booking.createdAt && typeof booking.createdAt === 'string') {
+                if (booking.createdAt) { // createdAt is string from mapper
                   try {
                     const date = new Date(booking.createdAt); 
                     if (!isNaN(date.getTime())) {
@@ -117,7 +115,7 @@ export default function BusinessManagePage() {
                 const salonBookings = allBookings.filter(b => b.salonId === salon.id);
                 const aggregatedSalonBookings: Record<string, number> = {};
                 salonBookings.forEach(booking => {
-                  if (booking.createdAt && typeof booking.createdAt === 'string') {
+                  if (booking.createdAt) { // createdAt is string
                     try {
                       const date = new Date(booking.createdAt);
                       if (!isNaN(date.getTime())) {

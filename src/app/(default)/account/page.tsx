@@ -18,7 +18,7 @@ import { getFirestore, doc, setDoc, collection, query, where, getDocs, Timestamp
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from "@/hooks/use-toast";
-import { mapSalon } from '@/utils/mappers';
+import { mapSalon, mapReview } from '@/utils/mappers'; // Added mapReview
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -115,29 +115,8 @@ export default function AccountPage() {
             await fetchNewsletterStatus(newProfile.email);
           }
 
-          const userBookings = await getUserBookings(user.uid);
-          const mappedBookings: Booking[] = userBookings.map((booking: any) => ({
-            id: booking.id,
-            userId: booking.userId,
-            salonId: booking.salonId,
-            serviceId: booking.serviceId,
-            startTime: booking.startTime,
-            endTime: booking.endTime,
-            salonName: booking.salonName || 'N/A',
-            serviceName: booking.serviceName || 'N/A',
-            date: booking.date || new Date().toISOString().split('T')[0],
-            time: booking.time || 'N/A',
-            status: booking.status as Booking['status'],
-            clientName: booking.clientName || 'N/A',
-            clientEmail: booking.clientEmail || 'N/A',
-            clientPhoneNumber: booking.clientPhoneNumber || 'N/A',
-            createdAt: booking.createdAt || new Date().toISOString(),
-            salonAddress: booking.salonAddress || 'N/A',
-            salonPhoneNumber: booking.salonPhoneNumber || 'N/A',
-            salonOwnerId: booking.salonOwnerId || 'N/A',
-            service: booking.service as Service || { id: '', name: 'N/A', duration: 0, price: 0 },
-          }));
-          setBookings(mappedBookings);
+          const userBookings = await getUserBookings(user.uid); // getUserBookings already uses mapBooking
+          setBookings(userBookings);
 
         } catch (e: unknown) {
           console.error("Error fetching/creating user profile or bookings:", e);
@@ -195,10 +174,7 @@ export default function AccountPage() {
       try {
         const reviewsQuery = query(reviewsCollectionRef, where('userId', '==', userProfile.id), orderBy('date', 'desc'));
         const reviewSnapshot = await getDocs(reviewsQuery);
-        const fetchedReviews: Review[] = [];
-        reviewSnapshot.forEach(docSnap => {
-          fetchedReviews.push({ id: docSnap.id, ...docSnap.data() } as Review);
-        });
+        const fetchedReviews: Review[] = reviewSnapshot.docs.map(docSnap => mapReview(docSnap.data(), docSnap.id));
         setReviews(fetchedReviews);
       } catch (error) {
         console.error("Error fetching user's written reviews:", error);
