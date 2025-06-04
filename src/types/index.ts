@@ -8,3 +8,4 @@ export * from './notification';
 export * from './location'; // Ensure this line is present and correct
 export * from './promotion';
 export * from './newsletter';
+export * from './hero-image'; // Add this line
