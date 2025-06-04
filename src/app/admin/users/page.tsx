@@ -319,13 +319,13 @@ export default function AdminUsersPage() {
                           >
                            {editingUserId === user.id ? 'Отмени' : 'Редактирай Роля'}
                           </Button>
-                           {editingUserId === user.id && (
+                          {editingUserId === user.id && (
                             <div className="flex items-center space-x-2 mt-2">
-                               <Select
-                                  value={user.role ?? 'user'}
-                                  onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
-                                  disabled={isSubmitting}
-                               >
+                              <Select
+                                value={user.role ?? 'user'}
+                                onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
+                                disabled={isSubmitting}
+                              >
                                 <SelectTrigger className="w-[120px]">
                                   <SelectValue placeholder="Избери роля" />
                                 </SelectTrigger>
@@ -337,12 +337,14 @@ export default function AdminUsersPage() {
                               </Select>
                             </div>
                           )}
-                         <Button
+                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDeleteUser(user.id, user.email)}
-                           {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
- </Button>
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
+                          </Button>
                         </TableCell>
                     </TableRow>
                     ))}
