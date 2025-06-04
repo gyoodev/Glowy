@@ -1,6 +1,11 @@
 
-import { recommendSalons, RecommendSalonsInputSchema, type RecommendSalonsInput, type RecommendSalonsOutput } from '@/ai/flows/recommend-salons';
 import { NextRequest, NextResponse } from 'next/server';
+import { 
+  RecommendSalonsInputSchema, 
+  type RecommendSalonsInput, 
+  type RecommendSalonsOutput 
+} from '@/ai/schemas/recommend-salons-schemas';
+import { recommendSalons } from '@/ai/flows/recommend-salons';
 
 export async function POST(req: NextRequest) {
   try {
@@ -12,18 +17,11 @@ export async function POST(req: NextRequest) {
     }
     
     const data: RecommendSalonsInput = parseResult.data;
-    // console.log('API Route: Received data for salon recommendations:', data); // Optional: for detailed input logging
-
     const result: RecommendSalonsOutput = await recommendSalons(data);
 
     if (result.error) {
-      console.error('API Route: Error from recommendSalons flow:', result.error); // Explicit server-side log
+      console.error('API Route: Error from recommendSalons flow:', result.error);
       return NextResponse.json({ success: false, error: result.error }, { status: 500 });
-    }
-
-    if (!result.recommendations) {
-      console.error('API Route: No recommendations in successful result from flow');
-      return NextResponse.json({ success: false, error: 'AI did not return any recommendations.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, recommendations: result.recommendations }, { status: 200 });
