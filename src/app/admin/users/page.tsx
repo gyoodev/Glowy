@@ -23,7 +23,7 @@ interface NewUserFormState {
   password?: string; 
   displayName: string;
   phoneNumber: string;
-  role: 'user' | 'business' | 'admin';
+  role: UserProfile['role']; // Use UserProfile role type
 }
 
 export default function AdminUsersPage() {
@@ -40,7 +40,7 @@ export default function AdminUsersPage() {
     password: '',
     displayName: '',
     phoneNumber: '',
-    role: 'user',
+    role: 'customer', // Default to 'customer'
   });
 
   const fetchUsers = async () => {
@@ -85,7 +85,7 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleUpdateUserRole = async (userId: string, newRole: 'user' | 'business' | 'admin') => {
+  const handleUpdateUserRole = async (userId: string, newRole: UserProfile['role']) => {
     setIsSubmitting(true); 
     setError(null);
     const functions = getFunctions();
@@ -104,13 +104,6 @@ export default function AdminUsersPage() {
       setIsSubmitting(false);
     }
   };
-
-  // Type definition for role update, including 'customer' as per UserProfile
-  const handleUpdateUserRole = async (userId: string, newRole: UserProfile['role']) => {
-    // ... rest of the function remains the same
-  };
-
-
 
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -139,7 +132,7 @@ export default function AdminUsersPage() {
         title: "Потребителят е създаден",
         description: 'UID: ' + (result.data?.uid || 'N/A') + '. Firestore документът за този потребител трябва да бъде създаден от createUserAdmin Cloud Function.',
       });
-      setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'user' });
+      setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'customer' });
       await fetchUsers(); 
     } catch (err: any) {
       console.error('Error creating user via function:', err);
@@ -257,7 +250,7 @@ export default function AdminUsersPage() {
                   <SelectValue placeholder="Избери роля" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Потребител (User)</SelectItem>
+                  <SelectItem value="customer">Клиент (Customer)</SelectItem>
                   <SelectItem value="business">Бизнес (Business)</SelectItem>
                   <SelectItem value="admin">Администратор (Admin)</SelectItem>
                 </SelectContent>
@@ -322,15 +315,15 @@ export default function AdminUsersPage() {
                           {editingUserId === user.id && (
                             <div className="flex items-center space-x-2 mt-2">
                               <Select
-                                value={user.role ?? 'user'}
+                                value={user.role ?? 'customer'}
                                 onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
                                 disabled={isSubmitting}
                               >
-                                <SelectTrigger className="w-[120px]">
+                                <SelectTrigger className="w-[150px]"> {/* Adjusted width */}
                                   <SelectValue placeholder="Избери роля" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="user">Потребител</SelectItem>
+                                  <SelectItem value="customer">Клиент</SelectItem>
                                   <SelectItem value="business">Бизнес</SelectItem>
                                   <SelectItem value="admin">Админ</SelectItem>
                                 </SelectContent>
@@ -343,7 +336,7 @@ export default function AdminUsersPage() {
                             onClick={() => handleDeleteUser(user.id, user.email)}
                             disabled={isSubmitting}
                           >
-                            {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
+                            {isSubmitting && editingUserId !== user.id ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
                           </Button>
                         </TableCell>
                     </TableRow>
