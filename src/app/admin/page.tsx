@@ -118,7 +118,7 @@ export default function AdminIndexPage() {
         const usersSnapshot = await getDocs(usersRef);
         const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt && (typeof user.createdAt === 'string' || user.createdAt instanceof Timestamp));
+        const validUsersWithDate = usersList.filter(user => user.createdAt && (typeof user.createdAt === 'string' || (user.createdAt as any).toDate !== undefined));
         setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
@@ -145,7 +145,7 @@ export default function AdminIndexPage() {
         const salonsSnapshot = await getDocs(salonsRef);
         const salonsList = salonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
         
-        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && (typeof salon.createdAt === 'string' || salon.createdAt instanceof Timestamp));
+        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && (typeof salon.createdAt === 'string' || (salon.createdAt as any).toDate !== undefined));
         setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
