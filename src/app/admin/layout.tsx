@@ -103,7 +103,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     }
   };
 
-  const isActive = (href: string) => pathname === href || (href !== '/admin' && pathname.startsWith(href));
+  const isActive = (href: string) => {
+    if (!pathname) {
+      return false; // Pathname is not yet available
+    }
+    // Exact match
+    if (pathname === href) {
+      return true;
+    }
+    // For non-base admin routes, check if pathname starts with href
+    // e.g., if href="/admin/users" and pathname="/admin/users/edit/123"
+    // This also handles the case where href="/admin" and pathname="/admin/users" (won't match as active)
+    if (href !== '/admin' && pathname.startsWith(href)) {
+      return true;
+    }
+    return false;
+  };
 
   if (isLoading) {
     return (
