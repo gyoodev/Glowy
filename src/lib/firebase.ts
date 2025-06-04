@@ -21,15 +21,41 @@ import {
 import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
 import { mapUserProfile, mapBooking, mapNotification, mapNewsletterSubscriber } from '@/utils/mappers'; // Path alias should now work
 
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "glowy-gyoodev.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "glowy-gyoodev",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "glowy-gyoodev.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "404029225537",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:404029225537:web:2f9144a90f82f82eff64c0",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-6Z1J5B647X"
+const defaultFirebaseConfig = {
+  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
+  authDomain: "glowy-gyoodev.firebaseapp.com",
+  projectId: "glowy-gyoodev",
+  storageBucket: "glowy-gyoodev.appspot.com", // Corrected: common Firebase storage bucket domain
+  messagingSenderId: "404029225537",
+  appId: "1:404029225537:web:2f9144a90f82f82eff64c0",
+  measurementId: "G-6Z1J5B647X"
 };
+
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || defaultFirebaseConfig.appId,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || defaultFirebaseConfig.measurementId
+};
+
+if (
+  firebaseConfig.apiKey === defaultFirebaseConfig.apiKey ||
+  firebaseConfig.projectId === defaultFirebaseConfig.projectId
+) {
+  console.warn(
+    "******************************************************************************\n" +
+    "** WARNING: Firebase is using default/fallback configuration values.        **\n" +
+    "** This is likely NOT what you want for your project.                       **\n" +
+    "** Please ensure your .env file is correctly set up with your               **\n" +
+    "** NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, etc.    **\n" +
+    "** If these are not set, the app will try to connect to a default project   **\n" +
+    "** ('glowy-gyoodev'), which may cause data fetching to fail or hang.        **\n" +
+    "******************************************************************************"
+  );
+}
 
 let app: FirebaseApp;
 if (!getApps().length) {
