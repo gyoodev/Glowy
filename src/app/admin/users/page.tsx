@@ -105,6 +105,13 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Type definition for role update, including 'customer' as per UserProfile
+  const handleUpdateUserRole = async (userId: string, newRole: UserProfile['role']) => {
+    // ... rest of the function remains the same
+  };
+
+
+
   const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newUser.password && !confirm("Ще създадете потребител без парола. Той ще може да влезе само чрез Google или друг oAuth доставчик, или ще трябва да нулира паролата си. Продължавате ли?")) {
@@ -318,13 +325,6 @@ export default function AdminUsersPage() {
                                   value={user.role ?? 'user'}
                                   onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
                                   disabled={isSubmitting}
-                          </Button>
-                           {editingUserId === user.id && (
-                            <div className="flex items-center space-x-2 mt-2">
-                               <Select
-                                  value={user.role ?? 'user'}
-                                  onValueChange={(value) => handleUpdateUserRole(user.id, value as 'user' | 'business' | 'admin' | 'customer')}
-                                  disabled={isSubmitting}
                                >
                                 <SelectTrigger className="w-[120px]">
                                   <SelectValue placeholder="Избери роля" />
@@ -341,16 +341,6 @@ export default function AdminUsersPage() {
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDeleteUser(user.id, user.email)}
- disabled={isSubmitting}
-                        >
-                           {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
-                          Изтрий
- </Button>
-                        </TableCell>
-                    </TableRow>
-                    ))}
-                </TableBody>
-                </Table>
                            {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
  </Button>
                         </TableCell>
