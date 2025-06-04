@@ -315,8 +315,15 @@ export default function AdminUsersPage() {
                            {editingUserId === user.id && (
                             <div className="flex items-center space-x-2 mt-2">
                                <Select
-                                  value={user.role || 'user'}
+                                  value={user.role ?? 'user'}
                                   onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
+                                  disabled={isSubmitting}
+                          </Button>
+                           {editingUserId === user.id && (
+                            <div className="flex items-center space-x-2 mt-2">
+                               <Select
+                                  value={user.role ?? 'user'}
+                                  onValueChange={(value) => handleUpdateUserRole(user.id, value as 'user' | 'business' | 'admin' | 'customer')}
                                   disabled={isSubmitting}
                                >
                                 <SelectTrigger className="w-[120px]">
@@ -336,6 +343,14 @@ export default function AdminUsersPage() {
                             onClick={() => handleDeleteUser(user.id, user.email)}
  disabled={isSubmitting}
                         >
+                           {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />}
+                          Изтрий
+ </Button>
+                        </TableCell>
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
                            {isSubmitting ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1 h-4 w-4" />} Изтрий
  </Button>
                         </TableCell>
