@@ -1,18 +1,18 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore'; 
-import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions'; 
-import { auth } from '@/lib/firebase'; 
-import type { UserProfile } from '@/types'; 
+import React, { useEffect, useState, useCallback } from 'react';
+import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions';
+import { auth } from '@/lib/firebase';
+import type { UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton'; 
+import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Trash2, UserPlus, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -20,10 +20,10 @@ import { mapUserProfile } from '@/utils/mappers';
 
 interface NewUserFormState {
   email: string;
-  password?: string; 
+  password?: string;
   displayName: string;
   phoneNumber: string;
-  role: UserProfile['role']; // Use UserProfile role type
+  role: UserProfile['role'];
 }
 
 export default function AdminUsersPage() {
@@ -40,16 +40,16 @@ export default function AdminUsersPage() {
     password: '',
     displayName: '',
     phoneNumber: '',
-    role: 'customer', // Default to 'customer'
+    role: 'customer',
   });
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const usersCollection = collection(firestoreInstance, 'users');
       const userSnapshot = await getDocs(usersCollection);
-      const usersList = userSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
+      const usersList = userSnapshot.docs.map(docSnap => mapUserProfile(docSnap.data(), docSnap.id));
       setUsers(usersList);
     } catch (err: any) {
       console.error("Error fetching users:", err);
@@ -58,14 +58,13 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [firestoreInstance, toast]);
 
   useEffect(() => {
     fetchUsers();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchUsers]);
 
-  const handleDeleteUser = async (userId: string, userEmail?: string) => {
+  const handleDeleteUser = useCallback(async (userId: string, userEmail?: string) => {
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребител ${userEmail || userId}? Тази операция е необратима и ще изтрие потребителя от Firebase Authentication и неговия документ от Firestore.`)) {
       return;
     }
@@ -73,20 +72,20 @@ export default function AdminUsersPage() {
     const functions = getFunctions();
     const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true); 
- await deleteUserAdminFunction({ uid: userId });
- fetchUsers(); 
+      await deleteUserAdminFunction({ uid: userId });
+      await fetchUsers();
       toast({ title: "Успех", description: "Потребителят е изтрит." });
     } catch (err: any) {
- toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
+      toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [fetchUsers, toast]);
 
-  const handleUpdateUserRole = async (userId: string, newRole: UserProfile['role']) => {
-    setIsSubmitting(true); 
+  const handleUpdateUserRole = useCallback(async (userId: string, newRole: UserProfile['role']) => {
+    setIsSubmitting(true);
     setError(null);
     const functions = getFunctions();
     const updateUserRoleAdminFunction = httpsCallable(functions, 'updateUserRoleAdmin');
@@ -94,8 +93,8 @@ export default function AdminUsersPage() {
     try {
       await updateUserRoleAdminFunction({ uid: userId, role: newRole });
       toast({ title: "Успех", description: `Ролята на потребител ${userId} е актуализирана.` });
-      setEditingUserId(null); 
-      await fetchUsers(); 
+      setEditingUserId(null);
+      await fetchUsers();
     } catch (err: any) {
       console.error('Error updating user role via function:', err);
       setError('Грешка при актуализация на ролята: ' + err.message + '. Уверете се, че Cloud Function "updateUserRoleAdmin" е deploy-ната и работи коректно.');
@@ -103,12 +102,12 @@ export default function AdminUsersPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [fetchUsers, toast]);
 
-  const handleCreateUser = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateUser = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!newUser.password && !confirm("Ще създадете потребител без парола. Той ще може да влезе само чрез Google или друг oAuth доставчик, или ще трябва да нулира паролата си. Продължавате ли?")) {
-        return;
+      return;
     }
     setIsSubmitting(true);
     setError(null);
@@ -127,13 +126,13 @@ export default function AdminUsersPage() {
       }
 
       const result = await createUserAdminFunction(userDataToSend) as HttpsCallableResult<any>;
-      
+
       toast({
         title: "Потребителят е създаден",
         description: 'UID: ' + (result.data?.uid || 'N/A') + '. Firestore документът за този потребител трябва да бъде създаден от createUserAdmin Cloud Function.',
       });
       setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'customer' });
-      await fetchUsers(); 
+      await fetchUsers();
     } catch (err: any) {
       console.error('Error creating user via function:', err);
       setError('Грешка при създаване на потребител: ' + err.message + '. Уверете се, че Cloud Function "createUserAdmin" е deploy-ната и работи коректно, и че имате права да я извикате.');
@@ -141,9 +140,10 @@ export default function AdminUsersPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [newUser, fetchUsers, toast]);
 
-  if (isLoading && users.length === 0) { 
+
+  if (isLoading && users.length === 0) {
     return (
        <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
         <Skeleton className="h-8 w-1/3 mb-6" />
@@ -173,7 +173,7 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (error && users.length === 0) { 
+  if (error && users.length === 0) {
      return (
       <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 text-center">
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
@@ -274,7 +274,7 @@ export default function AdminUsersPage() {
             <CardTitle className="text-2xl font-semibold">Списък с потребители ({users.length})</CardTitle>
          </CardHeader>
          <CardContent>
-            {isLoading && users.length > 0 ? ( 
+            {isLoading && users.length > 0 ? (
                 <div className="flex justify-center items-center py-4">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     <p className="ml-2">Обновяване на списъка...</p>
@@ -300,7 +300,7 @@ export default function AdminUsersPage() {
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.id}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.email || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.displayName || user.name || 'N/A'}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.role || 'N/A'}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">{user.role || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.phoneNumber || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <Button
@@ -319,7 +319,7 @@ export default function AdminUsersPage() {
                                 onValueChange={(value) => handleUpdateUserRole(user.id, value as UserProfile['role'])}
                                 disabled={isSubmitting}
                               >
-                                <SelectTrigger className="w-[150px]"> {/* Adjusted width */}
+                                <SelectTrigger className="w-[150px]">
                                   <SelectValue placeholder="Избери роля" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -349,5 +349,6 @@ export default function AdminUsersPage() {
       </Card>
     </div>
   );
-
 }
+
+    
