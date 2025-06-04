@@ -89,7 +89,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
           priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
           preferredLocations: data.preferredLocations || [],
         },
-        lastUpdatedAt: new Date(),
+        lastUpdatedAt: new Date().toISOString(), // Corrected: Convert Date to ISO string
       };
 
       // Preserve existing fields not in the form
@@ -405,3 +405,4 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
   );
 }
 
+    
