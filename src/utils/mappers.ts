@@ -150,8 +150,8 @@ export function mapSalon(raw: any, id?: string): Salon {
         isActive: raw.promotion.isActive,
         packageId: raw.promotion.packageId,
         packageName: raw.promotion.packageName,
-        purchasedAt: raw.promotion.purchasedAt ? timestampToISOString(raw.promotion.purchasedAt) : undefined,
-        expiresAt: raw.promotion.expiresAt ? timestampToISOString(raw.promotion.expiresAt) : undefined,
+        purchasedAt: timestampToISOString(raw.promotion.purchasedAt) || '',
+        expiresAt: timestampToISOString(raw.promotion.expiresAt) || '',
         paymentMethod: raw.promotion.paymentMethod,
         transactionId: raw.promotion.transactionId
     } : undefined,
