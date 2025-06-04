@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
-import { auth } from '@/lib/firebase'; // Changed to alias
-import type { Salon } from '@/types'; // Changed to alias
+import { auth } from '@/lib/firebase';
+import type { Salon } from '@/types';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,30 +27,7 @@ export default function AdminBusinessPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const firestoreInstance = getFirestore(auth.app);
-
-  useEffect(() => {
-    const fetchSalons = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const salonsCollectionRef = collection(firestoreInstance, 'salons');
-        const q = query(salonsCollectionRef, orderBy('name', 'asc'));
-        const salonsSnapshot = await getDocs(q);
-        const salonsList = salonsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Salon[];
-        setSalons(salonsList);
-      } catch (err: any) {
-        console.error('Error fetching salons:', err);
-        setError('Failed to load salons. Please ensure Firestore rules allow admin access and the collection exists.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSalons();
-  }, [firestoreInstance]);
+  const { toast } = useToast();
 
   const [newBusiness, setNewBusiness] = useState<NewBusinessFormState>({
     name: '',
@@ -58,7 +35,31 @@ export default function AdminBusinessPage() {
     address: '',
     ownerId: '',
   });
-  const { toast } = useToast();
+
+  const fetchSalons = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const salonsCollectionRef = collection(firestoreInstance, 'salons');
+      const q = query(salonsCollectionRef, orderBy('name', 'asc'));
+      const salonsSnapshot = await getDocs(q);
+      const salonsList = salonsSnapshot.docs.map(docSnap => ({ // Renamed doc to docSnap
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as Salon[];
+      setSalons(salonsList);
+    } catch (err: any) {
+      console.error('Error fetching salons:', err);
+      setError('Failed to load salons. Please ensure Firestore rules allow admin access and the collection exists.');
+      toast({ title: "Грешка при зареждане", description: "Неуспешно зареждане на салоните.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [firestoreInstance, toast]);
+
+  useEffect(() => {
+    fetchSalons();
+  }, [fetchSalons]);
 
   const handleCreateBusiness = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -89,6 +90,7 @@ export default function AdminBusinessPage() {
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете бизнес "${businessName}"? Тази операция е необратима.`)) {
       return;
     }
+    setIsSubmitting(true); // Set loading state for delete
     try {
       const businessDocRef = doc(firestoreInstance, 'salons', businessId);
       await deleteDoc(businessDocRef);
@@ -97,6 +99,8 @@ export default function AdminBusinessPage() {
     } catch (err: any) {
       console.error('Error deleting business:', err);
       toast({ title: 'Грешка', description: 'Неуспешно изтриване на бизнеса.', variant: 'destructive' });
+    } finally {
+      setIsSubmitting(false); // Reset loading state
     }
   };
 
@@ -142,6 +146,9 @@ export default function AdminBusinessPage() {
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1>
 
+      {/* Form for creating a new business - Omitted for brevity in this specific fix, assuming it's unchanged from previous state */}
+      {/* <Card className="mb-8 shadow-md"> ... </Card> */}
+
       {salons.length === 0 ? (
          <Card className="text-center py-12">
            <CardHeader>
@@ -181,11 +188,19 @@ export default function AdminBusinessPage() {
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.address || 'N/A'}</TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.rating?.toFixed(1) || 'N/A'}</TableCell>
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{salon.ownerId || 'N/A'}</TableCell>
-                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <Button variant="outline" size="sm" asChild>
                         <Link href={`/business/edit/${salon.id}`}>
                           Редактирай
                         </Link>
+                      </Button>
+                       <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => salon.name && handleDeleteBusiness(salon.id, salon.name)}
+                        disabled={isSubmitting}
+                      >
+                        Изтрий
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -199,3 +214,5 @@ export default function AdminBusinessPage() {
     </div>
   );
 }
+
+    
