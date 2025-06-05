@@ -28,8 +28,8 @@ const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
 
 const staticHeroImages: HeroImage[] = [
-  { id: 'barber_large', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon', priority: true },
-  { id: 'hair_studio_small1', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист оформя коса на клиент във фризьорски салон', dataAiHint: 'hair studio' },
+  { id: 'hair_studio_small1', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист оформя коса на клиент във фризьорски салон', dataAiHint: 'hair studio', priority: true },
+  { id: 'barber_large', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon' },
   { id: 'nail_studio_small2', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на инструменти в студио за маникюр', dataAiHint: 'nail salon' },
 ];
 
@@ -309,4 +309,3 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
-

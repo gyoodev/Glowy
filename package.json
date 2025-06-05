@@ -1,4 +1,3 @@
-
 {
   "name": "nextn",
   "version": "0.1.0",
@@ -52,6 +51,7 @@
     "firebase-admin": "^13.4.0",
     "genkit": "^1.8.0",
     "gsap": "^3.13.0",
+    "ldrs": "^1.1.7",
     "lucide-react": "^0.475.0",
     "micro": "^10.0.1",
     "next": "^15.3.2",
