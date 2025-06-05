@@ -40,8 +40,11 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         {/* Removed LoadingScreenAnimation as per prior discussion (commented out in its file) */}
         {isLoading ? (
-          <div className="flex items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
+          <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
              <Mirage size="60" speed="2.5" color="hsl(var(--primary))" />
+             <div className="mt-4 text-2xl font-bold text-primary">
+               Glowy ✨
+             </div>
           </div>
         ) : (
          <>
