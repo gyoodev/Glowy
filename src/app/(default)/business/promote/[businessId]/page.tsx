@@ -17,12 +17,8 @@ import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
-// Extend window type for PayPal
-declare global {
-  interface Window {
-    paypal?: any;
-  }
-}
+// Removed conflicting global Window declaration for paypal.
+// The types from @paypal/paypal-js (via @paypal/react-paypal-js) should handle this.
 
 const promotionPackages = [
   { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.', hostedButtonId: '36RPT2GTKL63U' },
@@ -98,14 +94,14 @@ export default function PromoteBusinessPage() {
   };
 
   useEffect(() => {
-    if (isPayPalHostedSDKLoaded && window.paypal && window.paypal.HostedButtons) {
+    if (isPayPalHostedSDKLoaded && window.paypal && (window.paypal as any).HostedButtons) {
       promotionPackages.forEach(pkg => {
         if (pkg.hostedButtonId) {
           const containerId = `paypal-container-${pkg.hostedButtonId}`;
           const container = document.getElementById(containerId);
           if (container && (!container.hasChildNodes() || container.innerHTML.trim() === '')) {
             try {
-              window.paypal.HostedButtons({
+              (window.paypal as any).HostedButtons({
                 hostedButtonId: pkg.hostedButtonId
               }).render(`#${containerId}`);
               console.log(`PayPal Hosted Button ${pkg.hostedButtonId} for package ${pkg.name} rendered into #${containerId}.`);
@@ -124,7 +120,7 @@ export default function PromoteBusinessPage() {
           }
         }
       });
-    } else if (isPayPalHostedSDKLoaded && (!window.paypal || !window.paypal.HostedButtons)) {
+    } else if (isPayPalHostedSDKLoaded && (!window.paypal || !(window.paypal as any).HostedButtons)) {
       console.warn("PayPal HostedButtons SDK loaded, but window.paypal.HostedButtons is not available yet.");
     }
   }, [isPayPalHostedSDKLoaded, toast]);
@@ -239,7 +235,7 @@ export default function PromoteBusinessPage() {
   return (
       <div className="container mx-auto py-10 px-6">
         <Script
-          src="https://www.paypal.com/sdk/js?client-id=BAAS_0VWHm4WLTs3PoHtuCDAfHCWrowMXnGsc2P0u0QO8m1KUhpw78ViY1I-yRhnKCLVzh1fBT9Do088_U&components=hosted-buttons&disable-funding=venmo&currency=EUR"
+          src={`https://www.paypal.com/sdk/js?client-id=${process.env.NEXT_PUBLIC_PAYPAL_HOSTED_BUTTON_CLIENT_ID || 'BAAS_0VWHm4WLTs3PoHtuCDAfHCWrowMXnGsc2P0u0QO8m1KUhpw78ViY1I-yRhnKCLVzh1fBT9Do088_U'}&components=hosted-buttons&disable-funding=venmo&currency=EUR`}
           strategy="afterInteractive"
           onLoad={() => {
             console.log("PayPal Hosted Button SDK loaded.");
