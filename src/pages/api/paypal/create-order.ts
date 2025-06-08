@@ -4,12 +4,21 @@ import paypal from '@paypal/checkout-server-sdk';
 
 const clientId = process.env.PAYPAL_CLIENT_ID;
 const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
+const paypalMode = process.env.PAYPAL_ENVIRONMENT || 'sandbox'; // Default to 'sandbox'
 
 if (!clientId || !clientSecret) {
-  console.error("FATAL ERROR: PayPal Client ID or Client Secret is not set for create-order API.");
+  console.error("FATAL SERVER ERROR: PayPal Client ID or Client Secret is not configured in environment variables (PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET). PayPal API calls will fail.");
 }
 
-const environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
+// Conditional environment setup
+let environment;
+if (paypalMode === 'live') {
+  environment = new paypal.core.LiveEnvironment(clientId!, clientSecret!);
+} else {
+  environment = new paypal.core.SandboxEnvironment(clientId!, clientSecret!);
+}
+console.log(`PayPal API configured for ${paypalMode.toUpperCase()} environment.`);
+
 const client = new paypal.core.PayPalHttpClient(environment);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -19,8 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (!clientId || !clientSecret) {
-    console.error("PayPal API credentials not configured on the server for create-order.");
-    return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server.' });
+    // This check is repeated here to ensure it's caught before trying to use the client if somehow missed above.
+    console.error("PayPal API credentials not configured on the server for create-order. Check PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
+    return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server. Please contact support or check server logs.' });
   }
 
   const { amount, currency, packageId, businessId, description } = req.body;
@@ -38,14 +48,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         currency_code: currency,
         value: amount,
       },
-      custom_id: packageId,
-      reference_id: businessId,
+      custom_id: packageId, // Used to identify the package later
+      reference_id: businessId, // Used to identify the business
       description: description || ('Promotion: ' + packageId + ' for business ' + businessId),
     }],
   });
 
   try {
     const order = await client.execute(request);
+    console.log(`PayPal order ${order.result.id} created successfully for ${paypalMode} environment.`);
     res.status(200).json({ success: true, orderID: order.result.id });
   } catch (e: unknown) {
     let errorMessage = 'Failed to create PayPal order.';
@@ -53,16 +64,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (e instanceof Error) {
         errorMessage = e.message;
-        // Check for PayPal specific error structure
-        const paypalError = e as any;
-        if (paypalError.isAxiosError && paypalError.response && paypalError.response.data) {
-            errorMessage = paypalError.response.data.message || errorMessage;
-            errorDetails = paypalError.response.data.details;
-            if (paypalError.response.data.details && paypalError.response.data.details.length > 0) {
-                const detailsString = paypalError.response.data.details.map((d:any) => d.issue + (d.description ? ' (' + d.description + ')' : '') ).join(', ');
-                errorMessage += ' Details: ' + detailsString;
+        const paypalError = e as any; // Cast to any to access potential PayPal-specific error details
+        if (paypalError.statusCode && paypalError.message && typeof paypalError.message === 'string') {
+             // PayPal SDK errors often have statusCode and a JSON message
+            try {
+                const parsedMessage = JSON.parse(paypalError.message);
+                errorMessage = parsedMessage.message || errorMessage;
+                if (parsedMessage.name === 'AUTHENTICATION_FAILURE' || parsedMessage.name === 'INVALID_RESOURCE_ID' || (parsedMessage.details && parsedMessage.details.some((d: any) => d.issue === 'INVALID_CLIENT'))) {
+                   errorMessage = `PayPal Authentication Failed: ${parsedMessage.message}. Please verify your PayPal API Client ID and Secret, and ensure they match the configured environment (${paypalMode.toUpperCase()}).`;
+                }
+                errorDetails = parsedMessage.details || errorDetails;
+                console.error('Detailed PayPal Create Order Error:', JSON.stringify(parsedMessage, null, 2));
+            } catch (jsonError) {
+                // If message is not JSON, use the original error message
+                console.error(`PayPal Create Order Error (Status ${paypalError.statusCode}): ${e.message}`);
             }
-            console.error('PayPal Create Order Error Details:', paypalError.response.data);
         } else {
            console.error('PayPal Create Order Error:', e.message, e.stack);
         }
