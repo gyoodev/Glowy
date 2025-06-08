@@ -3,7 +3,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, FieldValue, addDoc, collection } from 'firebase/firestore'; // Added addDoc and collection
+import Script from 'next/script'; // Import Next.js Script component
+import { getFirestore, doc, getDoc, updateDoc, Timestamp as FirestoreTimestamp, FieldValue, addDoc, collection } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { auth, firestore } from '@/lib/firebase';
 import type { Salon, Promotion } from '@/types';
@@ -14,22 +15,22 @@ import { AlertTriangle, CheckCircle, Gift, Loader2, ArrowLeft, XCircle, CreditCa
 import { useToast } from '@/hooks/use-toast';
 import { format, addDays, isFuture } from 'date-fns';
 import { bg } from 'date-fns/locale';
-// Stripe imports removed: loadStripe, Stripe, Elements, CardElement, useStripe, useElements, StripeCardElementOptions
-// PayPal specific imports (if any were here, they would remain or be handled by @paypal/react-paypal-js which is already a dependency)
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
+// Extend window type for PayPal
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
 
 const promotionPackages = [
-  { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.' },
+  { id: '7days', name: 'Сребърен план', durationDays: 7, price: 5, description: 'Вашият салон на челни позиции за 1 седмица.', hostedButtonId: '36RPT2GTKL63U' },
   { id: '30days', name: 'Златен план', durationDays: 30, price: 15, description: 'Максимална видимост за цял месец.' },
   { id: '90days', name: 'Диамантен план', durationDays: 90, price: 35, description: 'Най-изгодният пакет за дългосрочен ефект.' },
 ];
 
-const PAYPAL_CURRENCY = "EUR"; // PayPal currency
-
-// StripePromise and cardElementOptions removed
-
-// CheckoutForm (Stripe specific) component removed
+const PAYPAL_CURRENCY = "EUR";
 
 export default function PromoteBusinessPage() {
   const params = useParams();
@@ -37,15 +38,14 @@ export default function PromoteBusinessPage() {
   const { toast } = useToast();
   const [salon, setSalon] = useState<Salon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState<string | null>(null); // Can be packageId or 'stop' or 'paypal_packageId'
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
   const [isOwner, setIsOwner] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPayPalHostedSDKLoaded, setIsPayPalHostedSDKLoaded] = useState(false);
 
   const businessId = typeof params?.businessId === 'string' ? params.businessId : null;
-
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
-
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -97,6 +97,39 @@ export default function PromoteBusinessPage() {
     }
   };
 
+  useEffect(() => {
+    if (isPayPalHostedSDKLoaded) {
+      const silverPlanPackage = promotionPackages.find(p => p.id === '7days');
+      if (silverPlanPackage && silverPlanPackage.hostedButtonId) {
+        const containerId = `paypal-container-${silverPlanPackage.hostedButtonId}`;
+        const container = document.getElementById(containerId);
+        if (container) {
+          if (window.paypal && window.paypal.HostedButtons) {
+            try {
+              // Check if button is already rendered to prevent errors on re-renders
+              if (!container.hasChildNodes() || container.innerHTML.trim() === '') {
+                window.paypal.HostedButtons({
+                  hostedButtonId: silverPlanPackage.hostedButtonId
+                }).render(`#${containerId}`);
+                console.log(`PayPal Hosted Button ${silverPlanPackage.hostedButtonId} rendered.`);
+              }
+            } catch (renderError) {
+              console.error("Error rendering PayPal Hosted Button:", renderError);
+              toast({
+                title: "Грешка с PayPal бутона",
+                description: "Не можа да се зареди PayPal бутонът за Сребърен план. Моля, опитайте по-късно.",
+                variant: "destructive",
+              });
+            }
+          } else {
+            console.warn("PayPal HostedButtons SDK not fully ready in useEffect despite isPayPalHostedSDKLoaded=true.");
+          }
+        }
+      }
+    }
+  }, [isPayPalHostedSDKLoaded, toast]);
+
+
   const handlePaymentSuccess = async (details: any, packageId: string, paymentMethod: 'paypal') => {
     const chosenPackage = promotionPackages.find(p => p.id === packageId);
     if (!chosenPackage || !salon || !currentUser) {
@@ -114,21 +147,20 @@ export default function PromoteBusinessPage() {
         purchasedAt: FirestoreTimestamp.fromDate(now) as any, 
         expiresAt: expiryDate.toISOString(),
         paymentMethod: paymentMethod,
-        transactionId: details.id || (details.orderID ? details.orderID : 'N/A'), // orderID for PayPal
+        transactionId: details.id || (details.orderID ? details.orderID : 'N/A'),
     };
 
     try {
         const salonRef = doc(firestore, 'salons', salon.id);
         await updateDoc(salonRef, { promotion: newPromotion });
 
-        // Record the payment
         await addDoc(collection(firestore, 'promotionsPayments'), {
             businessId: salon.id,
             businessName: salon.name,
             promotionId: chosenPackage.id,
             promotionDetails: chosenPackage.name + " - " + chosenPackage.durationDays + " дни",
             amount: chosenPackage.price,
-            currency: PAYPAL_CURRENCY, // Assuming same currency for all
+            currency: PAYPAL_CURRENCY,
             status: 'completed',
             paymentMethod: paymentMethod,
             transactionId: newPromotion.transactionId,
@@ -149,7 +181,6 @@ export default function PromoteBusinessPage() {
     }
   };
 
-
   const handleStopPromotion = async () => {
     if (!salon || !salon.id || !salon.promotion || !currentUser || !isOwner || isProcessing) return;
     setIsProcessing('stop');
@@ -159,7 +190,7 @@ export default function PromoteBusinessPage() {
       await updateDoc(salonRef, {
         'promotion.isActive': false,
       });
-      fetchSalonData(currentUser.uid); // Re-fetch salon data
+      fetchSalonData(currentUser.uid);
       toast({
         title: 'Промоцията е спряна',
         description: 'Промоцията за ' + salon.name + ' беше деактивирана.',
@@ -189,8 +220,6 @@ export default function PromoteBusinessPage() {
     );
   }
 
-  // Stripe related conditional rendering removed
-
   if (error && (!salon || !isOwner)) {
     return (
       <div className="container mx-auto py-10 px-6">
@@ -207,9 +236,24 @@ export default function PromoteBusinessPage() {
     );
   }
 
-
   return (
       <div className="container mx-auto py-10 px-6">
+        <Script
+          src="https://www.paypal.com/sdk/js?client-id=BAAS_0VWHm4WLTs3PoHtuCDAfHCWrowMXnGsc2P0u0QO8m1KUhpw78ViY1I-yRhnKCLVzh1fBT9Do088_U&components=hosted-buttons&disable-funding=venmo&currency=EUR"
+          strategy="afterInteractive"
+          onLoad={() => {
+            console.log("PayPal Hosted Button SDK loaded.");
+            setIsPayPalHostedSDKLoaded(true);
+          }}
+          onError={(e) => {
+            console.error("Error loading PayPal Hosted Button SDK:", e);
+            toast({
+              title: "Грешка при зареждане на PayPal SDK",
+              description: "Не може да се зареди модулът за плащане. Моля, опитайте отново по-късно.",
+              variant: "destructive",
+            });
+          }}
+        />
         <header className="mb-8">
           <Button onClick={() => router.push('/business/manage')} variant="outline" size="sm" className="mb-4">
             <ArrowLeft className="mr-2 h-4 w-4" /> Назад към управление
@@ -256,35 +300,43 @@ export default function PromoteBusinessPage() {
               </CardContent>
             </Card>
 
-            {!isCurrentlyPromoted && paypalClientId && (
-              <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: PAYPAL_CURRENCY }}>
-                <section>
-                  <h2 className="text-2xl font-semibold mb-6 text-foreground">Изберете Промоционален Пакет</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {promotionPackages.map((pkg) => (
-                      <Card key={pkg.id} className="flex flex-col shadow-md hover:shadow-xl transition-shadow">
-                        <CardHeader>
-                          <CardTitle className="text-xl flex items-center"><Gift className="mr-2 h-5 w-5 text-primary" /> {pkg.name}</CardTitle>
-                          <CardDescription>{pkg.description}</CardDescription>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                          <p className="text-2xl font-bold text-primary mb-2">{pkg.price} {PAYPAL_CURRENCY.toUpperCase()}</p>
-                          <p className="text-sm text-muted-foreground">Продължителност: {pkg.durationDays} дни</p>
-                        </CardContent>
-                        <CardFooter className="flex-col items-stretch space-y-2">
-                           { /* PayPal Button */}
-                           {isProcessing === `paypal_${pkg.id}` ? (
+            {!isCurrentlyPromoted && (
+              <section>
+                <h2 className="text-2xl font-semibold mb-6 text-foreground">Изберете Промоционален Пакет</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {promotionPackages.map((pkg) => (
+                    <Card key={pkg.id} className="flex flex-col shadow-md hover:shadow-xl transition-shadow">
+                      <CardHeader>
+                        <CardTitle className="text-xl flex items-center"><Gift className="mr-2 h-5 w-5 text-primary" /> {pkg.name}</CardTitle>
+                        <CardDescription>{pkg.description}</CardDescription>
+                      </CardHeader>
+                      <CardContent className="flex-grow">
+                        <p className="text-2xl font-bold text-primary mb-2">{pkg.price} {PAYPAL_CURRENCY.toUpperCase()}</p>
+                        <p className="text-sm text-muted-foreground">Продължителност: {pkg.durationDays} дни</p>
+                      </CardContent>
+                      <CardFooter className="flex-col items-stretch space-y-2">
+                        {pkg.id === '7days' && pkg.hostedButtonId ? (
+                          <div id={`paypal-container-${pkg.hostedButtonId}`} className="w-full min-h-[50px]">
+                            {/* PayPal Hosted Button will render here via useEffect */}
+                            {!isPayPalHostedSDKLoaded && isProcessing !== `paypal_${pkg.id}` && (
+                               <Button className="w-full" disabled>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Зареждане на PayPal...
+                              </Button>
+                            )}
+                          </div>
+                        ) : paypalClientId ? (
+                          <PayPalScriptProvider options={{ "clientId": paypalClientId, currency: PAYPAL_CURRENCY }}>
+                            {isProcessing === `paypal_${pkg.id}` ? (
                                 <Button className="w-full" disabled>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Обработка...
                                 </Button>
                             ) : (
                                 <PayPalButtons
-                                    key={pkg.id} // Ensure re-render if pkg.id changes
+                                    key={pkg.id}
                                     style={{ layout: "vertical", label: "pay", height: 40 }}
                                     disabled={!!isProcessing && isProcessing !== `paypal_${pkg.id}`}
                                     createOrder={async (data, actions) => {
                                         setIsProcessing(`paypal_${pkg.id}`);
-                                        console.log("PayPal createOrder: businessId=", businessId, "packageId=", pkg.id);
                                         try {
                                             const response = await fetch('/api/paypal/create-order', {
                                                 method: 'POST',
@@ -294,7 +346,7 @@ export default function PromoteBusinessPage() {
                                                     currency: PAYPAL_CURRENCY,
                                                     packageId: pkg.id,
                                                     businessId: businessId,
-                                                    description: `${pkg.name} - ${salon.name}`
+                                                    description: `${pkg.name} - ${salon?.name || 'Salon'}`
                                                 }),
                                             });
                                             const orderData = await response.json();
@@ -310,7 +362,6 @@ export default function PromoteBusinessPage() {
                                         }
                                     }}
                                     onApprove={async (data, actions) => {
-                                        console.log("PayPal onApprove: orderID=", data.orderID);
                                         try {
                                             const response = await fetch('/api/paypal/capture-order', {
                                                 method: 'POST',
@@ -339,21 +390,33 @@ export default function PromoteBusinessPage() {
                                     }}
                                 />
                             )}
-                        </CardFooter>
-                      </Card>
-                    ))}
-                  </div>
-                </section>
-              </PayPalScriptProvider>
+                          </PayPalScriptProvider>
+                        ) : (
+                           <Card className="mt-6 col-span-full">
+                              <CardHeader>
+                                  <CardTitle className="text-destructive flex items-center"><AlertTriangle className="mr-2" />PayPal Не е Конфигуриран</CardTitle>
+                              </CardHeader>
+                              <CardContent>
+                                  <p className="text-muted-foreground">
+                                      Плащанията с PayPal не са активни, тъй като PayPal Client ID не е настроен. Моля, конфигурирайте <code>NEXT_PUBLIC_PAYPAL_CLIENT_ID</code>.
+                                  </p>
+                              </CardContent>
+                          </Card>
+                        )}
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </section>
             )}
-            {!isCurrentlyPromoted && !paypalClientId && (
+             {!isCurrentlyPromoted && (!paypalClientId && !promotionPackages.some(p => p.id === '7days' && p.hostedButtonId)) && (
                 <Card className="mt-6">
                     <CardHeader>
                         <CardTitle className="text-destructive flex items-center"><AlertTriangle className="mr-2" />PayPal Не е Конфигуриран</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <p className="text-muted-foreground">
-                            Плащанията с PayPal не са активни, тъй като PayPal Client ID не е настроен. Моля, конфигурирайте <code>NEXT_PUBLIC_PAYPAL_CLIENT_ID</code>.
+                            Плащанията с PayPal не са активни, тъй като PayPal Client ID (NEXT_PUBLIC_PAYPAL_CLIENT_ID) не е настроен за стандартните бутони и/или хостнатият бутон не е наличен.
                         </p>
                     </CardContent>
                 </Card>
@@ -363,4 +426,3 @@ export default function PromoteBusinessPage() {
       </div>
   );
 }
-
