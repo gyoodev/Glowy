@@ -1,23 +1,21 @@
 
 'use client';
 
-import { gsap } from 'gsap';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import Image from 'next/image';
-import { collection, getDocs, query, orderBy, Timestamp as FirestoreTimestamp } from 'firebase/firestore';
-import type { Salon, HeroImage, Service } from '@/types';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import type { Salon } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 import { Search, ListOrdered } from 'lucide-react';
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
+import { HeroSlider, type Slide } from '@/components/layout/HeroSlider'; // Import the new HeroSlider and Slide type
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -26,11 +24,50 @@ const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
-
-const staticHeroImages: HeroImage[] = [
-  { id: 'hair_studio_small1', src: 'https://images.unsplash.com/photo-1629397685944-7073f5589754?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxOXx8SGFpciUyMHNhbG9ufGVufDB8fHx8MTc0NzkyNDI4OHww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Стилист оформя коса на клиент във фризьорски салон', dataAiHint: 'hair studio', priority: true },
-  { id: 'barber_large', src: 'https://images.unsplash.com/photo-1599351431202-1e0f0137899a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxCYXJiZXJ8ZW58MHx8fHwxNzQ3OTIzNDI0fDA&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Интериор на модерен бръснарски салон', dataAiHint: 'barber salon' },
-  { id: 'nail_studio_small2', src: 'https://images.unsplash.com/photo-1571290274554-6a2eaa771e5f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxOYWlsJTIwc3R1ZGlvfGVufDB8fHx8MTc0NzkyMzQ3N3ww&ixlib=rb-4.1.0&q=80&w=1080', alt: 'Близък план на инструменти в студио за маникюр', dataAiHint: 'nail salon' },
+const heroSlides: Slide[] = [
+  {
+    id: 'slide1',
+    imageUrl: 'https://placehold.co/1920x700/A9A2E8/FFFFFF.png?text=Glowy+Beauty',
+    altText: 'Abstract beauty products display',
+    title: 'THE CODE OF YOUR BEAUTY',
+    subtitle: 'Открийте тайните на перфектния външен вид с нашите ексклузивни продукти и услуги.',
+    buttonText: 'ПОРЪЧАЙ КОЗМЕТИКА',
+    buttonLink: '/products', // Placeholder link
+    dataAiHint: 'beauty products cosmetics',
+    priority: true,
+    textAlign: 'left',
+    titleColor: 'text-white',
+    subtitleColor: 'text-gray-200',
+    buttonVariant: 'outline',
+  },
+  {
+    id: 'slide2',
+    imageUrl: 'https://placehold.co/1920x700/E8A2C3/FFFFFF.png?text=Modern+Salon+Style',
+    altText: 'Interior of a modern and stylish hair salon',
+    title: 'Открийте Вашия Идеален Салон',
+    subtitle: 'Разгледайте най-добрите салони във Вашия град и запазете час лесно и бързо.',
+    buttonText: 'РАЗГЛЕДАЙТЕ САЛОНИТЕ',
+    buttonLink: '/salons',
+    dataAiHint: 'salon interior stylish',
+    textAlign: 'center',
+    titleColor: 'text-white',
+    subtitleColor: 'text-gray-100',
+    buttonVariant: 'default',
+  },
+  {
+    id: 'slide3',
+    imageUrl: 'https://placehold.co/1920x700/A2D8E8/333333.png?text=Relaxing+Spa+Day',
+    altText: 'A tranquil spa setting with massage oils and stones',
+    title: 'Подарете си Момент на Релакс',
+    subtitle: 'Насладете се на успокояващи спа процедури и възстановете хармонията на тялото и духа.',
+    buttonText: 'ВИЖТЕ УСЛУГИТЕ',
+    buttonLink: '/salons', // Assuming services are part of salons
+    dataAiHint: 'spa relaxation wellness',
+    textAlign: 'right',
+    titleColor: 'text-slate-800', // Darker text for lighter background
+    subtitleColor: 'text-slate-700',
+    buttonVariant: 'secondary',
+  },
 ];
 
 
@@ -149,88 +186,12 @@ export default function SalonDirectoryPage() {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
   };
   
-  useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger);
-    gsap.utils.toArray('.hero-image').forEach((image: any) => {
-      gsap.fromTo(image, {
-        opacity: 0,
-        y: 50,
-      }, {
-        opacity: 1,
-        y: 0,
-        duration: 1,
-        ease: 'power3.out',
-        scrollTrigger: {
-          trigger: image,
-          start: 'top 80%',
-          end: 'bottom 20%',
-          toggleActions: 'play none none none',
-        },
-      });
-    });
-  }, [isLoading]); // Re-run animations when loading state changes (e.g., after data is loaded)
 
   return (
     <div className="container mx-auto py-10 px-6">
-      <header className="mb-16 py-12 relative overflow-hidden">
-          <div className="absolute inset-0 -z-10 opacity-30 pointer-events-none">
-              <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-primary/30 rounded-full filter blur-2xl animate-pulse delay-0"></div>
-              <div className="absolute bottom-1/4 right-1/4 w-40 h-40 bg-accent/30 rounded-full filter blur-2xl animate-pulse delay-200"></div>
-              <div className="absolute top-1/2 left-1/3 w-24 h-24 bg-secondary/50 rounded-lg filter blur-xl animate-ping-slow delay-100 transform -rotate-45"></div>
-              <div className="absolute bottom-1/3 right-1/3 w-20 h-20 bg-primary/20 rounded-full filter blur-lg animate-pulse delay-300"></div>
-              <div className="absolute top-10 right-20 w-0.5 h-32 bg-border/50 transform rotate-[20deg] opacity-70"></div>
-          </div>
-          <div className="container mx-auto px-6 grid md:grid-cols-2 gap-8 items-center relative z-0">
-              <div className="text-center md:text-left">
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
-                  Намерете Вашия Перфектен Салон
-                  </h1>
-                  <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0">
-                  Открийте най-добрите салони за красота и услуги близо до Вас.
-                  </p>
-              </div> 
-              <div className="relative z-10 md:col-span-1 space-y-4">
-                <div> 
-                  <Image
-                    key={staticHeroImages[0].id + '-large'} 
-                    src={staticHeroImages[0].src}
-                    alt={staticHeroImages[0].alt}
-                    width={560}
-                    height={320}
-                    priority={staticHeroImages[0].priority}
-                    className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
-                    data-ai-hint={staticHeroImages[0].dataAiHint}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Image
-                      key={staticHeroImages[1].id + '-small1'}
-                      src={staticHeroImages[1].src}
-                      alt={staticHeroImages[1].alt}
-                      width={270}
-                      height={270}
-                      loading="lazy"
-                      className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
-                      data-ai-hint={staticHeroImages[1].dataAiHint}
-                    />
-                  </div>
-                  <div>
-                    <Image
-                      key={staticHeroImages[2].id + '-small2'}
-                      src={staticHeroImages[2].src}
-                      alt={staticHeroImages[2].alt}
-                      width={270}
-                      height={270}
-                      loading="lazy"
-                      className="w-full h-auto object-cover rounded-lg shadow-xl hero-image"
-                      data-ai-hint={staticHeroImages[2].dataAiHint}
-                    />
-                  </div>
-                </div>
-              </div>
-          </div>
-        </header>
+      <header className="mb-10">
+        <HeroSlider slides={heroSlides} />
+      </header>
 
       <div className="flex flex-col md:flex-row gap-8">
         <aside className="w-full md:w-1/4 lg:w-1/5">
@@ -241,7 +202,6 @@ export default function SalonDirectoryPage() {
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
-          <div id="loading-screen"></div>
           <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-grow w-full sm:w-auto">
               <Input
@@ -309,3 +269,4 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
+
