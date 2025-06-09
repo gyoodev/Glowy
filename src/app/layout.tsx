@@ -1,125 +1,119 @@
-'use client';
-import {Geist, Geist_Mono} from 'next/font/google';
+
 import './globals.css';
-import { useState, useEffect, StrictMode } from 'react';
-import {Footer} from '@/components/layout/footer';
-// import { ClerkProvider } from '@clerk/nextjs'; // ClerkProvider removed if not used
+import { Geist, Geist_Mono } from 'next/font/google';
+import type { Metadata } from 'next';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
+
 import { Header } from '@/components/layout/header';
-import { Toaster } from "@/components/ui/toaster"; // Toaster needs to be here for useToast
-import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner'; // Import CookieConsentBanner
+import { Footer } from '@/components/layout/footer';
+import { Toaster } from "@/components/ui/toaster";
+import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
 import '@/lib/gsap'; // Import GSAP setup
 
-import { Mirage } from 'ldrs/react';
-import 'ldrs/react/Mirage.css';
+import { Mirage } from 'ldrs/react'; // For the preloader
+import 'ldrs/react/Mirage.css'; // Styles for the preloader
+
+
 const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
 });
-
-interface WebsiteSettings {
-  siteName?: string;
-  siteDescription?: string;
-  siteKeywords?: string;
-  siteAuthor?: string;
-  ogTitle?: string;
-  ogDescription?: string;
-  ogImage?: string;
-  twitterCard?: string;
-  canonicalUrl?: string; // Add canonicalUrl to the interface
-}
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
 });
 
+// Dynamically generate metadata by fetching from Firestore
+export async function generateMetadata(): Promise<Metadata> {
+  const firestore = getFirestore(auth.app);
+  const settingsRef = doc(firestore, 'settings', 'websiteSettings');
+  let settingsData: Record<string, any> = {};
+
+  try {
+    const snapshot = await getDoc(settingsRef);
+    if (snapshot.exists()) {
+      settingsData = snapshot.data();
+    } else {
+      console.log("Metadata: No 'websiteSettings' document found in Firestore. Using fallback values.");
+    }
+  } catch (error) {
+    console.error('Metadata: Error fetching website settings from Firestore:', error);
+    // Fallback to default settings if Firestore fetch fails
+  }
+
+  const siteTitle = settingsData.siteName || 'Glowy ✨';
+  const siteDescriptionText = settingsData.siteDescription || 'Открийте най-добрите салони за красота и услуги близо до Вас.';
+  const siteKeywordsText = settingsData.siteKeywords || 'салон, красота, резервации, маникюр, фризьор, спа';
+  const siteAuthorText = settingsData.siteAuthor || 'Glowy';
+  const canonicalUrlLink = settingsData.canonicalUrl || 'https://glowy.netlify.app/'; // Make sure your PRD/requirements state this URL
+  const ogImageUrl = settingsData.ogImage || 'https://glowy.netlify.app/og-image.jpg'; // Default OG image
+
+  return {
+    title: siteTitle,
+    description: siteDescriptionText,
+    keywords: siteKeywordsText,
+    authors: [{ name: siteAuthorText }],
+    openGraph: {
+      title: settingsData.ogTitle || siteTitle,
+      description: settingsData.ogDescription || siteDescriptionText,
+      url: canonicalUrlLink,
+      images: ogImageUrl ? [{ url: ogImageUrl }] : [],
+      type: 'website', // Common practice to specify OG type
+    },
+    twitter: {
+      card: (settingsData.twitterCard as "summary" | "summary_large_image" | "app" | "player") || 'summary_large_image',
+      title: settingsData.twitterTitle || settingsData.ogTitle || siteTitle,
+      description: settingsData.twitterDescription || settingsData.ogDescription || siteDescriptionText,
+      images: ogImageUrl ? [ogImageUrl] : [],
+    },
+    alternates: {
+      canonical: canonicalUrlLink,
+    },
+    // Add other metadata fields as needed, e.g., icons
+    // icons: {
+    //   icon: '/favicon.ico', // Example
+    //   apple: '/apple-touch-icon.png', // Example
+    // },
+  };
+}
+
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
-}>,
-) {
-  const [settings, setSettings] = useState<WebsiteSettings>({});
-  const [isLoading, setIsLoading] = useState(true);
-
-  const firestore = getFirestore(auth.app);
-  const settingsDocRef = doc(firestore, 'settings', 'websiteSettings');
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const docSnap = await getDoc(settingsDocRef);
-        if (docSnap.exists()) {
-          setSettings(docSnap.data() as WebsiteSettings);
-        } else {
-          console.log("No settings document found, using defaults for metatags.");
-        }
-      } catch (error) {
-        console.error('Error fetching settings for metatags:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchSettings();
-  }, [settingsDocRef]);
-
-  const { 
-    siteName = 'Glowy ✨', 
-    siteDescription = 'Your favorite salon and beauty service booking platform.', 
-    siteKeywords = 'salon, beauty, booking, appointments', 
-    siteAuthor = 'Glowy',
-    ogTitle = siteName, // Default to siteName
-    ogDescription = siteDescription, // Default to siteDescription
-    ogImage,
-    twitterCard = 'summary_large_image', // Default Twitter card type
- canonicalUrl, // Destructure canonicalUrl
-  } = settings;
-
-
+}>) {
+  // The isLoading state for settings is no longer needed here as metadata is handled server-side.
+  // The Mirage loader is kept as a general page loading indicator if desired,
+  // but it won't be tied to metadata fetching anymore.
+  // If you want a persistent loader, you might need a client component with its own state.
+  // For now, let's assume a quick initial load or that children handle their own loading states.
 
   return (
     <html lang="bg">
-    <title>{siteName}</title>
-    <meta charSet="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="description" content={siteDescription} />
-    <meta name="keywords" content={siteKeywords} />
-    <meta name="author" content={siteAuthor} />
-    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />} {/* Add canonical tag */}
-    {/* Open Graph Meta Tags */}
-    <meta property="og:title" content={ogTitle} />
-    <meta property="og:description" content={ogDescription} />
-    {ogImage && <meta property="og:image" content={ogImage} />}
-    {/* Twitter Card Meta Tags */}
-    <meta name="twitter:card" content={twitterCard} />
-    <meta name="twitter:title" content={ogTitle} /> {/* Often same as og:title */}
-    <meta name="twitter:description" content={ogDescription} /> {/* Often same as og:description */}
-    {ogImage && <meta name="twitter:image" content={ogImage} />} {/* Often same as og:image */}
-    <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-      {/* Removed LoadingScreenAnimation as per prior discussion (commented out in its file) */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
-           <div className="mt-4 text-2xl font-bold text-primary">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+        {/* 
+          The preloader was here. If you still want a preloader for initial page load
+          that hides after the main content is ready, it would need to be a client component
+          and manage its visibility state. The metadata fetching doesn't cause a delay here anymore.
+        */}
+        {/* <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
+           <Mirage size="60" speed="2.5" color="hsl(var(--primary))" />
+           <div className="mt-4 text-2xl font-bold" style={{ color: 'hsl(var(--primary))' }}>
              Glowy ✨
            </div>
-        </div>
-      ) : (
-       <>
-      <Header />
-      <main className="flex-1 bg-background">
-        {children}
-      </main>
-      <Footer />
-      <Toaster />
-      <CookieConsentBanner />
-       </>
-      )}
-    </body>
+        </div> */}
+        
+        <Header />
+        <main className="flex-1 bg-background">
+          {children}
+        </main>
+        <Footer />
+        <Toaster />
+        <CookieConsentBanner />
+      </body>
     </html>
   );
 }
