@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gllowy.netlify.app/sitemap.xml
