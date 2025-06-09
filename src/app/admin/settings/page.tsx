@@ -14,6 +14,7 @@ export default function AdminSettingsPage() {
   const [siteKeywords, setSiteKeywords] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [siteDescription, setSiteDescription] = useState('');
+  const [canonicalUrl, setCanonicalUrl] = useState('');
   const [siteAuthor, setSiteAuthor] = useState('');
   const [apiKey1, setApiKey1] = useState('');
   const [apiKey2, setApiKey2] = useState('');
@@ -47,6 +48,7 @@ export default function AdminSettingsPage() {
       siteDescription,
       siteKeywords,
       siteAuthor,
+      canonicalUrl,
       adminEmail,
       apiKey1,
       apiKey2,
@@ -91,6 +93,7 @@ export default function AdminSettingsPage() {
           setSiteName(data.siteName || '');
           setSiteKeywords(data.siteKeywords || '');
           setSiteDescription(data.siteDescription || '');
+          setCanonicalUrl(data.canonicalUrl || '');
           setAdminEmail(data.adminEmail || '');
  setSiteAuthor(data.siteAuthor || '');
           setApiKey1(data.apiKey1 || '');
@@ -148,6 +151,10 @@ export default function AdminSettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="adminEmail">Имейл на администратора</Label>
             <Input id="adminEmail" type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="canonicalUrl">Canonical URL</Label>
+            <Input id="canonicalUrl" type="url" value={canonicalUrl} onChange={(e) => setCanonicalUrl(e.target.value)} placeholder="Например: https://www.yourwebsite.com" />
           </div>
           {/* Add more form fields for API keys or other settings */}
           <div className="space-y-2">

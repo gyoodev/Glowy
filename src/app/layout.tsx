@@ -27,6 +27,7 @@ interface WebsiteSettings {
   ogDescription?: string;
   ogImage?: string;
   twitterCard?: string;
+  canonicalUrl?: string; // Add canonicalUrl to the interface
 }
 
 const geistMono = Geist_Mono({
@@ -75,48 +76,50 @@ export default function RootLayout({
     ogDescription = siteDescription, // Default to siteDescription
     ogImage,
     twitterCard = 'summary_large_image', // Default Twitter card type
+ canonicalUrl, // Destructure canonicalUrl
   } = settings;
 
 
 
   return (
     <html lang="bg">
-      <title>{siteName}</title>
-      <meta charSet="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
-      <meta name="description" content={siteDescription} />
-      <meta name="keywords" content={siteKeywords} />
-      <meta name="author" content={siteAuthor} />
-      {/* Open Graph Meta Tags */}
-      <meta property="og:title" content={ogTitle} />
-      <meta property="og:description" content={ogDescription} />
-      {ogImage && <meta property="og:image" content={ogImage} />}
-      {/* Twitter Card Meta Tags */}
-      <meta name="twitter:card" content={twitterCard} />
-      <meta name="twitter:title" content={ogTitle} /> {/* Often same as og:title */}
-      <meta name="twitter:description" content={ogDescription} /> {/* Often same as og:description */}
-      {ogImage && <meta name="twitter:image" content={ogImage} />} {/* Often same as og:image */}
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-        {/* Removed LoadingScreenAnimation as per prior discussion (commented out in its file) */}
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
-             <div className="mt-4 text-2xl font-bold text-primary">
-               Glowy ✨
-             </div>
-          </div>
-        ) : (
-         <>
-        <Header />
-        <main className="flex-1 bg-background">
-          {children}
-        </main>
-        <Footer />
-        <Toaster />
-        <CookieConsentBanner />
-         </>
-        )}
-      </body>
+    <title>{siteName}</title>
+    <meta charSet="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="description" content={siteDescription} />
+    <meta name="keywords" content={siteKeywords} />
+    <meta name="author" content={siteAuthor} />
+    {canonicalUrl && <link rel="canonical" href={canonicalUrl} />} {/* Add canonical tag */}
+    {/* Open Graph Meta Tags */}
+    <meta property="og:title" content={ogTitle} />
+    <meta property="og:description" content={ogDescription} />
+    {ogImage && <meta property="og:image" content={ogImage} />}
+    {/* Twitter Card Meta Tags */}
+    <meta name="twitter:card" content={twitterCard} />
+    <meta name="twitter:title" content={ogTitle} /> {/* Often same as og:title */}
+    <meta name="twitter:description" content={ogDescription} /> {/* Often same as og:description */}
+    {ogImage && <meta name="twitter:image" content={ogImage} />} {/* Often same as og:image */}
+    <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+      {/* Removed LoadingScreenAnimation as per prior discussion (commented out in its file) */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
+           <div className="mt-4 text-2xl font-bold text-primary">
+             Glowy ✨
+           </div>
+        </div>
+      ) : (
+       <>
+      <Header />
+      <main className="flex-1 bg-background">
+        {children}
+      </main>
+      <Footer />
+      <Toaster />
+      <CookieConsentBanner />
+       </>
+      )}
+    </body>
     </html>
   );
 }
