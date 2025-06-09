@@ -13,6 +13,8 @@ export default function AdminSettingsPage() {
   const [siteName, setSiteName] = useState('');
   const [siteDescription, setSiteDescription] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [siteKeywords, setSiteKeywords] = useState('');
+  const [siteAuthor, setSiteAuthor] = useState('');
   const [apiKey1, setApiKey1] = useState('');
   const [apiKey2, setApiKey2] = useState('');
   const [loading, setLoading] = useState(true); // Loading state
@@ -27,6 +29,8 @@ export default function AdminSettingsPage() {
       siteName,
       siteDescription,
       adminEmail,
+ siteKeywords,
+ siteAuthor,
       apiKey1,
       apiKey2,
     };
@@ -53,6 +57,8 @@ export default function AdminSettingsPage() {
           setSiteName(data.siteName || '');
           setSiteDescription(data.siteDescription || '');
           setAdminEmail(data.adminEmail || '');
+ setSiteKeywords(data.siteKeywords || '');
+ setSiteAuthor(data.siteAuthor || '');
           setApiKey1(data.apiKey1 || '');
           setApiKey2(data.apiKey2 || '');
           // Set other state variables if you add more settings
