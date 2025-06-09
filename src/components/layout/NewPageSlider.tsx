@@ -15,7 +15,7 @@ const slidesData = [
     description: 'Открийте най-добрите салони за красота и услуги близо до Вас.',
     buttonText: 'Разгледай Салоните',
     buttonLink: '/salons',
-    image: 'https://placehold.co/1920x520/E6E6FA/333333.png?text=Perfect+Salon',
+    image: 'https://placehold.co/1920x520/E6E6FA/333333.png?text=Beauty+Salon',
     dataAiHint: 'salon search beauty',
   },
   {
@@ -77,7 +77,7 @@ const NewPageSlider = () => {
                 alt={`Slide ${slide.id}: ${slide.title}`}
                 fill={true}
                 style={{ objectFit: 'cover' }}
-                priority={index === 0} // Add priority to the first image
+                priority={index === 0} 
                 data-ai-hint={slide.dataAiHint}
               />
               <div className="absolute inset-0 bg-gradient-to-r from-[#b284da99] via-transparent to-[#ffffff22]"></div>
@@ -88,11 +88,11 @@ const NewPageSlider = () => {
                 animate="visible"
                 exit="hidden"
                 variants={textVariants}
-                className="absolute left-10 md:left-20 top-1/2 transform -translate-y-1/2 text-white max-w-md md:max-w-lg lg:max-w-xl z-10"
+                className="absolute left-4 right-4 md:left-12 lg:left-20 md:right-auto top-1/2 transform -translate-y-1/2 text-white text-center md:text-left max-w-full md:max-w-lg lg:max-w-xl z-10 p-2"
               >
                 <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 drop-shadow-md">{slide.title}</h2>
-                <p className="text-lg md:text-xl font-light mb-4 md:mb-6 drop-shadow-sm">{slide.description}</p>
-                <Button asChild size="lg" className="bg-white text-primary hover:bg-primary/10 hover:text-primary-foreground rounded-full shadow-lg px-6 py-3 md:px-8 md:py-3.5 text-base md:text-lg">
+                <p className="text-base sm:text-lg md:text-xl font-light mb-4 md:mb-6 drop-shadow-sm leading-relaxed">{slide.description}</p>
+                <Button asChild size="lg" className="bg-white text-primary hover:bg-primary/10 hover:text-primary-foreground rounded-full shadow-lg px-6 py-3 md:px-8 md:py-3.5 text-sm sm:text-base md:text-lg">
                   <Link href={slide.buttonLink}>
                     {slide.buttonText}
                   </Link>
