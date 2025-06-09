@@ -12,7 +12,6 @@ import { auth } from '@/lib/firebase';
 export default function AdminSettingsPage() {
   const [siteName, setSiteName] = useState('');
   const [siteKeywords, setSiteKeywords] = useState('');
-  const [siteDescription, setSiteDescription] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [siteKeywords, setSiteKeywords] = useState('');
   const [siteAuthor, setSiteAuthor] = useState('');
