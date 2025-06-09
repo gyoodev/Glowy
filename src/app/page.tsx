@@ -15,7 +15,7 @@ import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
-import { HeroSlider, type Slide } from '@/components/layout/HeroSlider'; // Import the new HeroSlider and Slide type
+import NewPageSlider from '@/components/layout/NewPageSlider'; // Import the new slider
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -23,52 +23,6 @@ const DEFAULT_MIN_PRICE = 0;
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
-
-const heroSlides: Slide[] = [
-  {
-    id: 'slide1',
-    imageUrl: 'https://placehold.co/1920x700/A9A2E8/FFFFFF.png?text=Glowy+Beauty',
-    altText: 'Abstract beauty products display',
-    title: 'THE CODE OF YOUR BEAUTY',
-    subtitle: 'Открийте тайните на перфектния външен вид с нашите ексклузивни продукти и услуги.',
-    buttonText: 'ПОРЪЧАЙ КОЗМЕТИКА',
-    buttonLink: '/products', // Placeholder link
-    dataAiHint: 'beauty products cosmetics',
-    priority: true,
-    textAlign: 'left',
-    titleColor: 'text-white',
-    subtitleColor: 'text-gray-200',
-    buttonVariant: 'outline',
-  },
-  {
-    id: 'slide2',
-    imageUrl: 'https://placehold.co/1920x700/E8A2C3/FFFFFF.png?text=Modern+Salon+Style',
-    altText: 'Interior of a modern and stylish hair salon',
-    title: 'Открийте Вашия Идеален Салон',
-    subtitle: 'Разгледайте най-добрите салони във Вашия град и запазете час лесно и бързо.',
-    buttonText: 'РАЗГЛЕДАЙТЕ САЛОНИТЕ',
-    buttonLink: '/salons',
-    dataAiHint: 'salon interior stylish',
-    textAlign: 'center',
-    titleColor: 'text-white',
-    subtitleColor: 'text-gray-100',
-    buttonVariant: 'default',
-  },
-  {
-    id: 'slide3',
-    imageUrl: 'https://placehold.co/1920x700/A2D8E8/333333.png?text=Relaxing+Spa+Day',
-    altText: 'A tranquil spa setting with massage oils and stones',
-    title: 'Подарете си Момент на Релакс',
-    subtitle: 'Насладете се на успокояващи спа процедури и възстановете хармонията на тялото и духа.',
-    buttonText: 'ВИЖТЕ УСЛУГИТЕ',
-    buttonLink: '/salons', // Assuming services are part of salons
-    dataAiHint: 'spa relaxation wellness',
-    textAlign: 'right',
-    titleColor: 'text-slate-800', // Darker text for lighter background
-    subtitleColor: 'text-slate-700',
-    buttonVariant: 'secondary',
-  },
-];
 
 
 export default function SalonDirectoryPage() {
@@ -190,7 +144,7 @@ export default function SalonDirectoryPage() {
   return (
     <div className="container mx-auto py-10 px-6">
       <header className="mb-10">
-        <HeroSlider slides={heroSlides} />
+        <NewPageSlider /> {/* Use the new slider component */}
       </header>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -269,4 +223,3 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
-
