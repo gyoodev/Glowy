@@ -11,6 +11,7 @@ import { auth } from '@/lib/firebase';
 
 export default function AdminSettingsPage() {
   const [siteName, setSiteName] = useState('');
+  const [siteKeywords, setSiteKeywords] = useState('');
   const [siteDescription, setSiteDescription] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [siteKeywords, setSiteKeywords] = useState('');
@@ -31,6 +32,7 @@ export default function AdminSettingsPage() {
   const [firebaseMessagingSenderId, setFirebaseMessagingSenderId] = useState('');
   const [firebaseAppId, setFirebaseAppId] = useState('');
   const [firebaseMeasurementId, setFirebaseMeasurementId] = useState('');
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
   const [paypalClientId, setPaypalClientId] = useState('');
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [loading, setLoading] = useState(true); // Loading state
@@ -44,9 +46,9 @@ export default function AdminSettingsPage() {
     const settingsToSave = {
       siteName,
       siteDescription,
+      siteKeywords,
+      siteAuthor,
       adminEmail,
- siteKeywords,
- siteAuthor,
       apiKey1,
       apiKey2,
       ogTitle,
@@ -63,6 +65,7 @@ export default function AdminSettingsPage() {
  firebaseMessagingSenderId,
  firebaseAppId,
  firebaseMeasurementId,
+ googleMapsApiKey,
  paypalClientId,
  stripePublishableKey,
     };
@@ -87,9 +90,9 @@ export default function AdminSettingsPage() {
         if (docSnap.exists()) {
           const data = docSnap.data();
           setSiteName(data.siteName || '');
+          setSiteKeywords(data.siteKeywords || '');
           setSiteDescription(data.siteDescription || '');
           setAdminEmail(data.adminEmail || '');
- setSiteKeywords(data.siteKeywords || '');
  setSiteAuthor(data.siteAuthor || '');
           setApiKey1(data.apiKey1 || '');
           setApiKey2(data.apiKey2 || '');
@@ -107,6 +110,7 @@ export default function AdminSettingsPage() {
  setFirebaseMessagingSenderId(data.firebaseMessagingSenderId || '');
  setFirebaseAppId(data.firebaseAppId || '');
  setFirebaseMeasurementId(data.firebaseMeasurementId || '');
+ setGoogleMapsApiKey(data.googleMapsApiKey || '');
  setPaypalClientId(data.paypalClientId || '');
  setStripePublishableKey(data.stripePublishableKey || '');
           // Set other state variables if you add more settings
@@ -231,8 +235,8 @@ export default function AdminSettingsPage() {
             <Input
               id="googleMapsApiKey"
               type="text"
-              value={settings.googleMapsApiKey || ''} // Assuming settings object is available in scope
-              onChange={(e) => setSettings({ ...settings, googleMapsApiKey: e.target.value })} // Assuming setSettings is available
+              value={googleMapsApiKey}
+              onChange={(e) => setGoogleMapsApiKey(e.target.value)}
             />
           </div>
 
