@@ -120,7 +120,7 @@ const NewPageSlider = () => {
       </button>
 
       {/* Dots */}
-      <div className="absolute bottom-8 md:bottom-5 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
+      <div className="absolute bottom-12 md:bottom-8 lg:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-2 z-20">
         {slidesData.map((_, idx) => (
           <button
             key={idx}
