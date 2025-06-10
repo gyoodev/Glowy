@@ -447,17 +447,17 @@ service cloud.firestore {
       )}
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 gap-2 mb-6">
-          <TabsTrigger value="profile" className="py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+        <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
+          <TabsTrigger value="profile" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
             <Edit3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Профил
           </TabsTrigger>
-          <TabsTrigger value="reviews" className="py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+          <TabsTrigger value="reviews" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
             <MessageSquareText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Отзиви
           </TabsTrigger>
-          <TabsTrigger value="bookings" className="py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+          <TabsTrigger value="bookings" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
             <History className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Резервации
           </TabsTrigger>
-          <TabsTrigger value="favorites" className="py-3 text-sm sm:text-base data-[state=active]:shadow-md">
+          <TabsTrigger value="favorites" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
             <Heart className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Любими
           </TabsTrigger>
         </TabsList>
