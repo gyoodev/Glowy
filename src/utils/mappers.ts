@@ -119,12 +119,8 @@ export function mapSalon(raw: any, id?: string): Salon {
 
   let mappedLocation: { lat: number; lng: number } | undefined = undefined;
   if (raw.location && typeof raw.location.lat === 'number' && typeof raw.location.lng === 'number') {
-    // Only consider it a valid location if coordinates are not (0,0) which might be an uninitialized default
-    // or if you have a different way to signify uninitialized coordinates.
-    // For now, any pair of numbers is accepted, but you might want to refine this.
      mappedLocation = { lat: raw.location.lat, lng: raw.location.lng };
   }
-
 
   return {
     id: id || raw.id,
@@ -140,7 +136,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     services: services,
     photos: Array.isArray(raw.photos) ? raw.photos : [],
     heroImage: raw.heroImage || '',
-    location: mappedLocation, // Use the refined mappedLocation
+    location: mappedLocation,
     rating: typeof raw.rating === 'number' ? raw.rating : 0,
     reviewCount: typeof raw.reviewCount === 'number' ? raw.reviewCount : 0,
     createdAt: timestampToISOString(raw.createdAt),
@@ -158,6 +154,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     atmosphereForAi: raw.atmosphereForAi || '',
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
+    status: raw.status || 'approved', // Default to 'approved' for existing salons
   };
 }
 

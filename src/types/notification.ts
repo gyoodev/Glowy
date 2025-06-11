@@ -10,8 +10,12 @@ export type NotificationType =
   | 'new_payment_admin'
   | 'welcome_user'
   | 'new_user_admin'       // For admin when a new user registers
-  | 'new_salon_admin'      // For admin when a new salon is created
-  | 'new_contact_admin';   // For admin when a new contact form is submitted
+  | 'new_salon_admin'      // For admin when a new salon is created and needs approval
+  | 'salon_approved'       // For business owner when salon is approved
+  | 'salon_rejected'       // For business owner when salon is rejected
+  | 'new_contact_admin'  // For admin when a new contact form is submitted
+  | 'salon_approved'      // For business owner when salon is approved
+  | 'salon_rejected';     // For business owner when salon is rejected
 
 export interface Notification {
   id: string;
@@ -23,3 +27,4 @@ export interface Notification {
   link?: string;
   relatedEntityId?: string; // e.g., bookingId, reviewId, userId, salonId
 }
+

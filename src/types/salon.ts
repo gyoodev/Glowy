@@ -34,4 +34,6 @@ export interface Salon {
   targetCustomerForAi?: string;
   isFavorite?: boolean;
   uniqueSellingPointsForAi?: string;
+  status: 'pending_approval' | 'approved' | 'rejected';
 }
+

@@ -12,19 +12,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { generateSalonDescription } from '@/ai/flows/generate-salon-description'; // Assuming this is the correct path
+import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { allBulgarianCities, mockServices } from '@/lib/mock-data';
-import { Service } from '@/types/service';
+import type { Service, NotificationType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useMemo } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-// Define the schema for the form
+
 interface SalonServiceData {
   id: string;
   name: string;
@@ -34,7 +34,6 @@ interface SalonServiceData {
 }
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
-  // id: z.string().optional(), // Add the optional id field
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
   city: z.string().min(2, 'Моля, изберете град.'),
@@ -42,17 +41,15 @@ const createBusinessSchema = z.object({
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
   services: z.array(
-
     z.object({
-      id: z.string().optional(), // Add the optional id field
+      id: z.string().optional(),
       name: z.string().min(1, "Името на услугата е задължително."),
       description: z.string().optional(),
       price: z.coerce.number({ invalid_type_error: "Цената трябва да е число."}).min(0, "Цената трябва да е положително число."),
       duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
     })
   ).min(1, "Моля, добавете поне една услуга."),
-
- atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
+  atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
@@ -72,7 +69,7 @@ export default function CreateBusinessPage() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isBusinessUser, setIsBusinessUser] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
-  const firestore = getFirestore(); // Initialize Firestore here
+  const firestore = getFirestore();
   const [selectedCategory, setSelectedCategory] = useState<string | ''>('');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
@@ -87,12 +84,12 @@ export default function CreateBusinessPage() {
       address: '',
       city: '',
       priceRange: 'moderate',
-      services: [{ name: '', description: '', price: 0, duration: 30 }],
+      services: [{ id: uuidv4(), name: '', description: '', price: 0, duration: 30 }],
       atmosphereForAi: '',
       targetCustomerForAi: '',
       uniqueSellingPointsForAi: '',
     },
-    mode: "onChange", // Validate on change for better UX in multi-step
+    mode: "onChange",
   });
 
   const { fields: serviceFields, append: appendService, remove: removeService } = useFieldArray({
@@ -120,8 +117,34 @@ export default function CreateBusinessPage() {
     return () => unsubscribe();
   }, [router, toast, firestore]);
 
-  const notifyAdminsOfNewSalon = async (salonName: string) => {
-    console.log(`Conceptual: Notify admins about new salon: ${salonName}`);
+  const notifyAdminsOfNewSalon = async (salonName: string, salonId: string) => {
+    try {
+      const adminUsersQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
+      const adminSnapshot = await getDocs(adminUsersQuery);
+      
+      const notificationPromises = adminSnapshot.docs.map(adminDoc => {
+        const notificationData = {
+          userId: adminDoc.id,
+          message: `Нов салон "${salonName}" (ID: ${salonId}) очаква одобрение.`,
+          link: `/admin/business`, // Or `/admin/business/edit/${salonId}`
+          read: false,
+          createdAt: Timestamp.fromDate(new Date()),
+          type: 'new_salon_admin' as NotificationType,
+          relatedEntityId: salonId,
+        };
+        return addDoc(collection(firestore, 'notifications'), notificationData);
+      });
+      
+      await Promise.all(notificationPromises);
+      console.log(`Successfully notified ${adminSnapshot.size} admins about new salon: ${salonName}`);
+    } catch (error) {
+      console.error("Error notifying admins about new salon:", error);
+      toast({
+        title: "Грешка при уведомление",
+        description: "Имаше проблем с уведомяването на администраторите за новия салон.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleGenerateDescription = async () => {
@@ -174,7 +197,6 @@ export default function CreateBusinessPage() {
     }
   };
 
- // Group mockServices by category
   const categorizedServices = useMemo(() => {
     return mockServices.reduce((acc, service) => {
       if (service.category) {
@@ -185,7 +207,7 @@ export default function CreateBusinessPage() {
       }
       return acc;
     }, {} as Record<string, Service[]>);
-  }, [mockServices]);
+  }, []);
 
   const serviceCategories = useMemo(() => Object.keys(categorizedServices), [categorizedServices]);
 
@@ -195,7 +217,7 @@ export default function CreateBusinessPage() {
         (service) => service.id === selectedService.id || service.name === selectedService.name
       );
 
-      const newServiceId = selectedService.id || uuidv4(); // Use existing ID or generate new for predefined
+      const newServiceId = selectedService.id || uuidv4();
       if (existingServiceIndex === -1) {
         appendService({
           id: newServiceId,
@@ -204,7 +226,7 @@ export default function CreateBusinessPage() {
           price: selectedService.price,
           duration: selectedService.duration,
         });
-        setSelectedService(null); // Clear selected service after adding
+        setSelectedService(null);
       } else {
         toast({
           title: 'Дублирана услуга', description: `Услугата "${selectedService.name}" вече е добавена.`, variant: 'default'
@@ -225,10 +247,10 @@ export default function CreateBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        services: data.services.map(s => ({ // Map over services and assign unique IDs if missing
-            id: mockServices.find(ms => ms.name === s.name)?.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+        services: data.services.map(s => ({
+            id: s.id || uuidv4(),
             name: s.name,
-            description: (s as Service).description || mockServices.find(ms => ms.name === s.name)?.description || '',
+            description: (s as Service).description || '',
             price: Number(s.price), 
             duration: Number(s.duration), 
         })),
@@ -242,15 +264,16 @@ export default function CreateBusinessPage() {
         heroImage: 'https://placehold.co/1200x400.png?text=Hero+Image', 
         availability: {}, 
         createdAt: serverTimestamp(),
+        status: 'pending_approval' as 'pending_approval' | 'approved' | 'rejected', // Set initial status
     };
 
     try {
       const docRef = await addDoc(collection(firestore, 'salons'), salonDataToSave);
       toast({
-        title: 'Бизнесът е създаден успешно!',
-        description: `${data.name} беше добавен към Вашия списък.`,
+        title: 'Салонът е изпратен за одобрение!',
+        description: `${data.name} беше добавен и очаква одобрение от администратор.`,
       });
-      await notifyAdminsOfNewSalon(data.name);
+      await notifyAdminsOfNewSalon(data.name, docRef.id);
       router.push('/business/manage');
     } catch (error: any) {
       console.error('Error creating business:', error);
@@ -269,7 +292,7 @@ export default function CreateBusinessPage() {
     } else if (currentStep === 2) {
       isValid = await form.trigger(["services"]);
     } else {
-      isValid = true; // No validation needed to move from last step (submit handles final validation)
+      isValid = true;
     }
     
     if (isValid) {
@@ -305,7 +328,7 @@ export default function CreateBusinessPage() {
             <Building className="mr-3 h-8 w-8 text-primary" />
             Създаване на Нов Бизнес (Салон)
           </CardTitle>
-          <CardDescription>Попълнете информацията по-долу, за да регистрирате Вашия салон в платформата.</CardDescription>
+          <CardDescription>Попълнете информацията по-долу, за да регистрирате Вашия салон в платформата. Салонът ще бъде видим след одобрение от администратор.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -497,7 +520,7 @@ export default function CreateBusinessPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => appendService({ name: "", description: "", price: 0, duration: 30 })}
+                      onClick={() => appendService({ id: uuidv4(), name: "", description: "", price: 0, duration: 30 })}
                       className="mt-2"
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
@@ -601,7 +624,7 @@ export default function CreateBusinessPage() {
               )}
               {currentStep === totalSteps && (
                 <Button type="submit" className="w-full md:w-auto text-lg py-3 ml-auto" disabled={form.formState.isSubmitting || isAiGenerating}>
-                  {form.formState.isSubmitting ? 'Създаване...' : 'Създай Бизнес'}
+                  {form.formState.isSubmitting ? 'Изпращане за одобрение...' : 'Изпрати за Одобрение'}
                 </Button>
               )}
             </CardFooter>
@@ -611,5 +634,3 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
-
-    
