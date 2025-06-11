@@ -7,7 +7,7 @@ import type { Salon } from '@/types';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, MapPin, Gift, HeartOff } from 'lucide-react'; // Added HeartOff
+import { Star, MapPin, Gift, HeartOff, Sparkles } from 'lucide-react'; // Added Sparkles
 import { isFuture } from 'date-fns';
 
 interface SalonCardProps {
@@ -22,6 +22,10 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
                       salon.promotion.expiresAt &&
                       isFuture(new Date(salon.promotion.expiresAt));
 
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  const isNew = salon.createdAt && new Date(salon.createdAt) > threeDaysAgo;
+
   const handleUnfavoriteClick = () => {
     if (onToggleFavorite && salon.id) {
       onToggleFavorite(salon.id, true); // Pass true because in favorite mode, it's currently a favorite
@@ -30,12 +34,20 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
 
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full relative">
-      {isPromoted && (
-        <Badge variant="default" className="absolute top-2 right-2 bg-accent text-accent-foreground z-10 py-1 px-2 text-xs">
-          <Gift className="h-3 w-3 mr-1" />
-          Промотиран
-        </Badge>
-      )}
+      <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
+        {isPromoted && (
+          <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-2 text-xs shadow-md">
+            <Gift className="h-3 w-3 mr-1" />
+            Промотиран
+          </Badge>
+        )}
+        {isNew && (
+          <Badge variant="secondary" className="py-1 px-2 text-xs shadow-md">
+            <Sparkles className="h-3 w-3 mr-1" />
+            Нов
+          </Badge>
+        )}
+      </div>
       <CardHeader className="p-0">
         <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`} aria-label={`Вижте детайли за ${salon.name}`}>
           <div className="relative h-48 w-full">
