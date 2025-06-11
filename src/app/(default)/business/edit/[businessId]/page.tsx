@@ -25,7 +25,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { cn } from '@/lib/utils';
+import { cn, capitalizeFirstLetter } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
@@ -33,6 +33,7 @@ import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers';
 
+const rootServiceCategory = { id: 'root', name: 'Всички услуги', description: '', price: 0, duration: 0, children: mockServices };
 
 const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
   const hour = Math.floor(i / 2) + 8;
@@ -121,6 +122,9 @@ export default function EditBusinessPage() {
   const [selectedAvailabilityDate, setSelectedAvailabilityDate] = useState<Date | undefined>(undefined);
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+  
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
+  const [selectedServiceFromMock, setSelectedServiceFromMock] = useState<Service | null>(null);
 
   const [serviceNameSearch, setServiceNameSearch] = useState("");
   const [openServicePopovers, setOpenServicePopovers] = useState<Record<number, boolean>>({});
@@ -301,6 +305,23 @@ export default function EditBusinessPage() {
     toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
   };
 
+  const handleAddServiceFromMock = () => {
+    if (selectedServiceFromMock) {
+      const existingServiceIndex = form.getValues('services')?.findIndex(s => s.name === selectedServiceFromMock.name);
+      if (existingServiceIndex !== -1) {
+         toast({ title: 'Услугата е вече добавена', description: `Услугата "${selectedServiceFromMock.name}" вече присъства във вашия списък.`, variant: 'default'});
+         return;
+      }
+      appendService({
+        id: selectedServiceFromMock.id, // Use the mock service ID
+        name: selectedServiceFromMock.name,
+        description: selectedServiceFromMock.description,
+        price: selectedServiceFromMock.price,
+        duration: selectedServiceFromMock.duration,
+      });
+      setSelectedServiceFromMock(null); // Reset selected service after adding
+    }
+  };
   const onSubmit: SubmitHandler<EditBusinessFormValues> = async (data) => {
     if (!businessId || !business) return;
     setSaving(true);
@@ -366,18 +387,27 @@ export default function EditBusinessPage() {
   today.setHours(0,0,0,0);
 
   const currentAvailability = form.watch('availability') || {};
-  const availableDaysModifier = {
+ const availableDaysModifier = {
     available: Object.keys(currentAvailability).filter(dateKey => (currentAvailability[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
   };
 
-  const filteredMockServices = serviceNameSearch
-    ? mockServices.filter(service =>
-        service.name.toLowerCase().includes(serviceNameSearch.toLowerCase())
-      )
-    : mockServices;
 
-  return (
-    <div className="container mx-auto py-10 px-6">
+  const serviceCategories = useMemo(() => {
+    // Assuming mockServices are top-level categories or flat list for now
+    // If nested, you'd need a function to extract top-level categories
+    return [{ id: 'all', name: 'Всички категории' }, ...mockServices.filter(s => s.children && s.children.length > 0)];
+  }, []);
+
+  const servicesForSelect = useMemo(() => {
+    let filteredServices = mockServices; // Start with all mock services
+    if (selectedServiceCategory && selectedServiceCategory !== 'all') {
+      const category = mockServices.find(s => s.id === selectedServiceCategory); // Find the selected category
+      filteredServices = category?.children || []; // If category found and has children, use them; otherwise, an empty array
+    }
+    return filteredServices.filter(service =>
+        service.name.toLowerCase().includes(serviceNameSearch.toLowerCase())
+    }
+    return []; // Fallback if category not found or no children
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold flex items-center">
@@ -614,6 +644,58 @@ export default function EditBusinessPage() {
                   <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
                     <Briefcase className="mr-2 h-5 w-5 text-primary" />
                     Управление на Услуги
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 border rounded-md bg-muted/50">
+                     <div className="space-y-2">
+                        <Label htmlFor="serviceCategorySelect">Избери категория услуги</Label>
+                         <Select onValueChange={(value) => {
+                           setSelectedServiceCategory(value);
+                           setSelectedServiceFromMock(null); // Reset service selection when category changes
+                         }} value={selectedServiceCategory || ''}>
+                           <SelectTrigger id="serviceCategorySelect">
+                             <SelectValue placeholder="Избери категория" />
+                           </SelectTrigger>
+                           <SelectContent>
+                             <SelectItem value="all">Всички категории</SelectItem>
+                             {serviceCategories.filter(cat => cat.id !== 'all').map(category => (
+                               <SelectItem key={category.id} value={category.id}>
+                                 {category.name}
+                               </SelectItem>
+                             ))}
+                           </SelectContent>
+                         </Select>
+                     </div>
+                     <div className="space-y-2">
+                         <Label htmlFor="serviceSelect">Избери услуга от списъка</Label>
+                         <div className="flex items-end gap-2">
+                           <Select
+                             onValueChange={(value) => {
+                               const service = servicesForSelect.find(s => s.id === value);
+                               setSelectedServiceFromMock(service || null);
+                             }}
+                             value={selectedServiceFromMock?.id || ''}
+                             disabled={!selectedServiceCategory}
+                           >
+                             <SelectTrigger id="serviceSelect">
+                               <SelectValue placeholder={selectedServiceCategory ? "Избери услуга" : "Първо избери категория"} />
+                             </SelectTrigger>
+                             <SelectContent>
+                               {servicesForSelect.map(service => (
+                                 <SelectItem key={service.id} value={service.id}>
+                                   {service.name} ({service.duration} мин, {service.price} лв)
+                                 </SelectItem>
+                               ))}
+                             </SelectContent>
+                           </Select>
+                           <Button type="button" onClick={handleAddServiceFromMock} disabled={!selectedServiceFromMock}>
+                             <PlusCircle className="mr-2 h-4 w-4" /> Добави
+                           </Button>
+                         </div>
+                     </div>
+                  </div>
+
+                   <h4 className="text-lg font-semibold mb-4 border-b pb-2 mt-8">
+                    Моите Услуги
                   </h3>
                   {serviceFields.map((item, index) => (
                     <Card key={item.id} className="p-4 space-y-3 relative">
