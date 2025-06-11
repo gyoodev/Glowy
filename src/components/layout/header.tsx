@@ -48,7 +48,7 @@ export function Header() {
     if (typeof window !== 'undefined') {
       const savedTheme = getCookie(THEME_COOKIE_KEY);
       if (savedTheme) {
-        setThemeSetting(savedTheme);
+        setThemeSetting(savedTheme as 'light' | 'dark' | 'system');
       } else {
         // Default to system theme if no cookie is set
         setThemeSetting('system');
@@ -193,12 +193,12 @@ export function Header() {
       applyTheme(prefersDark ? 'dark' : 'light');
     } else {
       applyTheme(theme);
+      // Only show toast for explicit light/dark selection
+      toast({
+        title: 'Темата е променена',
+        description: `Темата е успешно сменена на ${theme === 'dark' ? 'тъмна' : 'светла'}.`,
+      });
     }
-
-    toast({
-      title: 'Темата е променена',
-      description: `Темата е успешно сменена на ${theme === 'dark' ? 'тъмна' : theme === 'light' ? 'светла' : 'системна'}.`,
-    });
   }, [applyTheme, toast]);
 
   useEffect(() => {
