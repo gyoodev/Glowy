@@ -894,4 +894,3 @@ export default function SalonProfilePage() {
     </>
   );
 }
-
