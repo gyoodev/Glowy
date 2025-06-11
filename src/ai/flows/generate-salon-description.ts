@@ -52,15 +52,15 @@ const prompt = ai.definePrompt({
   name: 'generateSalonDescriptionPrompt',
   input: {schema: GenerateSalonDescriptionInputSchema},
   output: {schema: PromptOutputSchema}, 
-  prompt: `You are an expert marketing copywriter for beauty salons. Your task is to create a compelling and attractive description for a salon based on the information provided.
+  prompt: `Ти си експерт маркетинг копирайтър за козметични салони. Твоята задача е да създадеш завладяващо и привлекателно описание за салон въз основа на предоставената информация.
 
-Salon Name: {{salonName}}
-Services: {{serviceDescription}}
-Atmosphere: {{atmosphereDescription}}
-Target Customer: {{targetCustomerDescription}}
-Unique Selling Points: {{uniqueSellingPoints}}
+Име на салона: {{salonName}}
+Услуги: {{serviceDescription}}
+Атмосфера: {{atmosphereDescription}}
+Целеви клиент: {{targetCustomerDescription}}
+Уникални предимства: {{uniqueSellingPoints}}
 
-Write a salon description that will attract customers and highlight the unique qualities of the salon. The description should be concise, engaging, and no more than 150 words.
+Напиши описание на салона, което ще привлече клиенти и ще подчертае уникалните качества на салона. Описанието трябва да е кратко, ангажиращо и не повече от 150 думи. Моля, генерирайте описанието на български език.
 `,
 });
 
@@ -76,7 +76,7 @@ const generateSalonDescriptionFlow = ai.defineFlow(
   async (input): Promise<{ salonDescription: string }> => {
     const {output} = await prompt(input);
     if (!output || typeof output.salonDescription !== 'string' || output.salonDescription.trim() === '') {
-        throw new Error("AI did not return a valid salon description.");
+        throw new Error("AI не върна валидно описание на салона.");
     }
     return { salonDescription: output.salonDescription };
   }

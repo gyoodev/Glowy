@@ -49,13 +49,13 @@ const prompt = ai.definePrompt({
   name: 'recommendSalonsPrompt',
   input: {schema: RecommendSalonsInputSchema},
   output: {schema: PromptOutputSchema },
-  prompt: `You are an AI beauty consultant. Based on user preferences, past bookings and current trending choices, recommend salons and services to the user.
+  prompt: `Ти си AI консултант по красота. Въз основа на потребителските предпочитания, минали резервации и актуални тенденции, препоръчай салони и услуги на потребителя. Моля, предоставете препоръките на български език.
 
-User Preferences: {{{userPreferences}}}
-{{#if pastBookings}}Past Bookings: {{{pastBookings}}}{{/if}}
-{{#if trendingChoices}}Trending Choices: {{{trendingChoices}}}{{/if}}
+Потребителски предпочитания: {{{userPreferences}}}
+{{#if pastBookings}}Минали резервации: {{{pastBookings}}}{{/if}}
+{{#if trendingChoices}}Актуални тенденции: {{{trendingChoices}}}{{/if}}
 
-Recommendations:`,
+Препоръки:`,
 });
 
 // This schema should match the actual return type of the flow's async function
