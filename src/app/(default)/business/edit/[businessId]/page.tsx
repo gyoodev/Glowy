@@ -13,14 +13,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase, type Icon as LucideIcon, FileText, CalendarCheck, Command as CommandIcon } from 'lucide-react';
+import { ImagePlus, Trash2, Edit, CalendarDays, Clock, PlusCircle, ChevronsUpDown, Check, Briefcase, type Icon as LucideIcon, FileText, CalendarCheck, Command as CommandIcon, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { allBulgarianCities, mockServices } from '@/lib/mock-data';
+import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -33,7 +33,6 @@ import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers';
 
-const rootServiceCategory = { id: 'root', name: 'Всички услуги', description: '', price: 0, duration: 0, children: mockServices };
 
 const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
   const hour = Math.floor(i / 2) + 8;
@@ -123,11 +122,8 @@ export default function EditBusinessPage() {
   const [newTimeForSelectedDate, setNewTimeForSelectedDate] = useState('');
   const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
   
-  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string | null>(null);
-  const [selectedServiceFromMock, setSelectedServiceFromMock] = useState<Service | null>(null);
-
-  const [serviceNameSearch, setServiceNameSearch] = useState("");
-  const [openServicePopovers, setOpenServicePopovers] = useState<Record<number, boolean>>({});
+  const [selectedServiceCategory, setSelectedServiceCategory] = useState<string>('all');
+  const [selectedServiceFromMockId, setSelectedServiceFromMockId] = useState<string | null>(null);
 
 
   const sortedBulgarianCities = useMemo(() => [...allBulgarianCities].sort((a, b) => a.localeCompare(b, 'bg')), []);
@@ -305,23 +301,59 @@ export default function EditBusinessPage() {
     toast({ title: 'Часовете са премахнати', description: `Всички часове за ${format(parse(dateKey, 'yyyy-MM-dd', new Date()), "PPP", { locale: bg })} са премахнати.`, variant: 'default'});
   };
 
-  const handleAddServiceFromMock = () => {
-    if (selectedServiceFromMock) {
-      const existingServiceIndex = form.getValues('services')?.findIndex(s => s.name === selectedServiceFromMock.name);
-      if (existingServiceIndex !== -1) {
-         toast({ title: 'Услугата е вече добавена', description: `Услугата "${selectedServiceFromMock.name}" вече присъства във вашия списък.`, variant: 'default'});
-         return;
+  const serviceCategoriesForSelect = useMemo(() => {
+    const categoriesMap: Record<string, Service[]> = {};
+    allMockServices.forEach(service => {
+      if (service.category) {
+        if (!categoriesMap[service.category]) {
+          categoriesMap[service.category] = [];
+        }
+        categoriesMap[service.category].push(service);
       }
-      appendService({
-        id: selectedServiceFromMock.id, // Use the mock service ID
-        name: selectedServiceFromMock.name,
-        description: selectedServiceFromMock.description,
-        price: selectedServiceFromMock.price,
-        duration: selectedServiceFromMock.duration,
-      });
-      setSelectedServiceFromMock(null); // Reset selected service after adding
+    });
+    return Object.keys(categoriesMap).map(categoryName => ({
+      category: categoryName,
+      services: categoriesMap[categoryName].sort((a, b) => a.name.localeCompare(b.name)),
+    })).sort((a,b) => a.category.localeCompare(b.category));
+  }, []);
+
+  const servicesForNameSelect = useMemo(() => {
+    if (!selectedServiceCategory || selectedServiceCategory === 'all') {
+      return []; 
+    }
+    const foundCategory = serviceCategoriesForSelect.find(cat => cat.category === selectedServiceCategory);
+    return foundCategory ? foundCategory.services : [];
+  }, [selectedServiceCategory, serviceCategoriesForSelect]);
+
+
+  const handleAddServiceFromMock = () => {
+    if (selectedServiceFromMockId) {
+      const serviceToAdd = allMockServices.find(s => s.id === selectedServiceFromMockId);
+      if (serviceToAdd) {
+        const currentServices = form.getValues('services') || [];
+        const existingServiceIndex = currentServices.findIndex(s => s.id === serviceToAdd.id || s.name === serviceToAdd.name);
+        
+        if (existingServiceIndex !== -1) {
+          toast({ title: 'Услугата е вече добавена', description: `Услугата "${serviceToAdd.name}" вече присъства във вашия списък.`, variant: 'default'});
+          return;
+        }
+        appendService({
+          id: serviceToAdd.id,
+          name: serviceToAdd.name,
+          description: serviceToAdd.description || '',
+          price: serviceToAdd.price,
+          duration: serviceToAdd.duration,
+        });
+        toast({ title: 'Услугата е добавена', description: `"${serviceToAdd.name}" беше добавена към списъка.`, variant: 'default'});
+        setSelectedServiceFromMockId(null); 
+      } else {
+        toast({ title: 'Грешка', description: 'Избраната услуга не беше намерена в списъка.', variant: 'destructive'});
+      }
+    } else {
+      toast({ title: 'Не е избрана услуга', description: 'Моля, изберете услуга, която да добавите.', variant: 'default'});
     }
   };
+
   const onSubmit: SubmitHandler<EditBusinessFormValues> = async (data) => {
     if (!businessId || !business) return;
     setSaving(true);
@@ -340,9 +372,9 @@ export default function EditBusinessPage() {
         photos: data.photos || [],
         availability: data.availability || {},
         services: data.services?.map(s => ({
-          id: s.id || mockServices.find(ms => ms.name === s.name)?.id || `service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          id: s.id || `custom_service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Ensure ID for new custom services
           name: s.name,
-          description: s.description || mockServices.find(ms => ms.name === s.name)?.description || '',
+          description: s.description || '',
           price: Number(s.price),
           duration: Number(s.duration)
         })) || [],
@@ -391,23 +423,8 @@ export default function EditBusinessPage() {
     available: Object.keys(currentAvailability).filter(dateKey => (currentAvailability[dateKey]?.length || 0) > 0).map(dateKey => parse(dateKey, 'yyyy-MM-dd', new Date()))
   };
 
-
-  const serviceCategories = useMemo(() => {
-    // Assuming mockServices are top-level categories or flat list for now
-    // If nested, you'd need a function to extract top-level categories
-    return [{ id: 'all', name: 'Всички категории' }, ...mockServices.filter(s => s.children && s.children.length > 0)];
-  }, []);
-
-  const servicesForSelect = useMemo(() => {
-    let filteredServices = mockServices; // Start with all mock services
-    if (selectedServiceCategory && selectedServiceCategory !== 'all') {
-      const category = mockServices.find(s => s.id === selectedServiceCategory); // Find the selected category
-      filteredServices = category?.children || []; // If category found and has children, use them; otherwise, an empty array
-    }
-    return filteredServices.filter(service =>
-        service.name.toLowerCase().includes(serviceNameSearch.toLowerCase())
-    }
-    return []; // Fallback if category not found or no children
+  return (
+    <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-3xl font-bold flex items-center">
@@ -417,27 +434,26 @@ export default function EditBusinessPage() {
           <CardDescription>Актуализирайте информацията, снимките, услугите и наличността за Вашия салон.</CardDescription>
         </CardHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-8">
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
-                <TabsTrigger value="details" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
-                    <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Детайли
-                </TabsTrigger>
-                <TabsTrigger value="servicesTab" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
-                    <Briefcase className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Услуги
-                </TabsTrigger>
-                <TabsTrigger value="workingHours" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
-                    <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Работно Време
-                </TabsTrigger>
-                <TabsTrigger value="availability" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
-                    <CalendarCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                    Наличност
-                </TabsTrigger>
-              </TabsList>
-
+          <Tabs defaultValue="details" className="w-full">
+           <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
+              <TabsTrigger value="details" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Детайли
+              </TabsTrigger>
+              <TabsTrigger value="servicesTab" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <Briefcase className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Услуги
+              </TabsTrigger>
+              <TabsTrigger value="workingHours" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Работно Време
+              </TabsTrigger>
+              <TabsTrigger value="availability" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <CalendarCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Наличност
+              </TabsTrigger>
+            </TabsList>
+            <CardContent className="space-y-8">
               <div className="flex-1 min-w-0">
                 <TabsContent value="details" className="mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                   <section>
@@ -619,7 +635,7 @@ export default function EditBusinessPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {form.watch('photos')!.map((photoUrl, index) => (
                             <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
-                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail" />
+                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail"/>
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -645,60 +661,75 @@ export default function EditBusinessPage() {
                     <Briefcase className="mr-2 h-5 w-5 text-primary" />
                     Управление на Услуги
                   </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 p-4 border rounded-md bg-muted/50">
-                     <div className="space-y-2">
-                        <Label htmlFor="serviceCategorySelect">Избери категория услуги</Label>
-                         <Select onValueChange={(value) => {
-                           setSelectedServiceCategory(value);
-                           setSelectedServiceFromMock(null); // Reset service selection when category changes
-                         }} value={selectedServiceCategory || ''}>
-                           <SelectTrigger id="serviceCategorySelect">
-                             <SelectValue placeholder="Избери категория" />
-                           </SelectTrigger>
-                           <SelectContent>
-                             <SelectItem value="all">Всички категории</SelectItem>
-                             {serviceCategories.filter(cat => cat.id !== 'all').map(category => (
-                               <SelectItem key={category.id} value={category.id}>
-                                 {category.name}
-                               </SelectItem>
-                             ))}
-                           </SelectContent>
-                         </Select>
-                     </div>
-                     <div className="space-y-2">
-                         <Label htmlFor="serviceSelect">Избери услуга от списъка</Label>
-                         <div className="flex items-end gap-2">
-                           <Select
-                             onValueChange={(value) => {
-                               const service = servicesForSelect.find(s => s.id === value);
-                               setSelectedServiceFromMock(service || null);
-                             }}
-                             value={selectedServiceFromMock?.id || ''}
-                             disabled={!selectedServiceCategory}
-                           >
-                             <SelectTrigger id="serviceSelect">
-                               <SelectValue placeholder={selectedServiceCategory ? "Избери услуга" : "Първо избери категория"} />
-                             </SelectTrigger>
-                             <SelectContent>
-                               {servicesForSelect.map(service => (
-                                 <SelectItem key={service.id} value={service.id}>
-                                   {service.name} ({service.duration} мин, {service.price} лв)
-                                 </SelectItem>
-                               ))}
-                             </SelectContent>
-                           </Select>
-                           <Button type="button" onClick={handleAddServiceFromMock} disabled={!selectedServiceFromMock}>
-                             <PlusCircle className="mr-2 h-4 w-4" /> Добави
-                           </Button>
-                         </div>
-                     </div>
-                  </div>
+                  
+                  {/* Section for adding predefined services */}
+                  <Card className="p-4 bg-muted/30 border-dashed">
+                    <CardHeader className="p-0 pb-3">
+                      <CardTitle className="text-lg">Бързо Добавяне на Услуга от Списък</CardTitle>
+                      <CardDescription>Изберете категория и услуга, за да я добавите към списъка на салона.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-0 space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                        <div>
+                          <Label htmlFor="predefinedServiceCategorySelect">Избери категория</Label>
+                          <Select 
+                            value={selectedServiceCategory}
+                            onValueChange={(value) => {
+                              setSelectedServiceCategory(value);
+                              setSelectedServiceFromMockId(null); // Reset service selection when category changes
+                            }}
+                          >
+                            <SelectTrigger id="predefinedServiceCategorySelect">
+                              <SelectValue placeholder="Избери категория" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Всички категории</SelectItem>
+                              {serviceCategoriesForSelect.map(categoryData => (
+                                <SelectItem key={categoryData.category} value={categoryData.category}>
+                                  {categoryData.category}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label htmlFor="predefinedServiceSelect">Избери услуга</Label>
+                          <Select
+                            value={selectedServiceFromMockId || ''}
+                            onValueChange={setSelectedServiceFromMockId}
+                            disabled={!selectedServiceCategory || selectedServiceCategory === 'all' || servicesForNameSelect.length === 0}
+                          >
+                            <SelectTrigger id="predefinedServiceSelect">
+                              <SelectValue placeholder={servicesForNameSelect.length > 0 ? "Избери услуга от категорията" : "Няма услуги в тази категория"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {servicesForNameSelect.map(service => (
+                                <SelectItem key={service.id} value={service.id}>
+                                  {service.name} ({service.duration} мин, {service.price} лв)
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <Button 
+                        type="button" 
+                        onClick={handleAddServiceFromMock} 
+                        disabled={!selectedServiceFromMockId || saving}
+                        className="w-full sm:w-auto"
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" /> Добави Избраната Услуга
+                      </Button>
+                    </CardContent>
+                  </Card>
 
-                   <h4 className="text-lg font-semibold mb-4 border-b pb-2 mt-8">
-                    Моите Услуги
-                  </h3>
+
+                   <h4 className="text-lg font-semibold mb-2 border-b pb-2 mt-6">
+                    Текущи Услуги на Салона
+                  </h4>
+                  {serviceFields.length === 0 && <p className="text-muted-foreground text-center py-3">Няма добавени услуги. Можете да ги добавите от списъка по-горе или ръчно.</p>}
                   {serviceFields.map((item, index) => (
-                    <Card key={item.id} className="p-4 space-y-3 relative">
+                    <Card key={item.id} className="p-4 space-y-3 relative shadow-sm">
                        <div className="space-y-1">
                         <Label htmlFor={`services.${index}.name`}>Име на услугата</Label>
                         <Controller
@@ -709,15 +740,6 @@ export default function EditBusinessPage() {
                               id={`services.${index}.name`}
                               {...field}
                               placeholder="Име на услуга"
-                              onChange={(e) => {
-                                field.onChange(e);
-                                const matchedService = mockServices.find(ms => ms.name.toLowerCase() === e.target.value.toLowerCase());
-                                if (!matchedService) {
-                                  form.setValue(`services.${index}.id`, `custom_${Date.now()}_${index}`, { shouldValidate: true });
-                                } else {
-                                  form.setValue(`services.${index}.id`, matchedService.id, { shouldValidate: true });
-                                }
-                              }}
                             />
                           )}
                         />
@@ -728,7 +750,7 @@ export default function EditBusinessPage() {
                         <Controller
                           name={`services.${index}.description`}
                           control={form.control}
-                          render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} />}
+                          render={({ field }) => <Textarea id={`services.${index}.description`} {...field} rows={2} placeholder="Кратко описание на услугата..."/>}
                         />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
@@ -737,7 +759,7 @@ export default function EditBusinessPage() {
                           <Controller
                             name={`services.${index}.price`}
                             control={form.control}
-                            render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} />}
+                            render={({ field }) => <Input id={`services.${index}.price`} type="number" {...field} placeholder="50"/>}
                           />
                            {form.formState.errors.services?.[index]?.price && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.price?.message}</p>}
                         </div>
@@ -746,17 +768,17 @@ export default function EditBusinessPage() {
                           <Controller
                             name={`services.${index}.duration`}
                             control={form.control}
-                            render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} />}
+                            render={({ field }) => <Input id={`services.${index}.duration`} type="number" {...field} placeholder="60"/>}
                           />
                           {form.formState.errors.services?.[index]?.duration && <p className="text-sm text-destructive">{form.formState.errors.services?.[index]?.duration?.message}</p>}
                         </div>
                       </div>
                       <Button
                         type="button"
-                        variant="destructive"
+                        variant="ghost"
                         size="icon"
                         onClick={() => removeService(index)}
-                        className="absolute top-2 right-2 h-7 w-7"
+                        className="absolute top-2 right-2 h-7 w-7 text-destructive hover:bg-destructive/10"
                         title="Премахни услугата"
                       >
                         <Trash2 size={16} />
@@ -767,16 +789,17 @@ export default function EditBusinessPage() {
                     type="button"
                     variant="outline"
                     onClick={() => appendService({
-                      id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                      id: `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
                       name: '',
                       description: '',
                       price: 0,
                       duration: 30
                     })}
                     className="mt-4"
+                    disabled={saving}
                   >
                     <PlusCircle className="mr-2 h-4 w-4" />
-                    Добави Нова Услуга
+                    Добави Нова Услуга (Ръчно)
                   </Button>
                    {form.formState.errors.services && typeof form.formState.errors.services === 'object' && !Array.isArray(form.formState.errors.services) && form.formState.errors.services.root && (
                     <p className="text-sm text-destructive mt-2">{form.formState.errors.services.root.message}</p>
@@ -980,10 +1003,11 @@ export default function EditBusinessPage() {
                   </section>
                 </TabsContent>
               </div>
-            </Tabs>
-          </CardContent>
+            </CardContent>
+          </Tabs>
           <CardFooter className="border-t pt-6">
             <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting}>
+              {saving || form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
               {saving || form.formState.isSubmitting ? 'Запазване...' : 'Запази Промените'}
             </Button>
           </CardFooter>
@@ -992,3 +1016,4 @@ export default function EditBusinessPage() {
     </div>
   );
 }
+
