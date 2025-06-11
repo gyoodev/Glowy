@@ -160,14 +160,14 @@ export default function EditBusinessPage() {
       if (!user) {
         router.push('/login');
       } else {
-        fetchBusinessData(user.uid); // Renamed to avoid conflict with component name
+        fetchBusinessData(user.uid);
       }
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [businessId, router, authInstance]);
 
-  const fetchBusinessData = async (userId: string) => { // Renamed
+  const fetchBusinessData = async (userId: string) => { 
     if (!businessId) {
       setLoading(false);
       toast({ title: 'Грешка', description: 'Липсва ID на бизнеса.', variant: 'destructive' });
@@ -178,7 +178,7 @@ export default function EditBusinessPage() {
       const businessRef = doc(firestore, 'salons', businessId);
       const docSnap = await getDoc(businessRef);
       if (docSnap.exists()) {
-        const businessData = mapSalon(docSnap.data(), docSnap.id); // Use mapper
+        const businessData = mapSalon(docSnap.data(), docSnap.id);
         if (businessData.ownerId !== userId) {
           toast({ title: 'Неоторизиран достъп', description: 'Нямате права да редактирате този бизнес.', variant: 'destructive' });
           router.push('/business/manage');
@@ -388,28 +388,28 @@ export default function EditBusinessPage() {
         </CardHeader>
         <form onSubmit={form.handleSubmit(onSubmit)}>
           <CardContent className="space-y-8">
-            <Tabs defaultValue="details" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10">
-              <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0">
-                <TabsTrigger value="details" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <FileText className="mr-2 h-5 w-5" />
+            <Tabs defaultValue="details" className="w-full">
+              <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
+                <TabsTrigger value="details" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                    <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Детайли
                 </TabsTrigger>
-                <TabsTrigger value="servicesTab" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <Briefcase className="mr-2 h-5 w-5" />
+                <TabsTrigger value="servicesTab" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                    <Briefcase className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Услуги
                 </TabsTrigger>
-                <TabsTrigger value="workingHours" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <Clock className="mr-2 h-5 w-5" />
+                <TabsTrigger value="workingHours" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                    <Clock className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Работно Време
                 </TabsTrigger>
-                <TabsTrigger value="availability" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <CalendarCheck className="mr-2 h-5 w-5" />
+                <TabsTrigger value="availability" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                    <CalendarCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Наличност
                 </TabsTrigger>
               </TabsList>
 
               <div className="flex-1 min-w-0">
-                <TabsContent value="details" className="mt-0 md:mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+                <TabsContent value="details" className="mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                   <section>
                     <h3 className="text-xl font-semibold mb-4 border-b pb-2">Основна Информация</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -610,7 +610,7 @@ export default function EditBusinessPage() {
                   </section>
                 </TabsContent>
 
-               <TabsContent value="servicesTab" className="mt-0 md:mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+               <TabsContent value="servicesTab" className="mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                   <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
                     <Briefcase className="mr-2 h-5 w-5 text-primary" />
                     Управление на Услуги
@@ -701,7 +701,7 @@ export default function EditBusinessPage() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="workingHours" className="mt-0 md:mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+                <TabsContent value="workingHours" className="mt-0 space-y-6 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                   <h3 className="text-xl font-semibold mb-4 border-b pb-2">Работно Време по Дни</h3>
                   {daysOfWeek.map(day => (
                     <div key={day.key} className="grid grid-cols-1 md:grid-cols-4 items-center gap-4 p-4 border rounded-md">
@@ -783,7 +783,7 @@ export default function EditBusinessPage() {
                   ))}
                 </TabsContent>
 
-                <TabsContent value="availability" className="mt-0 md:mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
+                <TabsContent value="availability" className="mt-0 space-y-8 bg-card p-4 sm:p-6 rounded-lg shadow-md">
                    <section>
                     <h3 className="text-xl font-semibold mb-4 border-b pb-2 flex items-center">
                       <CalendarDays className="mr-2 h-5 w-5 text-primary" />
@@ -910,5 +910,3 @@ export default function EditBusinessPage() {
     </div>
   );
 }
-
-    
