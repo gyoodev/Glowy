@@ -10,11 +10,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { auth } from '@/lib/firebase';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore';
-import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
+import { generateSalonDescription } from '@/ai/flows/generate-salon-description'; // Assuming this is the correct path
 import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { allBulgarianCities, mockServices } from '@/lib/mock-data';
@@ -22,7 +21,9 @@ import { Service } from '@/types/service';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
-
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { useMemo } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 // Define the schema for the form
 interface SalonServiceData {
   id: string;
@@ -33,21 +34,25 @@ interface SalonServiceData {
 }
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
-  description: z.string().min(20, 'Описанието трябва да е поне 20 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
+  // id: z.string().optional(), // Add the optional id field
+  description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
   city: z.string().min(2, 'Моля, изберете град.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], {
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
   services: z.array(
+
     z.object({
+      id: z.string().optional(), // Add the optional id field
       name: z.string().min(1, "Името на услугата е задължително."),
       description: z.string().optional(),
       price: z.coerce.number({ invalid_type_error: "Цената трябва да е число."}).min(0, "Цената трябва да е положително число."),
       duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
     })
   ).min(1, "Моля, добавете поне една услуга."),
-  atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
+
+ atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
@@ -67,7 +72,9 @@ export default function CreateBusinessPage() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [isBusinessUser, setIsBusinessUser] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
-  const firestore = getFirestore();
+  const firestore = getFirestore(); // Initialize Firestore here
+  const [selectedCategory, setSelectedCategory] = useState<string | ''>('');
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
@@ -167,6 +174,45 @@ export default function CreateBusinessPage() {
     }
   };
 
+ // Group mockServices by category
+  const categorizedServices = useMemo(() => {
+    return mockServices.reduce((acc, service) => {
+      if (service.category) {
+        if (!acc[service.category]) {
+          acc[service.category] = [];
+        }
+        acc[service.category].push(service);
+      }
+      return acc;
+    }, {} as Record<string, Service[]>);
+  }, [mockServices]);
+
+  const serviceCategories = useMemo(() => Object.keys(categorizedServices), [categorizedServices]);
+
+  const handleAddSelectedService = () => {
+    if (selectedService) {
+      const existingServiceIndex = form.getValues('services').findIndex(
+        (service) => service.id === selectedService.id || service.name === selectedService.name
+      );
+
+      const newServiceId = selectedService.id || uuidv4(); // Use existing ID or generate new for predefined
+      if (existingServiceIndex === -1) {
+        appendService({
+          id: newServiceId,
+          name: selectedService.name,
+          description: selectedService.description || '',
+          price: selectedService.price,
+          duration: selectedService.duration,
+        });
+        setSelectedService(null); // Clear selected service after adding
+      } else {
+        toast({
+          title: 'Дублирана услуга', description: `Услугата "${selectedService.name}" вече е добавена.`, variant: 'default'
+        });
+      }
+    }
+  };
+
   const onSubmit: SubmitHandler<CreateBusinessFormValues> = async (data) => {
     if (!auth.currentUser) {
       toast({ title: 'Грешка', description: 'Потребителят не е удостоверен.', variant: 'destructive' });
@@ -179,7 +225,7 @@ export default function CreateBusinessPage() {
         address: data.address,
         city: data.city,
         priceRange: data.priceRange,
-        services: data.services.map(s => ({
+        services: data.services.map(s => ({ // Map over services and assign unique IDs if missing
             id: mockServices.find(ms => ms.name === s.name)?.id || `custom_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: s.name,
             description: (s as Service).description || mockServices.find(ms => ms.name === s.name)?.description || '',
@@ -345,7 +391,42 @@ export default function CreateBusinessPage() {
 
               {currentStep === 2 && (
                 <motion.div key="step2" initial="hidden" animate="visible" exit="exit" variants={stepMotionVariants} className="space-y-6">
-                  <h2 className="text-xl font-semibold text-primary border-b pb-2">Стъпка 2: Услуги</h2>
+                  <h2 className="text-xl font-semibold text-primary border-b pb-4 mb-4">Стъпка 2: Услуги</h2>
+                  <div className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormItem>
+                          <FormLabel>Категория на услуга</FormLabel>
+                          <Select onValueChange={(value) => { setSelectedCategory(value); setSelectedService(null); }} value={selectedCategory}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Изберете категория" />
+                                  </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+ {Object.keys(categorizedServices).map(category => (
+                                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                          </Select>
+                      </FormItem>
+                       <FormItem>
+                          <FormLabel>Име на услуга</FormLabel>
+                           <Select onValueChange={(value) => setSelectedService(categorizedServices[selectedCategory]?.find(s => s.id === value) || null)} value={selectedService?.id || ''} disabled={!selectedCategory}>
+                              <FormControl>
+                                  <SelectTrigger>
+                                      <SelectValue placeholder="Изберете услуга" />
+                                  </SelectTrigger>
+                              </FormControl>
+                               <SelectContent>
+ {selectedCategory && categorizedServices[selectedCategory]?.map(service => (
+                                      <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>
+                                  ))}
+                              </SelectContent>
+                           </Select>
+                      </FormItem>
+                       <Button type="button" onClick={handleAddSelectedService} disabled={!selectedService} className="md:mt-7">Добави избрана услуга</Button>
+                    </div>
+                 
                   <div className="space-y-4 border p-4 rounded-md bg-muted/20">
                     {serviceFields.map((item, index) => (
                       <div key={item.id} className="grid grid-cols-1 md:grid-cols-10 gap-3 items-end border-b pb-4 last:border-b-0">
@@ -423,6 +504,7 @@ export default function CreateBusinessPage() {
                       Добави Услуга
                     </Button>
                     <FormMessage>{form.formState.errors.services?.message || form.formState.errors.services?.root?.message}</FormMessage>
+                  </div>
                   </div>
                 </motion.div>
               )}
@@ -529,6 +611,5 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
-
 
     
