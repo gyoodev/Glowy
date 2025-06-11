@@ -44,7 +44,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
         {isNew && (
           <Badge variant="secondary" className="py-1 px-2 text-xs shadow-md">
             <Sparkles className="h-3 w-3 mr-1" />
-            Нов
+            Нов в Glowy
           </Badge>
         )}
       </div>
