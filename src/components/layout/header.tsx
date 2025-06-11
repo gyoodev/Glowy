@@ -3,10 +3,10 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect, type ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useEffect, type ReactNode, useCallback } from 'react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
-import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard } from 'lucide-react';
+import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard, Laptop, Smartphone } from 'lucide-react';
 import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
 import type { Notification } from '@/types';
@@ -15,7 +15,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { setCookie, getCookie } from '@/lib/cookies';
+import { setCookie, getCookie, deleteCookie } from '@/lib/cookies';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
 // DropdownMenu components are no longer needed here for profile
 // import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -38,20 +39,36 @@ export function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
-  const [currentTheme, setCurrentTheme] = useState<string | null>(null);
+  const [themeSetting, setThemeSetting] = useState<'light' | 'dark' | 'system'>('system');
+  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
+  const [isMobileView, setIsMobileView] = useState(false);
 
   useEffect(() => {
     // Theme initialization
     if (typeof window !== 'undefined') {
       const savedTheme = getCookie(THEME_COOKIE_KEY);
       if (savedTheme) {
-        setCurrentTheme(savedTheme);
-        document.documentElement.classList.toggle('dark', savedTheme === 'dark');
+        setThemeSetting(savedTheme);
       } else {
-        // Default to light theme if no cookie is set or if system prefers dark
+        // Default to system theme if no cookie is set
+        setThemeSetting('system');
+      }
+
+      // Set initial mobile view state
+      const handleResize = () => {
+        setIsMobileView(window.innerWidth < 768); // Using Tailwind's 'md' breakpoint
+      };
+      handleResize(); // Set initial state
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const applyTheme = (theme: 'light' | 'dark') => {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const initialTheme = prefersDark ? 'dark' : 'light';
-        setCurrentTheme(initialTheme);
         document.documentElement.classList.toggle('dark', initialTheme === 'dark');
         // Optionally set the cookie here for the default theme
         // setCookie(THEME_COOKIE_KEY, initialTheme, 365);
@@ -161,16 +178,45 @@ export function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  const toggleTheme = () => {
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-    setCookie(THEME_COOKIE_KEY, newTheme, 365);
-    setCurrentTheme(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme === 'dark');
+  const applyTheme = useCallback((theme: 'light' | 'dark') => {
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(theme);
+    setResolvedTheme(theme);
+  }, []);
+
+  const handleSetTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
+    setThemeSetting(theme);
+    setCookie(THEME_COOKIE_KEY, theme, 365);
+
+    if (theme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(prefersDark ? 'dark' : 'light');
+    } else {
+      applyTheme(theme);
+    }
+
     toast({
       title: 'Темата е променена',
-      description: `Темата е успешно сменена на ${newTheme === 'dark' ? 'тъмна' : 'светла'}.`,
+      description: `Темата е успешно сменена на ${theme === 'dark' ? 'тъмна' : theme === 'light' ? 'светла' : 'системна'}.`,
     });
-  };
+  }, [applyTheme, toast]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+      const handleChange = (e: MediaQueryListEvent) => {
+        if (themeSetting === 'system') {
+          applyTheme(e.matches ? 'dark' : 'light');
+        }
+      };
+
+      mediaQuery.addEventListener('change', handleChange);
+      // Apply initial theme based on setting
+      handleSetTheme(themeSetting);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [themeSetting, applyTheme, handleSetTheme]);
 
   if (isLoading) {
     return (
@@ -216,10 +262,30 @@ export function Header() {
         </nav>
 
         <div className="flex flex-1 items-center justify-end space-x-2 md:flex-initial">
-          {currentTheme !== null && (
-            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Смяна на тема">
-              {currentTheme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-            </Button>
+          {themeSetting !== null && (
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Смяна на тема">
+                  {themeSetting === 'dark' ? (
+                    <Moon className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                  ) : themeSetting === 'light' ? (
+                    <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                   ) : (
+                      isMobileView ? <Smartphone className="h-5 w-5" /> : <Laptop className="h-5 w-5" />
+                    )}
+                  <span className="sr-only">Смяна на тема</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleSetTheme('light')}>
+                  Светла
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetTheme('dark')}>
+                  Тъмна
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleSetTheme('system')}>Системна</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
 
           {isLoggedIn && userRole === 'admin' && (

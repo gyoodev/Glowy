@@ -1,13 +1,12 @@
 
 import './globals.css';
 import { Geist, Geist_Mono } from 'next/font/google';
-import type { Metadata } from 'next';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 
-import { Header } from '@/components/layout/header';
+// Import dynamic for client-side rendering of Header
 import { Footer } from '@/components/layout/footer';
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from '@/components/ui/toaster';
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
 import '@/lib/gsap'; // Import GSAP setup
 
@@ -15,7 +14,7 @@ import { Mirage } from 'ldrs/react'; // For the preloader
 import 'ldrs/react/Mirage.css'; // Styles for the preloader
 
 
-const geistSans = Geist({
+export const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
 });
@@ -25,12 +24,14 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+import ClientDynamicHeader from '@/components/layout/ClientDynamicHeader'; // Import the new client component
+
 // Dynamically generate metadata by fetching from Firestore
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata() {
   const firestore = getFirestore(auth.app);
   const settingsRef = doc(firestore, 'settings', 'websiteSettings');
-  let settingsData: Record<string, any> = {};
 
+  let settingsData: Record<string, any> = {}; // Initialize settingsData here
   try {
     const snapshot = await getDoc(settingsRef);
     if (snapshot.exists()) {
@@ -79,7 +80,6 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -105,8 +105,8 @@ export default function RootLayout({
              Glowy ✨
            </div>
         </div> */}
-        
-        <Header />
+
+        <ClientDynamicHeader />
         <main className="flex-1 bg-background">
           {children}
         </main>
