@@ -669,178 +669,181 @@ export default function SalonProfilePage() {
       </div>
 
       <div className="container mx-auto py-10 px-6">
-        <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-         <Tabs defaultValue="info" orientation="vertical" className="flex flex-col md:flex-row gap-6 md:gap-10 flex-1">
-            <TabsList className="flex flex-row overflow-x-auto md:overflow-visible md:flex-col md:space-y-1 md:w-48 lg:w-56 md:border-r md:pr-4 shrink-0 bg-transparent p-0 shadow-none custom-scrollbar pb-2 md:pb-0" orientation="vertical" >
- <TabsTrigger value="info" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <Info className="mr-2 h-4 w-4" />Информация
-                </TabsTrigger>
- <TabsTrigger value="services" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <Sparkles className="mr-2 h-4 w-4" />Услуги
-                </TabsTrigger>
- <TabsTrigger value="reviews" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <MessageSquare className="mr-2 h-4 w-4" />Отзиви
-                </TabsTrigger>
- <TabsTrigger value="gallery" className="w-full justify-start py-2.5 px-3 text-sm sm:text-base data-[state=active]:bg-muted data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-sm rounded-md hover:bg-muted/50 transition-colors">
-                    <ImageIcon className="mr-2 h-4 w-4" />Галерия
-                </TabsTrigger>
- </TabsList>
-
-              <div className="flex-1 min-w-0">
-                  <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                        <div>
-                        <div className="flex items-center mb-1">
-                            <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
-                            <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
-                            <span className="ml-2 text-muted-foreground">({displayedReviews.length || salon.reviewCount || 0} отзива)</span>
-                        </div>
-                        <div className="flex items-center text-muted-foreground text-sm">
-                            <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
-                        </div>
-                        </div>
-                        <div className="flex items-center gap-2 mt-3 sm:mt-0">
-                            {isPromotionActive && (
-                            <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
-                                <Gift className="h-3 w-3 mr-1" /> Промотиран
-                            </Badge>
-                            )}
-                            {salon.priceRange && (
-                                <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
-                                {priceRangeTranslations[salon.priceRange] || salon.priceRange}
-                                </Badge>
-                            )}
-                            {auth.currentUser && salon?.id && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleToggleFavorite}
-                                className={`py-2 px-3 text-sm sm:text-base flex items-center ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
-                                aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
-                            >
-                                <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
-                                {isFavorite ? "Премахни от любими" : "Добави в любими"}
-                            </Button>
-                            )}
-                        </div>
-                    </div>
-                    <p className="text-foreground leading-relaxed">{salon.description}</p>
-                    </div>
-                  <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                      <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
-                      <ul className="space-y-2 text-sm text-muted-foreground">
-                          <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                          <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
-                          <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
-                      </ul>
-                      {!isPromotionActive && userRole === 'business' && isSalonOwner && (
-                          <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                              <CardHeader className="pb-3 pt-4"><CardTitle className="text-lg text-secondary-foreground flex items-center"><Gift className="mr-2 h-5 w-5" />Рекламирайте Вашия Салон</CardTitle></CardHeader>
-                              <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80"><p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
-                                <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
-                                    <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
-                                </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-                        <div className="mt-6">
-                          <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-                            <MapPin className="mr-2 h-5 w-5 text-primary" /> Местоположение на Картата
-                          </h3>
-                            <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
-                             {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( 
-                              <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
- ) }
-                            </div>
-                          </div>
-                          </TabsContent>
-                  <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                      <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
-                    </h2>
-                    <div className="space-y-1">
-                      {(salon.services && salon.services.length > 0) ? salon.services.map(service => (
-                        <ServiceListItem key={service.id} service={service} onBook={handleBookService} />
-                      )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="reviews" id="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                    <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                      <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
-                    </h2>
-                    {isLoadingReviews ? (
-                         <div className="space-y-4">
-                            {[...Array(3)].map((_, i) => (
-                            <Card key={i} className="shadow-sm">
-                                <CardHeader>
-                                <Skeleton className="h-5 w-1/3 mb-1" />
-                                <Skeleton className="h-4 w-1/4" />
-                                </CardHeader>
-                                <CardContent className="space-y-2">
-                                <Skeleton className="h-4 w-full" />
-                                <Skeleton className="h-4 w-2/3" />
-                                </CardContent>
-                            </Card>
-                            ))}
-                        </div>
-                    ) : displayedReviews.length > 0 ? (
-                      <div className="space-y-6">
-                        {displayedReviews.map(review => (
-                          <ReviewCard key={review.id} review={review} />
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
-                    )}
-                     {auth.currentUser && (
-                        <div className="mt-6">
-                        {showReviewForm ? (
-                            <AddReviewForm
-                            onAddReview={handleReviewSubmit}
-                            onCancel={() => setShowReviewForm(false)}
-                            />
-                        ) : (
-                            <Button
-                            variant="outline"
-                            onClick={() => setShowReviewForm(true)}
-                            data-ai-hint="Add review button"
-                            className="w-full"
-                            >
-                            Добави Отзив
-                            </Button>
-                        )}
-                        </div>
-                    )}
-                     {auth.currentUser && userReviews.length > 0 && !showReviewForm && (
-                        <div className="mt-8 bg-card p-6 rounded-lg shadow-md">
-                             <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                                <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Вашите Отзиви за този салон
-                             </h2>
-                             <div className="space-y-6">
-                                {userReviews.map(review => (
-                                    <ReviewCard key={review.id} review={review} />
-                                ))}
-                             </div>
-                        </div>
+        <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
+          <div className="lg:w-2/3"> {/* Main content area */}
+            
+            {/* Salon Header Info - Moved above Tabs */}
+            <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                  <div>
+                  <div className="flex items-center mb-1">
+                      <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
+                      <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
+                      <span className="ml-2 text-muted-foreground">({displayedReviews.length || salon.reviewCount || 0} отзива)</span>
+                  </div>
+                  <div className="flex items-center text-muted-foreground text-sm">
+                      <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
+                  </div>
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 sm:mt-0">
+                      {isPromotionActive && (
+                      <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
+                          <Gift className="h-3 w-3 mr-1" /> Промотиран
+                      </Badge>
                       )}
-                  </TabsContent>
-                  <TabsContent value="gallery" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                     <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                      <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
-                    </h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
-                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                                <Image src={photo} alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
-                            </div>
-                        )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
-                    </div>
-                  </TabsContent>
-                </div>
-            </Tabs>
+                      {salon.priceRange && (
+                          <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
+                          {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+                          </Badge>
+                      )}
+                      {auth.currentUser && salon?.id && (
+                      <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleToggleFavorite}
+                          className={`py-2 px-3 text-sm sm:text-base flex items-center ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
+                          aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                      >
+                          <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
+                          {isFavorite ? "Премахни от любими" : "Добави в любими"}
+                      </Button>
+                      )}
+                  </div>
+              </div>
+              <p className="text-foreground leading-relaxed">{salon.description}</p>
+            </div>
 
-          <aside className="md:w-1/3 space-y-8 sticky top-20">
+            <Tabs defaultValue="info" className="w-full">
+              <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
+                <TabsTrigger value="info" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <Info className="mr-2 h-4 w-4" />Информация
+                </TabsTrigger>
+                <TabsTrigger value="services" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <Sparkles className="mr-2 h-4 w-4" />Услуги
+                </TabsTrigger>
+                <TabsTrigger value="reviews" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <MessageSquare className="mr-2 h-4 w-4" />Отзиви
+                </TabsTrigger>
+                <TabsTrigger value="gallery" className="inline-flex items-center justify-center whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-lg">
+                  <ImageIcon className="mr-2 h-4 w-4" />Галерия
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
+                    <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
+                    <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
+                </ul>
+                {!isPromotionActive && userRole === 'business' && isSalonOwner && (
+                    <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
+                        <CardHeader className="pb-3 pt-4"><CardTitle className="text-lg text-secondary-foreground flex items-center"><Gift className="mr-2 h-5 w-5" />Рекламирайте Вашия Салон</CardTitle></CardHeader>
+                        <CardContent className="text-sm space-y-2 text-secondary-foreground/90 dark:text-secondary-foreground/80"><p>Искате ли Вашият салон да достигне до повече клиенти? Възползвайте се от нашата VIP/Промотирана услуга!</p>
+                          <Button asChild variant="default" className="mt-2 bg-primary hover:bg-primary/90 text-primary-foreground">
+                              <Link href={salon.id ? "/business/promote/" + salon.id : '#'}>Научете повече / Активирайте</Link>
+                          </Button>
+                          </CardContent>
+                      </Card>
+                  )}
+                  <div className="mt-6">
+                    <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
+                      <MapPin className="mr-2 h-5 w-5 text-primary" /> Местоположение на Картата
+                    </h3>
+                      <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
+                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( 
+                        <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
+)}
+                      </div>
+                    </div>
+                    </TabsContent>
+                <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
+                    <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
+                  </h2>
+                  <div className="space-y-1">
+                    {(salon.services && salon.services.length > 0) ? salon.services.map(service => (
+                      <ServiceListItem key={service.id} service={service} onBook={handleBookService} />
+                    )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="reviews" id="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
+                    <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
+                  </h2>
+                  {isLoadingReviews ? (
+                       <div className="space-y-4">
+                          {[...Array(3)].map((_, i) => (
+                          <Card key={i} className="shadow-sm">
+                              <CardHeader>
+                              <Skeleton className="h-5 w-1/3 mb-1" />
+                              <Skeleton className="h-4 w-1/4" />
+                              </CardHeader>
+                              <CardContent className="space-y-2">
+                              <Skeleton className="h-4 w-full" />
+                              <Skeleton className="h-4 w-2/3" />
+                              </CardContent>
+                          </Card>
+                          ))}
+                      </div>
+                  ) : displayedReviews.length > 0 ? (
+                    <div className="space-y-6">
+                      {displayedReviews.map(review => (
+                        <ReviewCard key={review.id} review={review} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
+                  )}
+                   {auth.currentUser && (
+                      <div className="mt-6">
+                      {showReviewForm ? (
+                          <AddReviewForm
+                          onAddReview={handleReviewSubmit}
+                          onCancel={() => setShowReviewForm(false)}
+                          />
+                      ) : (
+                          <Button
+                          variant="outline"
+                          onClick={() => setShowReviewForm(true)}
+                          data-ai-hint="Add review button"
+                          className="w-full"
+                          >
+                          Добави Отзив
+                          </Button>
+                      )}
+                      </div>
+                  )}
+                   {auth.currentUser && userReviews.length > 0 && !showReviewForm && (
+                      <div className="mt-8 bg-card p-6 rounded-lg shadow-md">
+                           <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
+                              <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Вашите Отзиви за този салон
+                           </h2>
+                           <div className="space-y-6">
+                              {userReviews.map(review => (
+                                  <ReviewCard key={review.id} review={review} />
+                              ))}
+                           </div>
+                      </div>
+                    )}
+                </TabsContent>
+                <TabsContent value="gallery" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                   <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
+                    <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
+                  </h2>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
+                          <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
+                              <Image src={photo} alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
+                          </div>
+                      )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div> {/* End Main content area */}
+
+          <aside className="lg:w-1/3 space-y-8 sticky top-20">
              <div id="booking-calendar-section">
               <BookingCalendar
                 salonName={salon.name}
@@ -891,3 +894,4 @@ export default function SalonProfilePage() {
     </>
   );
 }
+
