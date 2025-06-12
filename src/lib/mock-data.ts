@@ -71,6 +71,7 @@ export const mockSalons: Salon[] = [
       [(new Date(Date.now() + 86400000 * 3)).toISOString().split('T')[0]]: ['10:00', '12:00', '15:30'],
     },
     createdAt: new Date().toISOString(),
+    status: 'approved',
   },
   {
     id: 'salon2',
@@ -93,6 +94,7 @@ export const mockSalons: Salon[] = [
       [(new Date(Date.now() + 86400000 * 2)).toISOString().split('T')[0]]: ['10:30', '12:00', '15:00'],
     },
     createdAt: new Date().toISOString(),
+    status: 'approved',
   },
   {
     id: 'salon3',
@@ -117,6 +119,7 @@ export const mockSalons: Salon[] = [
       [(new Date(Date.now() + 86400000 * 3)).toISOString().split('T')[0]]: ['10:00', '11:30', '13:30', '16:30'],
     },
     createdAt: new Date().toISOString(),
+    status: 'approved',
   },
 ];
 
@@ -150,3 +153,4 @@ export const allBulgarianCities: string[] = [
   "Габрово", "Видин", "Монтана", "Кюстендил", "Кърджали",
   "Търговище", "Ловеч", "Силистра", "Разград", "Смолян"
 ];
+
