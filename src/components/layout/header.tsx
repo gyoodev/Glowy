@@ -28,7 +28,7 @@ const navItems = [
 ];
 
 const THEME_COOKIE_KEY = 'glowy-theme';
-
+const APP_NAME = 'Glaura';
 export function Header() {
   const router = useRouter();
   const { toast } = useToast();
@@ -223,7 +223,7 @@ export function Header() {
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center px-6">
                  <div className="mr-6 flex items-center space-x-2">
-                    <AppIcon className="h-6 w-6 text-primary" />
+                    <AppIcon className="h-6 w-6 text-primary animate-pulse" />
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
                 </div>
                 <div className="flex-1"></div>
@@ -239,11 +239,11 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center px-6">
         <Link href="/" className="mr-6 flex items-center space-x-2">
-          <AppIcon className="h-6 w-6 text-primary" />
-          <span className="font-bold sm:inline-block text-lg">Glowy</span>
+          <AppIcon className="h-6 w-6 text-primary animate-pulse" />
+          <span className="font-bold sm:inline-block text-lg">{APP_NAME}</span>
         </Link>
 
-        <nav className="hidden flex-1 items-center space-x-1 md:flex">
+        <nav className="hidden flex-1 items-center space-x-1 md:flex pr-4">
           {navItems.map((item) => {
              if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
               return null;

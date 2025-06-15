@@ -14,7 +14,7 @@ export default function AboutGlowyPage() {
         <div className="text-left mb-12">
           <span className="text-sm font-semibold text-primary uppercase tracking-wider">ПЛАТФОРМА</span>
           <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl text-gray-50">
-            Запознайте се с Glowy
+            Запознайте се с Glaura
           </h1>
         </div>
 
@@ -70,7 +70,7 @@ export default function AboutGlowyPage() {
             <Card className="bg-gray-800 border-gray-700/50 shadow-md rounded-lg">
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs font-semibold uppercase tracking-wider text-primary flex items-center">
-                  <Info className="w-4 h-4 mr-2" />
+                  <Info className="w-4 h-4 mr-2" />Я ЗА
                   ЗА GLOWY
                 </CardTitle>
               </CardHeader>

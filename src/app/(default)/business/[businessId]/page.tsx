@@ -14,7 +14,7 @@ export default function BusinessProfilePage() {
   return (
     <div className="container mx-auto py-10">
       <h1 className="text-3xl font-bold mb-6">Business Profile for: {businessId}</h1>
-      {/* Placeholder for business details */}
+      {/* Placeholder for Glaura business details */}
       <p>Loading or displaying business information here...</p>
       {/* Further sections for services, bookings, etc. */}
     </div>

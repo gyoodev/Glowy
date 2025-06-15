@@ -116,7 +116,7 @@ export default function RegisterPage() {
         // Create welcome notification for new user
         await addDoc(collection(firestore, 'notifications'), {
           userId: user.uid,
-          message: 'Добре дошли в Glowy! Радваме се да Ви видим. Разгледайте своя профил и започнете да откривате салони.',
+ message: 'Добре дошли в Glaura! Радваме се да Ви видим. Разгледайте своя профил и започнете да откривате салони.',
           link: '/account',
           read: false,
           createdAt: Timestamp.fromDate(new Date()),

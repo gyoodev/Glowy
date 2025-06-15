@@ -138,7 +138,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (isLoading) {
     console.log('AdminLayout: Rendering loading state...');
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-foreground">
+ <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <p className="text-lg">Glowy - Зареждане на административен панел...</p>
       </div>
     );
@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 !isSidebarOpen && "sr-only" 
               )}
             >
-              Glowy Админ
+ Glaura Админ
             </h1>
             <nav className="space-y-1">
               {navItems.map((item) => {

@@ -152,7 +152,7 @@ export default function SalonsDirectoryPage() {
             <div className="text-center md:text-left">
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-foreground mb-6">
                 Всички Салони
-                </h1>
+ </h1>
                 <p className="text-lg md:text-xl text-muted-foreground max-w-xl mx-auto md:mx-0">
                 Разгледайте всички салони, налични в платформата и намерете подходящия за Вас.
                 </p>

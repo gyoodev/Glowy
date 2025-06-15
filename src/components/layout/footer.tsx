@@ -53,9 +53,9 @@ export function Footer() {
       <div className="container py-12 px-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-8">
           <div>
-            <h3 className="text-lg font-semibold text-foreground mb-3">За Glowy</h3>
+            <h3 className="text-lg font-semibold text-foreground mb-3">За Glaura</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Glowy е Вашата дестинация за откриване на най-добрите салони за красота и уелнес услуги. Ние Ви помагаме лесно да намерите и резервирате перфектното изживяване.
+              Glaura е Вашата дестинация за откриване на най-добрите салони за красота и уелнес услуги. Ние Ви помагаме лесно да намерите и резервирате перфектното изживяване.
             </p>
           </div>
 
@@ -63,7 +63,7 @@ export function Footer() {
             <h3 className="text-lg font-semibold text-foreground mb-3">Важни Връзки</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/about-glowy" className="text-muted-foreground hover:text-primary transition-colors">За Glowy</Link></li>
-              <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Условия за ползване</Link></li>
+              <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Условия за Ползване</Link></li>
               <li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Политика за поверителност</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Контакти</Link></li>
               <li><Link href="/faq" className="text-muted-foreground hover:text-primary transition-colors">Често задавани въпроси</Link></li>
