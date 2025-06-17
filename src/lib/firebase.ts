@@ -21,40 +21,23 @@ import {
 import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
 import { mapUserProfile, mapBooking, mapNotification, mapNewsletterSubscriber } from '@/utils/mappers'; // Path alias should now work
 
-const defaultFirebaseConfig = {
-  apiKey: "AIzaSyBl6-VkACEuUwr0A9DvEBIZGZ59IiffK0M",
-  authDomain: "glowy-gyoodev.firebaseapp.com",
-  projectId: "glowy-gyoodev",
-  storageBucket: "glowy-gyoodev.appspot.com", // Corrected: common Firebase storage bucket domain
-  messagingSenderId: "404029225537",
-  appId: "1:404029225537:web:2f9144a90f82f82eff64c0",
-  measurementId: "G-6Z1J5B647X"
-};
-
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || defaultFirebaseConfig.apiKey,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || defaultFirebaseConfig.authDomain,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || defaultFirebaseConfig.projectId,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || defaultFirebaseConfig.storageBucket,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || defaultFirebaseConfig.messagingSenderId,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || defaultFirebaseConfig.appId,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || defaultFirebaseConfig.measurementId
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-if (
-  firebaseConfig.apiKey === defaultFirebaseConfig.apiKey ||
-  firebaseConfig.projectId === defaultFirebaseConfig.projectId
-) {
-  console.warn(
-    "******************************************************************************\n" +
-    "** WARNING: Firebase is using default/fallback configuration values.        **\n" +
-    "** This is likely NOT what you want for your project.                       **\n" +
-    "** Please ensure your .env file is correctly set up with your               **\n" +
-    "** NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_PROJECT_ID, etc.    **\n" +
-    "** If these are not set, the app will try to connect to a default project   **\n" +
-    "** ('glowy-gyoodev'), which may cause data fetching to fail or hang.        **\n" +
-    "******************************************************************************"
-  );
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error("******************************************************************************");
+  console.error("** CRITICAL ERROR: Firebase environment variables are not set.              **");
+  console.error("** Please ensure NEXT_PUBLIC_FIREBASE_API_KEY and NEXT_PUBLIC_FIREBASE_PROJECT_ID are defined. **");
+  console.error("******************************************************************************");
+  // Depending on your application's needs, you might want to throw an error here
+  // throw new Error("Firebase environment variables are not set.");
 }
 
 let app: FirebaseApp;
