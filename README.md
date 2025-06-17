@@ -1,6 +1,6 @@
-✨ Glowy – Salon Management Platform
+✨ Glaura – Salon Management Platform
 
-Glowy is a comprehensive salon management platform that streamlines appointment bookings, service management, customer reviews, and leverages AI to generate compelling salon descriptions and personalized user recommendations. 
+Glaura is a comprehensive salon management platform that streamlines appointment bookings, service management, customer reviews, and leverages AI to generate compelling salon descriptions and personalized user recommendations. 
 
 
 ---
