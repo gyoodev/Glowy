@@ -34,7 +34,6 @@ export default function AdminSettingsPage() {
   const [firebaseAppId, setFirebaseAppId] = useState('');
   const [firebaseMeasurementId, setFirebaseMeasurementId] = useState('');
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
-  const [siteAuthor, setSiteAuthor] = useState('');
   const [paypalClientId, setPaypalClientId] = useState('');
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [loading, setLoading] = useState(true); // Loading state
