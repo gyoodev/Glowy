@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
   { href: '/salons', label: 'Салони' },
-  { href: '/recommendations', label: 'Glowy Препоръка' },
+  { href: '/recommendations', label: 'Glaura Препоръка' },
   { href: '/contact', label: 'Контакти' },
 ];
 
@@ -223,7 +223,7 @@ export function Header() {
         <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-16 items-center px-6">
                  <div className="mr-6 flex items-center space-x-2">
-                    <AppIcon className="h-6 w-6 text-primary animate-pulse" />
+                    <AppIcon className="h-6 w-6 text-primary animate-pulse" /> {/* This is likely your app icon */}
                     <span className="font-bold sm:inline-block text-lg">Glowy</span>
                 </div>
                 <div className="flex-1"></div>
