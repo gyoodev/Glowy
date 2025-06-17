@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, type Firestore } from 'firebase/firestore';
+import { onAuthStateChanged, getAuth, type Auth } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
 export default function AdminSettingsPage() {
@@ -36,9 +37,52 @@ export default function AdminSettingsPage() {
   const [paypalClientId, setPaypalClientId] = useState('');
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [loading, setLoading] = useState(true); // Loading state
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
 
-  const firestore = getFirestore(auth.app); // Get Firestore instance
+  const firestore: Firestore = getFirestore(auth.app); // Get Firestore instance
+  const firebaseAuth: Auth = getAuth(auth.app); // Get Auth instance
+
   const settingsDocRef = doc(firestore, 'settings', 'websiteSettings'); // Reference to the settings document
+
+  const fetchSettings = async () => {
+    try {
+      const docSnap = await getDoc(settingsDocRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSiteName(data.siteName || '');
+        setSiteKeywords(data.siteKeywords || '');
+        setSiteDescription(data.siteDescription || '');
+        setCanonicalUrl(data.canonicalUrl || '');
+        setAdminEmail(data.adminEmail || '');
+        setSiteAuthor(data.siteAuthor || '');
+        setApiKey1(data.apiKey1 || '');
+        setApiKey2(data.apiKey2 || '');
+        setOgTitle(data.ogTitle || '');
+        setOgDescription(data.ogDescription || '');
+        setOgImage(data.ogImage || '');
+        setTwitterCard(data.twitterCard || '');
+        setTwitterTitle(data.twitterTitle || '');
+        setTwitterDescription(data.twitterDescription || '');
+        setTwitterImage(data.twitterImage || '');
+        setFirebaseApiKey(data.firebaseApiKey || '');
+        setFirebaseAuthDomain(data.firebaseAuthDomain || '');
+        setFirebaseProjectId(data.firebaseProjectId || '');
+        setFirebaseStorageBucket(data.firebaseStorageBucket || '');
+        setFirebaseMessagingSenderId(data.firebaseMessagingSenderId || '');
+        setFirebaseAppId(data.firebaseAppId || '');
+        setFirebaseMeasurementId(data.firebaseMeasurementId || '');
+        setGoogleMapsApiKey(data.googleMapsApiKey || '');
+        setPaypalClientId(data.paypalClientId || '');
+        setStripePublishableKey(data.stripePublishableKey || '');
+      } else {
+        console.log("No settings document found, using defaults.");
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault(); // Prevent default form submission
@@ -85,47 +129,6 @@ export default function AdminSettingsPage() {
   };
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const docSnap = await getDoc(settingsDocRef);
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          setSiteName(data.siteName || '');
-          setSiteKeywords(data.siteKeywords || '');
-          setSiteDescription(data.siteDescription || '');
-          setCanonicalUrl(data.canonicalUrl || '');
-          setAdminEmail(data.adminEmail || '');
- setSiteAuthor(data.siteAuthor || '');
-          setApiKey1(data.apiKey1 || '');
-          setApiKey2(data.apiKey2 || '');
-          setOgTitle(data.ogTitle || '');
-          setOgDescription(data.ogDescription || '');
-          setOgImage(data.ogImage || '');
-          setTwitterCard(data.twitterCard || '');
-          setTwitterTitle(data.twitterTitle || '');
-          setTwitterDescription(data.twitterDescription || '');
-          setTwitterImage(data.twitterImage || '');
- setFirebaseApiKey(data.firebaseApiKey || '');
- setFirebaseAuthDomain(data.firebaseAuthDomain || '');
- setFirebaseProjectId(data.firebaseProjectId || '');
- setFirebaseStorageBucket(data.firebaseStorageBucket || '');
- setFirebaseMessagingSenderId(data.firebaseMessagingSenderId || '');
- setFirebaseAppId(data.firebaseAppId || '');
- setFirebaseMeasurementId(data.firebaseMeasurementId || '');
- setGoogleMapsApiKey(data.googleMapsApiKey || '');
- setPaypalClientId(data.paypalClientId || '');
- setStripePublishableKey(data.stripePublishableKey || '');
-          // Set other state variables if you add more settings
-        } else {
-          console.log("No settings document found, using defaults.");
-        }
-      } catch (error) {
-        console.error('Error fetching settings:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSettings();
   }, [settingsDocRef]); // Depend on the settings document reference
 
