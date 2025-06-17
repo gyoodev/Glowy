@@ -589,7 +589,8 @@ export default function SalonProfilePage() {
       }
 
       setShowReviewForm(false);
-      toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив." });
+      // Show success toast only on successful submission
+      toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив.", variant: "default" });
     } catch (error) {
       console.error("[SalonProfilePage] Error adding review:", error);
       toast({ title: "Грешка при добавяне на отзив", description: "Моля, опитайте отново.", variant: "destructive" });
