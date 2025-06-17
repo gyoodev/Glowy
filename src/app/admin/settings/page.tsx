@@ -300,6 +300,7 @@ export default function AdminSettingsPage() {
  </div>
  <Button type='submit' disabled={loading}>Запази Промените</Button>
 
+ </form>
  )
  )}
  </CardContent>
