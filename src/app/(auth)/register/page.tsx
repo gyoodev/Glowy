@@ -254,6 +254,13 @@ export default function RegisterPage() {
                 variant: 'destructive',
                 duration: 6000,
             });
+        } else if (error.code === 'auth/popup-blocked') {
+            toast({
+                title: 'Изскачащият прозорец е блокиран',
+                description: 'Моля, разрешете изскачащите прозорци за този сайт, за да се регистрирате с Google.',
+                variant: 'destructive',
+                duration: 10000, // Keep the toast visible for a longer time
+            });
         } else if (error.code === 'auth/popup-closed-by-user') {
             // Handle cases where the user closes the popup
             toast({ title: 'Регистрацията отменена', description: 'Прозорецът за вход с Google беше затворен.', variant: 'default' });

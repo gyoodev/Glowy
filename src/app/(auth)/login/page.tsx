@@ -78,7 +78,6 @@ export default function LoginPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    form.formState.isSubmitting = true; // Manually set submitting state
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
@@ -125,8 +124,6 @@ export default function LoginPage() {
         description: error.message || 'Възникна неочаквана грешка.',
         variant: 'destructive',
       });
-    } finally {
-      form.formState.isSubmitting = false; // Reset submitting state
     }
   };
 
