@@ -62,7 +62,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold text-foreground mb-3">Важни Връзки</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/about-glowy" className="text-muted-foreground hover:text-primary transition-colors">За Glowy</Link></li>
+              <li><Link href="/about-glowy" className="text-muted-foreground hover:text-primary transition-colors">За Glaura</Link></li>
               <li><Link href="/terms" className="text-muted-foreground hover:text-primary transition-colors">Условия за Ползване</Link></li>
               <li><Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">Политика за поверителност</Link></li>
               <li><Link href="/contact" className="text-muted-foreground hover:text-primary transition-colors">Контакти</Link></li>
@@ -106,7 +106,7 @@ export function Footer() {
             <div className="flex items-center gap-4">
               {/* Theme toggle button removed from here */}
               <p className="text-sm text-muted-foreground">
-                Открийте Своя Блясък.
+                Открий Своя Блясък.
               </p>
             </div>
           </div>
