@@ -13,7 +13,7 @@ const Logo: FC = () => {
         </linearGradient>
       </defs>
       <text x="5" y="22" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold" fill="url(#glowyGradient)">
-        Glowy
+        Glaura
       </text>
       {/* Simple Sparkle representation */}
       <path d="M95 10 L96 8 L97 10 L99 11 L97 12 L96 14 L95 12 L93 11 Z" fill="hsl(var(--primary))" opacity="0.8">
