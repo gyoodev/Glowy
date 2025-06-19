@@ -65,22 +65,45 @@ export default function AdminUsersPage() {
   }, [fetchUsers]);
 
   const handleDeleteUser = useCallback(async (userId: string, userEmail?: string) => {
+    console.log(`[AdminUsersPage] Attempting to delete user. UID: ${userId}, Email: ${userEmail}`);
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребител ${userEmail || userId}? Тази операция е необратима и ще изтрие потребителя от Firebase Authentication и неговия документ от Firestore.`)) {
+      console.log(`[AdminUsersPage] User deletion cancelled by admin. UID: ${userId}`);
       return;
     }
 
+    setIsSubmitting(true);
+    console.log(`[AdminUsersPage] Calling 'deleteUserAdmin' Cloud Function for UID: ${userId}`);
     const functions = getFunctions();
     const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
 
-    setIsSubmitting(true);
     try {
-      await deleteUserAdminFunction({ uid: userId });
+      const result = await deleteUserAdminFunction({ uid: userId });
+      console.log(`[AdminUsersPage] Cloud Function 'deleteUserAdmin' result for UID ${userId}:`, result);
+
+      toast({ title: "Успех", description: "Потребителят е изтрит успешно." });
+      console.log(`[AdminUsersPage] User ${userId} deleted successfully. Fetching updated user list.`);
       await fetchUsers();
-      toast({ title: "Успех", description: "Потребителят е изтрит." });
     } catch (err: any) {
-      toast({ title: "Грешка при изтриване", description: err.message, variant: "destructive" });
+      console.error(`[AdminUsersPage] Error deleting user UID ${userId}:`, err);
+      let errorMessage = "Неуспешно изтриване на потребителя.";
+      if (err.code) {
+        errorMessage += ` (Код: ${err.code})`;
+      }
+      if (err.message) {
+        errorMessage += ` Съобщение: ${err.message}`;
+      }
+      if (err.details) {
+        errorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
+      }
+      toast({
+        title: "Грешка при изтриване",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 9000,
+      });
     } finally {
       setIsSubmitting(false);
+      console.log(`[AdminUsersPage] Finished delete process for UID: ${userId}. isSubmitting set to false.`);
     }
   }, [fetchUsers, toast]);
 
@@ -350,5 +373,3 @@ export default function AdminUsersPage() {
     </div>
   );
 }
-
-    
