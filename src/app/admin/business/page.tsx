@@ -68,13 +68,12 @@ export default function AdminBusinessPage() {
       const docRef = await addDoc(salonsCollectionRef, {
         ...newBusiness,
         createdAt: serverTimestamp(), // Use serverTimestamp
-        // Add other default fields for a new salon if necessary
+        status: 'approved', // Default to approved for admin creation for now
         description: 'Новосъздаден салон. Моля, редактирайте детайлите.',
         rating: 0,
         reviewCount: 0,
         photos: [],
         services: [],
-        // Add more default fields as per your Salon type
       });
       toast({
         title: 'Бизнесът е създаден',
@@ -95,17 +94,17 @@ export default function AdminBusinessPage() {
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете бизнес "${businessName}"? Тази операция е необратима.`)) {
       return;
     }
-    setIsSubmitting(true); 
+    setIsSubmitting(true);
     try {
       const businessDocRef = doc(firestoreInstance, 'salons', businessId);
       await deleteDoc(businessDocRef);
       toast({ title: 'Бизнесът е изтрит', description: `Бизнесът "${businessName}" беше успешно изтрит.` });
-      fetchSalons(); 
+      fetchSalons();
     } catch (err: any) {
       console.error('Error deleting business:', err);
       toast({ title: 'Грешка', description: 'Неуспешно изтриване на бизнеса.', variant: 'destructive' });
     } finally {
-      setIsSubmitting(false); 
+      setIsSubmitting(false);
     }
   };
 
@@ -202,7 +201,14 @@ export default function AdminBusinessPage() {
                        <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => salon.name && handleDeleteBusiness(salon.id, salon.name)}
+                        onClick={() => {
+                          if (!salon.id) {
+                            toast({ title: 'Грешка', description: 'ID на салона липсва. Изтриването е невъзможно.', variant: 'destructive' });
+                            return;
+                          }
+                          const nameForConfirmation = salon.name || `салон с ID: ${salon.id}`;
+                          handleDeleteBusiness(salon.id, nameForConfirmation);
+                        }}
                         disabled={isSubmitting}
                       >
                         Изтрий
@@ -219,5 +225,3 @@ export default function AdminBusinessPage() {
     </div>
   );
 }
-
-    
