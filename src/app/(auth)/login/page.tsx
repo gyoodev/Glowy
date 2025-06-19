@@ -119,10 +119,15 @@ export default function LoginPage() {
       router.push('/');
     } catch (error: any) {
       console.error('Error during Google Sign-In:', error);
+      let errorMessage = error.message || 'Възникна неочаквана грешка.';
+      if (error.code === 'auth/unauthorized-domain') {
+        errorMessage = 'Домейнът не е оторизиран за Firebase Sign-In. Моля, добавете домейна (вероятно cloudworkstations.dev) към "Authorized domains" във Вашите Firebase Authentication настройки.';
+      }
       toast({
         title: 'Грешка при влизане с Google',
-        description: error.message || 'Възникна неочаквана грешка.',
+        description: errorMessage,
         variant: 'destructive',
+        duration: 10000, // Longer duration for important errors
       });
     }
   };
@@ -216,3 +221,5 @@ export default function LoginPage() {
     </Card>
   );
 }
+
+    
