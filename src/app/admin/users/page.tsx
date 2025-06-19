@@ -86,20 +86,27 @@ export default function AdminUsersPage() {
     } catch (err: any) {
       console.error(`[AdminUsersPage] Error deleting user UID ${userId}:`, err);
       let errorMessage = "Неуспешно изтриване на потребителя.";
-      if (err.code) {
+      let errorTitle = "Грешка при изтриване";
+
+      if (err.code === 'functions/internal') {
+        errorTitle = "Сървърна грешка при изтриване";
+        errorMessage = `Възникна вътрешна грешка във Firebase Cloud Function 'deleteUserAdmin'. Моля, проверете логовете на функцията във Вашата Firebase конзола за повече детайли. (Код: ${err.code})`;
+        console.error("[AdminUsersPage] Firebase Cloud Function 'deleteUserAdmin' reported an internal error. Check Firebase console logs for the function.");
+      } else if (err.code) {
         errorMessage += ` (Код: ${err.code})`;
       }
-      if (err.message) {
+      if (err.message && err.code !== 'functions/internal') { // Don't append generic message if we have a specific one
         errorMessage += ` Съобщение: ${err.message}`;
       }
       if (err.details) {
         errorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
       }
+
       toast({
-        title: "Грешка при изтриване",
+        title: errorTitle,
         description: errorMessage,
         variant: "destructive",
-        duration: 9000,
+        duration: 10000, // Longer duration for important errors
       });
     } finally {
       setIsSubmitting(false);
@@ -156,10 +163,18 @@ export default function AdminUsersPage() {
       });
       setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'customer' });
       await fetchUsers();
-    } catch (err: any) {
+    } catch (err: any)
+       {
       console.error('Error creating user via function:', err);
-      setError('Грешка при създаване на потребител: ' + err.message + '. Уверете се, че Cloud Function "createUserAdmin" е deploy-ната и работи коректно, и че имате права да я извикате.');
-      toast({ title: 'Грешка при създаване на потребител', description: err.message, variant: 'destructive' });
+      let detailedErrorMessage = 'Грешка при създаване на потребител: ' + err.message;
+      if (err.code === 'functions/internal') {
+        detailedErrorMessage = `Възникна вътрешна грешка във Firebase Cloud Function 'createUserAdmin'. Моля, проверете логовете на функцията във Вашата Firebase конзола. (Код: ${err.code})`;
+         console.error("[AdminUsersPage] Firebase Cloud Function 'createUserAdmin' reported an internal error. Check Firebase console logs for the function.");
+      } else if (err.details) {
+        detailedErrorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
+      }
+      setError(detailedErrorMessage);
+      toast({ title: 'Грешка при създаване на потребител', description: detailedErrorMessage, variant: 'destructive', duration: 10000 });
     } finally {
       setIsSubmitting(false);
     }
