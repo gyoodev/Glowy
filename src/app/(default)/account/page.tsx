@@ -335,7 +335,7 @@ export default function AccountPage() {
                         </p>
                         <p>
                         <strong>Моля, влезте във Вашата <a href="https://console.firebase.google.com/" target="_blank" rel="noopener noreferrer" className="underline hover:text-destructive-foreground font-semibold">Firebase Console</a>, изберете проект <code>{process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'glowy-gyoodev'}</code>, отидете на Firestore Database &gt; Rules и ги заменете със следните:</strong>
-                        </p> {/* Renamed project name placeholder */}
+                        </p>
                         <pre className="text-xs bg-muted text-muted-foreground p-3 rounded-md overflow-x-auto my-2 border border-border whitespace-pre-wrap break-all" data-ai-hint="firestore rules">
                         <code>
 {`rules_version = '2';
@@ -359,7 +359,9 @@ service cloud.firestore {
     }
     match /salons/{salonId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null && (request.auth.uid == resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /newsletterSubscribers/{subscriberId} {
         allow create: if true; 
