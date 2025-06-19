@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getFirestore, collection, query, orderBy, getDocs, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { firestore as db } from '@/lib/firebase'; // Import initialized Firestore instance
 
 interface ContactEntry {
   id: string;
@@ -18,19 +19,18 @@ export default function AdminContactsPage() {
   const [contacts, setContacts] = useState<ContactEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const firestore = getFirestore(); // Initialize Firestore
 
   useEffect(() => {
     const fetchContacts = async () => {
       setIsLoading(true);
       setError(null);
       try {
-        const contactsCollection = collection(firestore, 'contacts');
+        const contactsCollection = collection(db, 'contacts'); // Use imported db instance
         const contactsQuery = query(contactsCollection, orderBy('createdAt', 'desc'));
         const querySnapshot = await getDocs(contactsQuery);
 
         const fetchedContacts: ContactEntry[] = [];
-        querySnapshot.forEach((docSnap) => { // Renamed doc to docSnap to avoid conflict with doc import
+        querySnapshot.forEach((docSnap) => {
           fetchedContacts.push({
             id: docSnap.id,
             ...docSnap.data() as Omit<ContactEntry, 'id'>
@@ -46,11 +46,11 @@ export default function AdminContactsPage() {
     };
 
     fetchContacts();
-  }, [firestore]); // firestore dependency is correct
+  }, []); // db instance from @/lib/firebase is stable, so it's not needed in dependency array
 
   const handleToggleAnswered = async (contactId: string, currentStatus: boolean) => {
     try {
-      const contactRef = doc(firestore, 'contacts', contactId);
+      const contactRef = doc(db, 'contacts', contactId); // Use imported db instance
       await updateDoc(contactRef, {
         isAnswered: !currentStatus
       });

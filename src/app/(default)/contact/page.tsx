@@ -10,7 +10,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useToast } from '@/hooks/use-toast';
-import { getFirestore, collection, addDoc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
+import { firestore as db } from '@/lib/firebase'; // Import initialized Firestore instance
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
 
@@ -27,7 +28,6 @@ type ContactFormValues = z.infer<typeof contactFormSchema>;
 export default function ContactPage() {
   // Hooks and state
   const { toast } = useToast();
-  const firestore = getFirestore();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<ContactFormValues>({
@@ -44,7 +44,7 @@ export default function ContactPage() {
   const onSubmit = async (data: ContactFormValues) => {
     setIsSubmitting(true);
     try {
-      await addDoc(collection(firestore, 'contacts'), {
+      await addDoc(collection(db, 'contacts'), { // Use the imported db instance
         ...data,
         createdAt: Timestamp.fromDate(new Date()),
         isAnswered: false,
