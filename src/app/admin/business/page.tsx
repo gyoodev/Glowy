@@ -6,11 +6,11 @@ import { getFirestore, collection, getDocs, query, orderBy, addDoc, deleteDoc, d
 import { auth } from '@/lib/firebase';
 import type { Salon } from '@/types';
 import Link from 'next/link';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, List } from 'lucide-react';
+import { AlertTriangle, List, Trash2, UserPlus, Loader2 } from 'lucide-react'; // Added Loader2
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
@@ -96,7 +96,7 @@ export default function AdminBusinessPage() {
     }
   };
 
-  const handleDeleteBusiness = async (businessId: string, businessName: string) => {
+  const handleDeleteBusiness = useCallback(async (businessId: string, businessName: string) => {
     console.log(`AdminBusinessPage: Confirmation prompt for deleting business: ID=${businessId}, Name=${businessName}`);
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете салон "${businessName}"? Тази операция е необратима и ще премахне салона от системата.`)) {
         console.log(`AdminBusinessPage: Deletion cancelled by user for business ID: ${businessId}`);
@@ -119,18 +119,7 @@ export default function AdminBusinessPage() {
         setIsSubmitting(false);
         console.log("AdminBusinessPage: Deletion process finished, isSubmitting set to false.");
     }
-  };
-
-  const handleDeleteClick = (salonItem: Salon) => {
-    if (!salonItem || !salonItem.id) {
-        toast({ title: 'Грешка при изтриване', description: 'Липсва ID на салона. Изтриването е невъзможно.', variant: 'destructive' });
-        console.error("AdminBusinessPage: Delete attempt failed: Salon object or ID is missing.", salonItem);
-        return;
-    }
-    const nameForConfirmation = salonItem.name || `салон с ID: ${salonItem.id}`;
-    console.log(`AdminBusinessPage: Initiating delete for salon: ID=${salonItem.id}, Name=${nameForConfirmation}`);
-    handleDeleteBusiness(salonItem.id, nameForConfirmation);
-  };
+  }, [firestoreInstance, toast, fetchSalons]);
 
 
   if (isLoading) {
@@ -226,9 +215,19 @@ export default function AdminBusinessPage() {
                        <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => handleDeleteClick(salon)}
+                        onClick={() => {
+                          if (!salon || !salon.id) {
+                            toast({ title: 'Грешка при изтриване', description: 'Липсва ID на салона. Изтриването е невъзможно.', variant: 'destructive' });
+                            console.error("AdminBusinessPage: Delete attempt failed: Salon object or ID is missing.", salon);
+                            return;
+                          }
+                          const nameForConfirmation = salon.name || `салон с ID: ${salon.id}`;
+                          console.log(`AdminBusinessPage: Initiating delete for salon: ID=${salon.id}, Name=${nameForConfirmation}`);
+                          handleDeleteBusiness(salon.id, nameForConfirmation);
+                        }}
                         disabled={isSubmitting}
                       >
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                         Изтрий
                       </Button>
                     </TableCell>
@@ -243,5 +242,3 @@ export default function AdminBusinessPage() {
     </div>
   );
 }
-
-    
