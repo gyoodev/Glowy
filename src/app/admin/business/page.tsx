@@ -38,6 +38,7 @@ export default function AdminBusinessPage() {
   });
 
   const fetchSalons = useCallback(async () => {
+    console.log("AdminBusinessPage: Starting fetchSalons...");
     setIsLoading(true);
     setError(null);
     try {
@@ -46,12 +47,14 @@ export default function AdminBusinessPage() {
       const salonsSnapshot = await getDocs(q);
       const salonsList = salonsSnapshot.docs.map(docSnap => mapSalon(docSnap.data(), docSnap.id));
       setSalons(salonsList);
+      console.log(`AdminBusinessPage: Fetched ${salonsList.length} salons.`);
     } catch (err: any) {
-      console.error('Error fetching salons:', err);
+      console.error('AdminBusinessPage: Error fetching salons:', err);
       setError('Failed to load salons. Please ensure Firestore rules allow admin access and the collection exists.');
       toast({ title: "Грешка при зареждане", description: "Неуспешно зареждане на салоните.", variant: "destructive" });
     } finally {
       setIsLoading(false);
+      console.log("AdminBusinessPage: fetchSalons finished.");
     }
   }, [firestoreInstance, toast]);
 
@@ -63,50 +66,72 @@ export default function AdminBusinessPage() {
     e.preventDefault();
     setIsSubmitting(true);
     setError(null);
+    console.log("AdminBusinessPage: Attempting to create new business:", newBusiness);
     try {
       const salonsCollectionRef = collection(firestoreInstance, 'salons');
       const docRef = await addDoc(salonsCollectionRef, {
         ...newBusiness,
-        createdAt: serverTimestamp(), // Use serverTimestamp
-        status: 'approved', // Default to approved for admin creation for now
+        createdAt: serverTimestamp(),
+        status: 'approved', 
         description: 'Новосъздаден салон. Моля, редактирайте детайлите.',
         rating: 0,
         reviewCount: 0,
         photos: [],
         services: [],
       });
+      console.log(`AdminBusinessPage: Business created successfully with ID: ${docRef.id}`);
       toast({
         title: 'Бизнесът е създаден',
         description: `Нов салон "${newBusiness.name}" е добавен с ID: ${docRef.id}`,
       });
       setNewBusiness({ name: '', city: '', address: '', ownerId: '' });
-      fetchSalons(); // Refresh the list
+      await fetchSalons(); 
     } catch (err: any) {
-      console.error('Error creating business:', err);
+      console.error('AdminBusinessPage: Error creating business:', err);
       setError('Неуспешно създаване на бизнес.');
       toast({ title: 'Грешка', description: 'Неуспешно създаване на бизнес.', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
+      console.log("AdminBusinessPage: Create business process finished.");
     }
   };
 
   const handleDeleteBusiness = async (businessId: string, businessName: string) => {
-    if (!window.confirm(`Сигурни ли сте, че искате да изтриете бизнес "${businessName}"? Тази операция е необратима.`)) {
-      return;
+    console.log(`AdminBusinessPage: Confirmation prompt for deleting business: ID=${businessId}, Name=${businessName}`);
+    if (!window.confirm(`Сигурни ли сте, че искате да изтриете салон "${businessName}"? Тази операция е необратима и ще премахне салона от системата.`)) {
+        console.log(`AdminBusinessPage: Deletion cancelled by user for business ID: ${businessId}`);
+        return;
     }
+
+    console.log(`AdminBusinessPage: Proceeding with deletion for business ID: ${businessId}`);
     setIsSubmitting(true);
     try {
-      const businessDocRef = doc(firestoreInstance, 'salons', businessId);
-      await deleteDoc(businessDocRef);
-      toast({ title: 'Бизнесът е изтрит', description: `Бизнесът "${businessName}" беше успешно изтрит.` });
-      fetchSalons();
+        const businessDocRef = doc(firestoreInstance, 'salons', businessId);
+        await deleteDoc(businessDocRef);
+        console.log(`AdminBusinessPage: Successfully deleted business ID: ${businessId} from Firestore.`);
+        toast({ title: 'Салонът е изтрит', description: `Салон "${businessName}" беше успешно изтрит.` });
+        await fetchSalons(); 
+        console.log("AdminBusinessPage: Salon list refreshed after deletion.");
     } catch (err: any) {
-      console.error('Error deleting business:', err);
-      toast({ title: 'Грешка', description: 'Неуспешно изтриване на бизнеса.', variant: 'destructive' });
+        console.error(`AdminBusinessPage: Error deleting business ID ${businessId}:`, err.message, err.code, err.stack);
+        toast({ title: 'Грешка при изтриване', description: `Неуспешно изтриване на салон: ${err.message}`, variant: 'destructive' });
     } finally {
-      setIsSubmitting(false);
+        setIsSubmitting(false);
+        console.log("AdminBusinessPage: Deletion process finished, isSubmitting set to false.");
     }
   };
+
+  const handleDeleteClick = (salonItem: Salon) => {
+    if (!salonItem || !salonItem.id) {
+        toast({ title: 'Грешка при изтриване', description: 'Липсва ID на салона. Изтриването е невъзможно.', variant: 'destructive' });
+        console.error("AdminBusinessPage: Delete attempt failed: Salon object or ID is missing.", salonItem);
+        return;
+    }
+    const nameForConfirmation = salonItem.name || `салон с ID: ${salonItem.id}`;
+    console.log(`AdminBusinessPage: Initiating delete for salon: ID=${salonItem.id}, Name=${nameForConfirmation}`);
+    handleDeleteBusiness(salonItem.id, nameForConfirmation);
+  };
+
 
   if (isLoading) {
     return (
@@ -201,14 +226,7 @@ export default function AdminBusinessPage() {
                        <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => {
-                          if (!salon.id) {
-                            toast({ title: 'Грешка', description: 'ID на салона липсва. Изтриването е невъзможно.', variant: 'destructive' });
-                            return;
-                          }
-                          const nameForConfirmation = salon.name || `салон с ID: ${salon.id}`;
-                          handleDeleteBusiness(salon.id, nameForConfirmation);
-                        }}
+                        onClick={() => handleDeleteClick(salon)}
                         disabled={isSubmitting}
                       >
                         Изтрий
@@ -225,3 +243,5 @@ export default function AdminBusinessPage() {
     </div>
   );
 }
+
+    
