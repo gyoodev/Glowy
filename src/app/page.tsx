@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, ListOrdered } from 'lucide-react';
+import { Search, ListOrdered, ShoppingBag } from 'lucide-react'; // Added ShoppingBag for no salons case
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
 import { format, isFuture } from 'date-fns';
 import { firestore } from '@/lib/firebase';
@@ -203,6 +203,14 @@ export default function SalonDirectoryPage() {
                 </div>
               ))}
             </div>
+          ) : salons.length === 0 ? (
+            <div className="text-center py-12">
+              <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> {/* Changed icon */}
+              <h3 className="text-xl font-semibold text-foreground">В платформата все още няма създадени салони.</h3>
+              <p className="text-muted-foreground mt-2">
+                Моля, проверете по-късно или ако сте собственик на салон, регистрирайте го.
+              </p>
+            </div>
           ) : filteredSalons.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSalons.map(salon => (
@@ -212,9 +220,9 @@ export default function SalonDirectoryPage() {
           ) : (
             <div className="text-center py-12">
               <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold text-foreground">Няма намерени салони</h3>
+              <h3 className="text-xl font-semibold text-foreground">Търсеният от Вас салон не е намерен в платформата.</h3>
               <p className="text-muted-foreground mt-2">
-                Опитайте да промените Вашите филтри или термина за търсене.
+                Моля, проверете критериите си за търсене.
               </p>
             </div>
           )}
@@ -223,3 +231,4 @@ export default function SalonDirectoryPage() {
     </div>
   );
 }
+
