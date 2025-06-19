@@ -3,7 +3,7 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'; // Added useMemo
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
@@ -108,7 +108,16 @@ function generateSalonSchema(salon: Salon) {
 
 export default function SalonProfilePage() {
   const params = useParams();
-  const slugParam = params?.slug;
+  // Use useMemo to get a plain string slug, preventing issues with params object enumeration
+  const plainSlug = useMemo(() => {
+    const s = params?.slug;
+    if (typeof s === 'string') return s;
+    // For a [slug] route, s should be a string. Array handling is for [...slug].
+    // If it's an array for [slug], it's unexpected, but we take the first part.
+    if (Array.isArray(s) && s.length > 0) return s[0];
+    return undefined;
+  }, [params]);
+
 
   const [salon, setSalon] = useState<Salon | null>(null);
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
@@ -129,17 +138,7 @@ export default function SalonProfilePage() {
 
 
   useEffect(() => {
-    let currentSlug: string | undefined;
-    if (typeof slugParam === 'string') {
-       currentSlug = slugParam;
-    } else if (Array.isArray(slugParam) && slugParam.length > 0) {
-      currentSlug = slugParam[0];
-    } else {
-      console.warn("[SalonProfilePage] Invalid or missing slug parameter:", slugParam);
-      currentSlug = undefined;
-    }
-
-    const salonNameFromSlug = currentSlug ? currentSlug.replace(/_/g, ' ') : undefined;
+    const salonNameFromSlug = plainSlug ? plainSlug.replace(/_/g, ' ') : undefined;
     console.log("[SalonProfilePage] Derived salonNameFromSlug for Firestore query:", salonNameFromSlug);
 
     const fetchSalonByName = async (name: string) => {
@@ -199,7 +198,11 @@ export default function SalonProfilePage() {
       console.log("[SalonProfilePage] No valid salon name from slug, cannot fetch salon.");
       setSalon(null);
       setIsLoading(false);
-      toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
+      // Only toast if params has been processed and plainSlug is still undefined,
+      // indicating an actual issue with the slug from URL.
+      if (params && Object.keys(params).length > 0 && !plainSlug) {
+        toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
+      }
     }
 
     return () => {
@@ -207,7 +210,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [slugParam, firestore, toast]);
+  }, [plainSlug, firestore, toast, params]); // params is included for the conditional toast logic
 
   useEffect(() => {
     const fetchUserRoleAndCheckOwnership = async () => {
