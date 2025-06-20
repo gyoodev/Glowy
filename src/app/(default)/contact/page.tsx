@@ -14,17 +14,6 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase'; // Import initialized Firestore instance
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
-
-// Metadata for the contact page 
-export async function generateMetadata() {
-  return {
-    title: 'Свържете се с нас - Glaura', // Use your actual site name
-    description: 'Имате въпроси или предложения? Свържете се с Glaura чрез нашата форма за контакт.', // Use your actual site name
-    keywords: 'контакт, запитване, форма за контакт, връзка с нас, имейл', // Add relevant keywords
-  };
-}
-
-// Zod schema for the contact form
 const contactFormSchema = z.object({
   name: z.string().min(2, { message: "Името трябва да е поне 2 символа." }),
   email: z.string().email({ message: "Моля, въведете валиден имейл адрес." }),
