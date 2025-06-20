@@ -55,10 +55,10 @@ export default function RootLayout({
        </div> */}
 
         <ClientLayoutContent>
+ <main className="flex-1 bg-background">
+ {children}
+ </main>
         </ClientLayoutContent>
-
-        <main className="flex-1 bg-background">
-        </main>
         <Footer />
         <Toaster />
         <CookieConsentBanner />

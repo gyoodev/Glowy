@@ -1,95 +1,186 @@
-
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: Can manage their own profile. Admins can read all.
+    // Helper function to check if the requester is an admin
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Helper function to check if the requester is a business user
+    function isBusinessUser() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow create: if request.auth != null; // For user registration
-      allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Admins can list users
+      // Authenticated user can create, read, and update their own profile.
+      allow create, read, update: if request.auth != null && request.auth.uid == userId;
+
+      // Admin capabilities for user documents:
+      // Admins can get any user document, list all users,
+      // create user documents (e.g., if a Firebase Function only handles Auth user creation),
+      // update any user document (e.g., to change a role),
+      // and delete any user document from Firestore (Auth user deletion is separate).
+      allow get, list, create, update, delete: if isAdmin();
     }
 
-    // Notifications: Users manage their own.
-    match /notifications/{notificationId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null; // System or other users can create notifications for a user
-    }
-
-    // Bookings:
-    // - Customers can create for any salon.
-    // - Customers can read/update/delete their own bookings.
-    // - Salon owners can read/update bookings for their salon.
-    // - Admins can read/update/delete any booking.
-    match /bookings/{bookingId} {
-      allow create: if request.auth != null;
-      allow read, update: if request.auth != null &&
-                            (request.auth.uid == resource.data.userId ||
-                             (resource.data.salonOwnerId != null && request.auth.uid == resource.data.salonOwnerId) ||
-                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow delete: if request.auth != null &&
-                            (request.auth.uid == resource.data.userId || 
-                             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-    }
-
-    // Reviews:
-    // - Authenticated users can create reviews.
-    // - Users can read/update/delete their own reviews.
-    // - Public can read all reviews.
-    // - Salon owners can reply (update a 'reply' field if implemented).
-    // - Admins can manage all reviews.
-    match /reviews/{reviewId} {
-      allow create: if request.auth != null;
-      allow read: if true; 
-      allow update: if request.auth != null &&
-                       (request.auth.uid == resource.data.userId || 
-                        (resource.data.salonId != null && request.auth.uid == get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId) || 
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-      allow delete: if request.auth != null &&
-                       (request.auth.uid == resource.data.userId || 
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
-    }
-
-    // Salons: Public read. Owners can write to their own. Admins can write to any.
+    // Salons collection
     match /salons/{salonId} {
-      allow read: if true;
-      allow create: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'business';
-      allow update, delete: if request.auth != null &&
-                               (request.auth.uid == resource.data.ownerId ||
-                                get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      // Anyone can read salon information.
+      allow get, list: if true;
+
+      // Business users can create salons if they are the owner.
+      // Admins can also create salons.
+      allow create: if (
+                        request.auth != null &&
+                        request.auth.uid == request.resource.data.ownerId &&
+                        isBusinessUser()
+                      ) || isAdmin();
+
+      // Business owners can update their own salons.
+      // Admins can also update any salon.
+      allow update: if (
+                        request.auth != null &&
+                        resource.data.ownerId == request.auth.uid &&
+                        isBusinessUser()
+                      ) || isAdmin();
+
+      // Only admins can delete salons.
+      allow delete: if isAdmin();
     }
 
-    // Newsletter Subscribers: Anyone can create (subscribe). Admins can read/list/delete.
-    match /newsletterSubscribers/{subscriberId} {
-      allow create: if true;
-      allow read, list, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Bookings collection
+    match /bookings/{bookingId} {
+      // Authenticated users can create their own bookings.
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Authenticated users can read their own bookings.
+      // Business owners can read bookings for their salons.
+      // Admins can read any booking.
+      allow read: if (request.auth != null && request.auth.uid == resource.data.userId) ||
+                  (request.auth != null && isBusinessUser() && get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid) ||
+                  isAdmin();
+
+      // Business owners can update ONLY the status of bookings for their salons.
+      // Admins can update any field of any booking.
+      allow update: if (
+                        request.auth != null &&
+                        isBusinessUser() &&
+                        get(/databases/$(database)/documents/salons/$(resource.data.salonId)).data.ownerId == request.auth.uid &&
+                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+                      ) || isAdmin();
+
+      // Admins can list all bookings.
+      // Business owners list bookings via client-side queries filtered by salonId,
+      // which are then authorized by the 'read' rule above for each document.
+      allow list: if isAdmin();
+
+      // Generally, bookings are cancelled (status change) rather than deleted.
+      // Admins can delete if necessary.
+      allow delete: if isAdmin();
     }
 
-    // Promotion Payments: Only authenticated users can create. Admins can read/list/manage.
-    match /promotionsPayments/{paymentId} {
-      allow create: if request.auth != null; 
-      allow read, list, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    // Reviews collection
+    match /reviews/{reviewId} {
+      // Anyone can read reviews.
+      allow get, list: if true;
+
+      // Authenticated users can create reviews.
+      // (Assumes review data includes a 'userId' field matching the creator's UID)
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+      // Users can update/delete their own reviews.
+      // Admins can also update/delete any review.
+      allow update, delete: if (
+                                request.auth != null &&
+                                resource.data.userId == request.auth.uid
+                              ) || isAdmin();
     }
 
-    // Contact Messages: Anyone can create. Admins can manage.
+    // Contacts collection
     match /contacts/{contactId} {
+      // Allow anyone to create/submit a contact form.
       allow create: if true;
-      allow read, list, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Only admins can read, list, update (e.g., mark as answered), or delete contacts.
+      allow get, list, update, delete: if isAdmin();
     }
 
-    // Counters: Authenticated users can read/write. (Use with caution for writes).
-    match /counters/{counterName} {
-      allow read: if request.auth != null; 
-      allow write: if request.auth != null; // Consider restricting writes more specifically if needed.
+    // NewsletterSubscribers collection
+    match /newsletterSubscribers/{subscriberId} {
+      // Allow anyone to create (subscribe).
+      allow create: if true;
+      // Only admins can read the list of subscribers or individual subscribers.
+      allow get, list: if isAdmin();
+      // Admins can delete subscribers.
+      allow delete: if isAdmin();
+      // Updates are generally not needed by clients for subscribers.
+      allow update: if false;
     }
 
-    // Settings: Public read for website settings. Admins can write.
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // User can read and update (to mark as read) their own notifications.
+      // The notification document must have a 'userId' field matching the requester's UID.
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
+
+      // Creating notifications:
+      // Authenticated users can create notifications (e.g., customer review creates a notification for business owner,
+      // business owner changing status creates notification for customer).
+      // Server-side (Admin SDK) in capture-order also creates notifications for admins.
+      allow create: if request.auth != null;
+
+      // Admins can delete notifications if needed.
+      allow delete: if isAdmin();
+    }
+
+    // Counters collection
+    match /counters/users {
+      // Allow authenticated users to read and write the user counter.
+      // WARNING: This is for client-side increment during registration.
+      // Not secure for production. Use Cloud Functions for reliable and secure counters.
+      allow read, write: if request.auth != null;
+    }
+    
+    // PromotionsPayments collection (records of payments for promotions)
+    match /promotionsPayments/{paymentId} {
+      // Allow authenticated users to create payment records (e.g., client-side after PayPal success).
+      // It's better if a trusted server (like a Cloud Function triggered by PayPal webhook) writes these.
+      allow create: if request.auth != null;
+
+      // Only admins can read or list payment information.
+      allow get, list: if isAdmin();
+
+      // Admins can update or delete payment records if necessary (e.g., for refunds or corrections).
+      allow update, delete: if isAdmin();
+    }
+
+    // Settings collection
     match /settings/{settingId} {
+      // Allow public read access for server-side functions like generateMetadata.
       allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      // Only allow authenticated admins to write settings.
+      allow write: if isAdmin();
+    }
+
+    // Promotions collection (This rule was in your original set. If you have a separate 'promotions' collection, keep it. 
+    // Otherwise, if promotions are only stored within salon documents, this might be unused.)
+    match /promotions/{promotionId} {
+      // Anyone can read active promotions.
+      allow get, list: if resource.data.isActive == true;
+
+      // Business owners can create promotions for their own salons (assumes ownedSalons is a list on user doc).
+      allow create: if request.auth != null && isBusinessUser() && request.resource.data.salonId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ownedSalons;
+
+      // Business owners can read, update, and delete their own promotions (assumes ownedSalons).
+      allow read, update, delete: if request.auth != null && isBusinessUser() && resource.data.salonId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.ownedSalons;
+
+      // Admins can read, list, update, and delete any promotion.
+      allow get, list, update, delete: if isAdmin();
     }
   }
 }
-
-    
