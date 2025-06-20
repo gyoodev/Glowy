@@ -9,6 +9,6 @@ export async function generateMetadata() {
 
 
 export const metadata = {
-  title: 'Glaura ✨',
+  title: 'Glaura - Открий своя блясък',
   description: 'Открийте най-добрите салони за красота и услуги във Вашия град. Запазете час лесно и бързо с Glaura. Фризьорски салони, маникюр, спа и други.',
 };
