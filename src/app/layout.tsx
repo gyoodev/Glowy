@@ -5,7 +5,7 @@ import { getFirestore, doc, getDoc } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 
 
-import ClientLayoutContent from '@/components/layout/ClientLayoutContent'; // Import the new client component
+import ClientLayoutContent from '@/components/layout/ClientLayoutContent';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
@@ -13,6 +13,7 @@ import { Mirage } from 'ldrs/react'; // For the preloader
 import 'ldrs/react/Mirage.css'; // Styles for the preloader
 
 
+import { metadata } from './metadata'; // Import the metadata object
 export const geistSans = Geist({
   variable: '--font-geist-sans',
   subsets: ['latin'],
@@ -38,8 +39,9 @@ export default function RootLayout({
   return (
     <html lang="bg">
       <head>
+ <title>{String(metadata.title)}</title> {/* Set the title from metadata */}
         <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+ <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         {/* 
