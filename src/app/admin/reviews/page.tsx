@@ -170,7 +170,7 @@ export default function AdminReviewsPage() {
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6 flex items-center">
-        <MessageSquareText className="mr-3 h-8 w-8 text-primary"/>
+        <MessageSquare className="mr-3 h-8 w-8 text-primary"/>
         Админ - Управление на Отзиви
       </h1>
       {reviews.length === 0 ? (
