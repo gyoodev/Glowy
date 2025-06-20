@@ -37,11 +37,10 @@ export default function RootLayout({
 
   return (
     <html lang="bg">
- <head>
- <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
- <link rel="icon" href="/favicon/icon.svg" type="image/svg+xml" />
- <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
- </head>
+      <head>
+        <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         {/* 
           The preloader was here. If you still want a preloader for initial page load
@@ -55,9 +54,9 @@ export default function RootLayout({
        </div> */}
 
         <ClientLayoutContent>
- <main className="flex-1 bg-background">
- {children}
- </main>
+          <main className="flex-1 bg-background">
+            {children}
+          </main>
         </ClientLayoutContent>
         <Footer />
         <Toaster />
