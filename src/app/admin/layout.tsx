@@ -25,7 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet'; 
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; 
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -212,14 +212,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="flex flex-col">
+                <SheetHeader className="mb-4 border-b pb-4">
+                  <SheetTitle>
+                    <Link
+                      href="/admin"
+                      className="flex items-center gap-2 text-lg font-semibold"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <AppIcon className="h-6 w-6 text-primary" />
+                      <span>Glaura Админ</span>
+                    </Link>
+                  </SheetTitle>
+                </SheetHeader>
                 <nav className="grid gap-2 text-lg font-medium">
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-2 text-lg font-semibold mb-4"
-                  >
-                    <AppIcon className="h-6 w-6 text-primary" />
-                    <span>Glaura Админ</span>
-                  </Link>
                   {navItems.map((item) => (
                     <Link
                       key={item.label}
