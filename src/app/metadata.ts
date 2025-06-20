@@ -1,3 +1,12 @@
+export async function generateMetadata() {
+  return {
+    title: 'Намерете Салон за Красота близо до Вас - Glaura ✨',
+    description: 'Открийте най-добрите салони за красота, услуги и резервирайте час онлайн с Glaura ✨.',
+    keywords: 'салони за красота, резервации онлайн, фризьор, маникюр, козметика',
+  };
+}
+
+
 
 export const metadata = {
   title: 'Glaura ✨',

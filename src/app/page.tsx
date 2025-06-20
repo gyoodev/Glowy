@@ -25,14 +25,6 @@ const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
 
-export async function generateMetadata() {
-  return {
-    title: 'Намерете Салон за Красота близо до Вас - Glowy ✨',
-    description: 'Открийте най-добрите салони за красота, услуги и резервирайте час онлайн с Glowy ✨.',
-    keywords: 'салони за красота, резервации онлайн, фризьор, маникюр, козметика',
-  };
-}
-
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
