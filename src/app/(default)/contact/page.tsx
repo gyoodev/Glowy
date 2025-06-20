@@ -15,6 +15,15 @@ import { firestore as db } from '@/lib/firebase'; // Import initialized Firestor
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
 
+// Metadata for the contact page 
+export async function generateMetadata() {
+  return {
+    title: 'Свържете се с нас - Glaura', // Use your actual site name
+    description: 'Имате въпроси или предложения? Свържете се с Glaura чрез нашата форма за контакт.', // Use your actual site name
+    keywords: 'контакт, запитване, форма за контакт, връзка с нас, имейл', // Add relevant keywords
+  };
+}
+
 // Zod schema for the contact form
 const contactFormSchema = z.object({
   name: z.string().min(2, { message: "Името трябва да е поне 2 символа." }),
@@ -68,7 +77,7 @@ export default function ContactPage() {
 
   // Render the contact form
   return (
-    <div className="container mx-auto py-10 px-6">
+    <div className="container mx-auto py-10 px-6 space-y-10">
       <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader className="text-center">
           <CardTitle className="text-3xl font-bold flex items-center justify-center">
@@ -151,6 +160,19 @@ export default function ContactPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Static Business Information Section */}
+      <section className="max-w-2xl mx-auto text-center space-y-4">
+        <h2 className="text-2xl font-semibold">Намерете ни</h2>
+        <address className="not-italic text-muted-foreground">
+          <p>Вашият Адрес Тук</p>
+          <p>Вашият Град, Вашият Пощенски Код</p>
+          <p>Вашата Държава</p>
+        </address>
+        <p className="text-muted-foreground">Телефон: <a href="tel:+YOUR_PHONE_NUMBER">+ВАШИЯТ ТЕЛЕФОНЕН НОМЕР</a></p>
+        <p className="text-muted-foreground">Имейл: <a href="mailto:YOUR_EMAIL_ADDRESS">ВАШИЯТ ИМЕЙЛ АДРЕС</a></p>
+        {/* You can add a map embed here if you have one */}
+      </section>
     </div>
   );
 }

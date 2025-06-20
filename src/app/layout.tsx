@@ -72,11 +72,15 @@ export async function generateMetadata() {
     alternates: {
       canonical: canonicalUrlLink,
     },
-    // Add other metadata fields as needed, e.g., icons
-    // icons: {
-    //   icon: '/favicon.ico', // Example
-    //   apple: '/apple-touch-icon.png', // Example
-    // },
+    robots: {
+      index: true,
+      follow: true,
+    },
+    icons: {
+      icon: '/favicon/favicon.ico', // Standard favicon
+      shortcut: '/favicon/favicon.ico', // Shortcut icon for older browsers
+      apple: '/favicon/apple-touch-icon.png', // Apple touch icon
+    },
   };
 }
 
@@ -93,6 +97,11 @@ export default function RootLayout({
 
   return (
     <html lang="bg">
+ <head>
+ <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
+ <link rel="icon" href="/favicon/icon.svg" type="image/svg+xml" />
+ <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+ </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         {/* 
           The preloader was here. If you still want a preloader for initial page load
