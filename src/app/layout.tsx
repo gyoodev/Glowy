@@ -49,8 +49,7 @@ export default function RootLayout({
           and manage its visibility state. The metadata fetching doesn't cause a delay here anymore.
         */}
         {/* <div className="flex flex-col items-center justify-center min-h-screen w-full bg-white/80 backdrop-blur-md fixed inset-0 z-50">
-           <Mirage size="60" speed="2.5" color="hsl(var(--primary))" />
-          <div className="mt-4 text-2xl font-bold" style={{ color: 'hsl(var(--primary))' }}>
+          <Mirage size="60" speed="2.5" color="hsl(var(--primary))" />
              Glaura ✨
           </div>
        </div> */}
@@ -59,7 +58,6 @@ export default function RootLayout({
         </ClientLayoutContent>
 
         <main className="flex-1 bg-background">
-          {children}
         </main>
         <Footer />
         <Toaster />
