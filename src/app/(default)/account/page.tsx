@@ -350,12 +350,23 @@ service cloud.firestore {
       allow create: if request.auth != null;
     }
     match /bookings/{bookingId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read, write: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow create: if request.auth != null;
+      allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
      match /reviews/{reviewId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null;
+      allow read: if true; // Anyone can read reviews
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId; // User can create their own review
+      allow update: if request.auth != null && (
+                       (request.auth.uid == resource.data.userId && request.resource.data.keys().hasOnly(['comment', 'rating'])) || // User can update their own comment/rating
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' // Admin can update anything
+                     );
+      allow delete: if request.auth != null && (
+                       request.auth.uid == resource.data.userId || // User can delete their own review
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' // Admin can delete any review
+                     );
+      // Admin list access for all reviews
+      allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /salons/{salonId} {
       allow read: if true;
@@ -376,11 +387,11 @@ service cloud.firestore {
       allow read, list, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /counters/{counterName} {
-        allow read, write: if request.auth != null;
+        allow read, write: if request.auth != null; // Consider more specific rules if needed
     }
     match /settings/{settingId} {
-      allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if true; // Publicly readable settings
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can write
     }
   }
 }`}
@@ -571,5 +582,3 @@ service cloud.firestore {
     </div>
   );
 }
-
-    

@@ -19,7 +19,8 @@ import {
   CreditCard,
   Menu,
   PanelLeft, 
-  Sparkles as AppIcon
+  Sparkles as AppIcon,
+  MessageSquareText, // Added for Reviews
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { href: '/admin/users', label: 'Потребители', icon: Users },
   { href: '/admin/business', label: 'Бизнеси', icon: Briefcase },
   { href: '/admin/bookings', label: 'Резервации', icon: CalendarCheck },
+  { href: '/admin/reviews', label: 'Отзиви', icon: MessageSquareText }, // Added Reviews
   { href: '/admin/contacts', label: 'Запитвания', icon: Mail },
   { href: '/admin/newsletter', label: 'Бюлетин', icon: Newspaper },
   { href: '/admin/payments', label: 'Плащания', icon: CreditCard },
@@ -123,7 +125,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   if (isLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
-        <p className="text-lg">Glowy - Зареждане на административен панел...</p>
+        <p className="text-lg">Glaura - Зареждане на административен панел...</p>
       </div>
     );
   }
@@ -153,7 +155,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 !isDesktopSidebarOpen && "sr-only"
               )}
             >
-              Glowy Админ
+              Glaura Админ
             </h1>
             <nav className="space-y-1">
               {navItems.map((item) => (
@@ -216,7 +218,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     className="flex items-center gap-2 text-lg font-semibold mb-4"
                   >
                     <AppIcon className="h-6 w-6 text-primary" />
-                    <span>Glowy Админ</span>
+                    <span>Glaura Админ</span>
                   </Link>
                   {navItems.map((item) => (
                     <Link
