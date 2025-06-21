@@ -9,7 +9,7 @@ import { Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 // sendReviewReminderEmail is not used here anymore
 
-interface BookingCalendarProps {
+export interface BookingCalendarProps {
   salonName: string;
   serviceName?: string;
   availability?: Record<string, string[]>; // Date string -> array of time slots "HH:mm"
