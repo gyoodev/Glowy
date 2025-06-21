@@ -6,6 +6,7 @@ import Link from 'next/link'; // Keep Link for general use
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'; // Added useMemo
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
+import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
@@ -14,8 +15,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
 // Add TabsTrigger here
-import { TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs'; // Moved TabsContent and TabsList here
-import { Tabs } from '@/components/ui/tabs'; // Keep this import for Tabs component
 // Static import of BookingCalendar
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
@@ -23,9 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
 import { bg } from 'date-fns/locale'; // Keep date-fns locale import
 
-// Define the expected type for the dynamically imported component
-// Dynamically import components
-const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), {
+const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), { // Moved TabsContent and TabsList here // Keep this import for Tabs component // Static import of BookingCalendar
   loading: () => <Skeleton className="h-40 w-full rounded-lg" />,
  });
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
