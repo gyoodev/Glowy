@@ -1,16 +1,15 @@
 
 'use client';
+import dynamic from 'next/dynamic';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from 'next/link'; // Keep Link for general use
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'; // Added useMemo
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
-import AddReviewForm from '@/components/salon/AddReviewForm';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
-import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
@@ -24,6 +23,20 @@ import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
 import { bg } from 'date-fns/locale';
+import { startAfter } from 'firebase/firestore';
+
+// Dynamically import components
+const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), {
+  loading: () => <Skeleton className="h-40 w-full" />,
+});
+const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
+  loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
+});
+const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
+  // Consider a more specific skeleton for calendar if needed
+  loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
+});
+
 import { mapSalon } from '@/utils/mappers';
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -123,6 +136,8 @@ export default function SalonProfilePage() {
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [lastVisibleReview, setLastVisibleReview] = useState<any>(null); // State to hold the last document snapshot
+  const [hasMoreReviews, setHasMoreReviews] = useState(true); // State to track if there are more reviews
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
@@ -212,25 +227,109 @@ export default function SalonProfilePage() {
     };
   }, [plainSlug, firestore, toast, params]); // params is included for the conditional toast logic
 
+  const fetchSalonReviews = async (salonId: string, startAfterDoc: any = null) => {
+    if (!salonId) return;
+    setIsLoadingReviews(true);
+    try {
+      const reviewsCollectionRef = collection(firestore, 'reviews');
+      let q = query(
+        reviewsCollectionRef,
+        where('salonId', '==', salonId),
+        orderBy('date', 'desc'),
+        limit(10)
+      );
+
+      if (startAfterDoc) {
+        q = query(
+          reviewsCollectionRef,
+          where('salonId', '==', salonId),
+          orderBy('date', 'desc'),
+          startAfter(startAfterDoc), // Start fetching after the last document
+          limit(10)
+        );
+      }
+
+      const querySnapshot = await getDocs(q);
+      const reviewsData = querySnapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      })) as Review[];
+
+      // Update last visible document
+      if (querySnapshot.docs.length > 0) {
+        setLastVisibleReview(querySnapshot.docs[querySnapshot.docs.length - 1]);
+      } else {
+        setLastVisibleReview(null); // No documents returned
+      }
+
+      // Check if there are potentially more reviews
+      setHasMoreReviews(querySnapshot.docs.length === 10);
+
+      if (startAfterDoc) {
+        // Append to existing reviews if loading more
+        setDisplayedReviews(prevReviews => [...prevReviews, ...reviewsData]);
+      } else {
+        // Replace reviews for the first load
+        setDisplayedReviews(reviewsData);
+      }
+
+      // Recalculate average rating and count only if this is the initial load or the total set has changed
+      // A more accurate way is to get the total count from the salon document and calculate,
+      // but this is simpler for displaying based on fetched reviews.
+      // For simplicity here, let's recalculate based on all displayed reviews after appending.
+       if (startAfterDoc) {
+            // Recalculate based on the combined list
+            const totalDisplayed = [...displayedReviews, ...reviewsData]; // Use the combined list
+            if (totalDisplayed.length > 0) {
+                const totalRating = totalDisplayed.reduce((acc, rev) => acc + rev.rating, 0);
+                const newAverageRating = totalRating / totalDisplayed.length;
+                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: totalDisplayed.length }) : null);
+            } else {
+                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
+            }
+       } else {
+            // Recalculate for the first batch
+            if (reviewsData.length > 0) {
+                const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
+                const newAverageRating = totalRating / reviewsData.length;
+                setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: reviewsData.length }) : null);
+            } else {
+                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
+            }
+       }
+
+    } catch (error) {
+      console.error("[SalonProfilePage] Error fetching salon reviews:", error);
+      if (!startAfterDoc) {
+         setDisplayedReviews([]);
+      }
+      setHasMoreReviews(false); // Assume no more reviews on error
+    } finally {
+      setIsLoadingReviews(false);
+    }
+  };
+
+   const fetchMoreReviews = useCallback(async () => {
+        if (!salon?.id || isLoadingReviews || !lastVisibleReview) return;
+        await fetchSalonReviews(salon.id, lastVisibleReview);
+    }, [salon?.id, isLoadingReviews, lastVisibleReview]);
+
   useEffect(() => {
     const fetchUserRoleAndCheckOwnership = async () => {
       if (!auth.currentUser || !salon) {
         setUserRole(null);
         setIsSalonOwner(false);
-        setIsFavorite(false); // Reset favorite status if no user or salon
+        setIsFavorite(false);
+        setUserProfile(null); // Reset user profile state
         return;
       }
       try {
         const userProfileData = await getUserProfile(auth.currentUser.uid);
-        setUserProfile(userProfileData); 
+        setUserProfile(userProfileData);
         if (userProfileData) {
           setUserRole(userProfileData.role || null);
           setIsSalonOwner(salon.ownerId === auth.currentUser.uid);
           setIsFavorite(userProfileData.preferences?.favoriteSalons?.includes(salon.id) || false);
-        } else {
-          setUserRole(null);
-          setIsSalonOwner(false);
-          setIsFavorite(false);
         }
       } catch (error) {
         console.error("[SalonProfilePage] Error fetching user role or checking ownership:", error);
@@ -239,33 +338,8 @@ export default function SalonProfilePage() {
         setIsFavorite(false);
       }
     };
-
-    const fetchSalonReviews = async () => {
-      if (!salon?.id) return;
-      setIsLoadingReviews(true);
-      try {
-        const reviewsCollectionRef = collection(firestore, 'reviews');
-        const q = query(reviewsCollectionRef, where('salonId', '==', salon.id), orderBy('date', 'desc'), limit(10)); // Limit to 10 reviews
-        const querySnapshot = await getDocs(q);
-        const reviewsData = querySnapshot.docs.map(docSnap => ({
-          id: docSnap.id,
-          ...docSnap.data()
-        })) as Review[];
-        setDisplayedReviews(reviewsData);
-
-        if (reviewsData.length > 0) {
-            const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
-            const newAverageRating = totalRating / reviewsData.length;
-            setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: reviewsData.length }) : null);
-        } else {
-             setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
-        }
-      } catch (error) {
-        console.error("[SalonProfilePage] Error fetching salon reviews:", error);
-        setDisplayedReviews([]);
-      } finally {
-        setIsLoadingReviews(false);
-      }
+    if(salon?.id) {
+       fetchSalonReviews(salon.id); // Fetch initial reviews on salon load
     };
 
     if(salon) {
@@ -273,7 +347,7 @@ export default function SalonProfilePage() {
       fetchSalonReviews();
     }
   }, [salon?.id, firestore]); 
-
+ // Depend on salon.id and firestore. Removed displayedReviews as it caused unnecessary refetches.
 
   const fetchUserReviews = async () => {
     if (!auth.currentUser || !salon?.id) {
@@ -411,13 +485,13 @@ export default function SalonProfilePage() {
       return;
     }
 
+ const localSelectedService = selectedService;
     const bookingSalonName = salon.name;
     const bookingServiceName = selectedService.name;
     const bookingDate = new Date(selectedBookingDate);
     const bookingTime = selectedBookingTime;
- const bookingDuration = localSelectedService.duration;
- const bookingPrice = localSelectedService.price;
-    const localSelectedService = selectedService;
+ const bookingDuration = selectedService.duration;
+ const bookingPrice = selectedService.price;
 
     let clientName = auth.currentUser.displayName || 'Клиент';
     let clientEmail = auth.currentUser.email || 'Няма имейл';
@@ -883,6 +957,17 @@ export default function SalonProfilePage() {
                   ) : (
                     <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                   )}
+
+                  {/* Load More Button */}
+                  {hasMoreReviews && !isLoadingReviews && displayedReviews.length > 0 && (
+                    <div className="mt-6 text-center">
+                      <Button
+                        onClick={fetchMoreReviews}
+                      >
+                        Зареди още отзиви
+                      </Button>
+                    </div>
+                  )}
                    {auth.currentUser && (
                       <div className="mt-6">
                       {showReviewForm ? (
@@ -917,22 +1002,9 @@ export default function SalonProfilePage() {
                 </TabsContent>
                 <TabsContent value="gallery" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                    <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                    <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Фото Галерия
+                    <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Галерия
                   </h2>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                      {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
-                          <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                              {/* Corrected usage of next/image */}
-                          <Image
-                            src={photo}
-                            alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")}
-                            width={300} // Provide appropriate width and height based on your design
-                            height={300}
-                            objectFit="cover"
-                          />
-                          </div>
-                      )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
-                  </div>
+                   <SalonGallery photos={salon.photos || []} salonName={salon.name || ''} salonCity={salon.city || ''} />
                 </TabsContent>
               </Tabs>
             </div> {/* End Main content area */}

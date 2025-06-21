@@ -26,6 +26,20 @@ export default async function handler(
   }
 }
 
+export function createTransport() {
+ // Configure the transporter using environment variables
+ const transporter = nodemailer.createTransport({
+ host: process.env.SMTP_HOST,
+ port: parseInt(process.env.SMTP_PORT || '587', 10), // Default to 587 if not set
+ secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+ auth: {
+ user: process.env.SMTP_USER,
+ pass: process.env.SMTP_PASS,
+ },
+ });
+ return transporter;
+}
+
 function createTransport() {
  // Configure the transporter using environment variables
  const transporter = nodemailer.createTransport({
