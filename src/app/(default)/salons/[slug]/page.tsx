@@ -20,11 +20,13 @@ import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/fire
 import { TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { startAfter } from 'firebase/firestore';
+import type { BookingCalendarProps } from '@/components/booking/booking-calendar'; // Import the props type
 
+// Define the expected type for the dynamically imported component
 // Dynamically import components
 const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), {
   loading: () => <Skeleton className="h-40 w-full" />,
@@ -33,8 +35,9 @@ const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
   loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
 });
 const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
-  // Explicitly import the default export
-  loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
+  // Explicitly import the default export and provide a loader type
+  // Use a simple div or a more specific skeleton if needed for the calendar
+  loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
 });
 
 import { mapSalon } from '@/utils/mappers';

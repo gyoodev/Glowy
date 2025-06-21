@@ -267,9 +267,9 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" aria-label="Смяна на тема">
                   {themeSetting === 'dark' ? (
-                    <Moon className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="h-5 w-5 rotate-0 scale-100 transition-all text-gray-200 dark:text-gray-200" />
                   ) : themeSetting === 'light' ? (
-                    <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Sun className="h-5 w-5 rotate-0 scale-100 transition-all text-yellow-500 dark:text-yellow-500" />
                    ) : (
                       isMobileView ? <Smartphone className="h-5 w-5" /> : <Laptop className="h-5 w-5" />
                     )}
