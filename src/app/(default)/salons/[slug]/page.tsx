@@ -612,7 +612,8 @@ export default function SalonProfilePage() {
                     variant: "default",
                     duration: 7000,
                 });
-            } else {
+            } else {;
+ // Keep the semicolon here after the closing brace of the if block
               let errorMessage = `Неуспешно изпращане на покана за отзив на ${userEmailForReminder}.`;
                if (!reminderResponse.ok) {
  if (reminderResponse.status === 429) {
@@ -624,7 +625,8 @@ export default function SalonProfilePage() {
 
                 console.warn("Reminder email not sent:", errorMessage);
                  toast({
-                    title: "Проблем с изпращане на покана",
+ // Corrected the title and description
+ title: "Грешка при изпращане на покана",
                     description: errorMessage, // Use the dynamically generated error message
                     variant: "default",
                 });
@@ -632,7 +634,8 @@ export default function SalonProfilePage() {
           } catch (emailError) {;
             console.error("[SalonProfilePage] Error sending review reminder email:", emailError);
             toast({
-                title: "Грешка при изпращане на покана за отзив",
+ // Corrected the title and description
+ title: "Грешка при изпращане на покана",
                 description: "Възникна грешка при опита за изпращане на покана за отзив по имейл.",
                 variant: "destructive",
             });
