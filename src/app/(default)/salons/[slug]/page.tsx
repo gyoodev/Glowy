@@ -1,6 +1,5 @@
 
 'use client';
-import dynamic from 'next/dynamic';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link'; // Keep Link for general use
@@ -17,12 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
 // Add TabsTrigger here
-import { TabsTrigger } from '@/components/ui/tabs';
+import { TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs'; // Moved TabsContent and TabsList here
 import { Button } from '@/components/ui/button';
 import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
-import { bg } from 'date-fns/locale';
 import { startAfter } from 'firebase/firestore';
 import type { BookingCalendarProps } from '@/components/booking/booking-calendar'; // Import the props type
 
@@ -35,13 +31,15 @@ const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
   loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
 });
 const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
-  // Explicitly import the default export and provide a loader type
-  // Use a simple div or a more specific skeleton if needed for the calendar
-  loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
+ loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
 }); 
 
-
+// Static import of BookingCalendar
+import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Keep Card imports
+import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
+import { bg } from 'date-fns/locale'; // Keep date-fns locale import
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
@@ -346,7 +344,7 @@ export default function SalonProfilePage() {
        fetchSalonReviews(salon.id); // Fetch initial reviews on salon load
     };
 
-    if(salon) {
+    if(salon?.id) { // Ensure salon.id exists before fetching related data
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews();
     }
