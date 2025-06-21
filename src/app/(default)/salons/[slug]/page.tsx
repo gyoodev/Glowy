@@ -625,10 +625,10 @@ export default function SalonProfilePage() {
                  toast({
                     title: "Проблем с изпращане на покана",
                     description: reminderResult.message,
-                    variant: "default",
+                    variant: "default",;
                 });
             }
-          } catch (emailError) {
+          } catch (emailError) {;
             console.error("[SalonProfilePage] Error sending review reminder email:", emailError);
             toast({
                 title: "Грешка при изпращане на покана за отзив",
