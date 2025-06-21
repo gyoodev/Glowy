@@ -9,34 +9,32 @@ import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWor
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
-import { Tabs, TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
 // Add TabsTrigger here
 import { TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs'; // Moved TabsContent and TabsList here
-import { Button } from '@/components/ui/button';
-import type { BookingCalendarProps } from '@/components/booking/booking-calendar'; // Import the props type
-
-// Define the expected type for the dynamically imported component
-// Dynamically import components
-const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), {
- loading: () => <Skeleton className="h-40 w-full rounded-lg" />,
-});
-const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
-  loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
-});
-const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
- loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
-}); 
-
+import { Tabs } from '@/components/ui/tabs'; // Keep this import for Tabs component
 // Static import of BookingCalendar
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Keep Card imports
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
 import { bg } from 'date-fns/locale'; // Keep date-fns locale import
+
+// Define the expected type for the dynamically imported component
+// Dynamically import components
+const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), {
+  loading: () => <Skeleton className="h-40 w-full rounded-lg" />,
+ });
+ const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
+   loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
+ });
+ const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
+  loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
+ }); 
+
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
