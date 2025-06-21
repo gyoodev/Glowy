@@ -31,9 +31,6 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
- const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
-  loading: () => <Skeleton className="w-full min-h-[300px] rounded-lg" />, // Increased min-height for a better skeleton
- }); 
 
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
