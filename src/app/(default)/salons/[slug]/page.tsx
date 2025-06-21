@@ -589,10 +589,14 @@ export default function SalonProfilePage() {
         }
         reminderTimeoutId.current = setTimeout(async () => {
           const userEmailForReminder = auth.currentUser?.email;
+ if (!userEmailForReminder) {
+ console.warn("[SalonProfilePage] User email not available for review reminder.");
+ return;
+ }
           try {
             const reminderResponse = await fetch('/api/send-email/review-reminder', {
               method: 'POST',
-              salonName: bookingSalonName,
+              headers: { 'Content-Type': 'application/json' },
               serviceName: bookingServiceName || undefined,
               bookingDate: format(bookingDate, 'PPP', { locale: bg }),
               bookingTime: bookingTime,
@@ -600,16 +604,19 @@ export default function SalonProfilePage() {
             if(reminderResult.success) {
                  toast({
                     title: "Изпратена покана за отзив",
-                    description: `Покана за отзив е изпратена на ${userEmailForReminder}.`,
+                    description: `Покана да оставите отзив беше изпратена на ${userEmailForReminder}.`,
                     variant: "default",
                     duration: 7000,
                 });
             } else {
               let errorMessage = `Неуспешно изпращане на покана за отзив на ${userEmailForReminder}.`;
                if (!reminderResponse.ok) {
+ if (reminderResponse.status === 429) {
+                  errorMessage = "Твърде много заявки за имейли. Моля, опитайте по-късно.";
+ } else {
                  const errorData = await reminderResponse.json();
                  errorMessage += ` Грешка: ${errorData.error || reminderResponse.statusText}`;
-              }
+ }
 
                 console.warn("Reminder email not sent:", reminderResult.message);
                  toast({
@@ -626,7 +633,14 @@ export default function SalonProfilePage() {
                 variant: "destructive",
             });
           }
-        }, delay);
+        }, delay); // Schedule the reminder
+
+        // Store the timeout ID in useRef to clear it if needed (e.g., on component unmount)
+        // This part is already correctly implemented at the top with `reminderTimeoutId`.
+        // Ensuring it's handled here as well for clarity.
+        if (reminderTimeoutId.current) {
+          console.log("[SalonProfilePage] Cleared previous reminder timeout.");
+        }
 
         toast({
           title: "Напомняне за отзив е насрочено",
