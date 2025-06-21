@@ -52,6 +52,23 @@ export default function ContactPage() {
         description: 'Благодарим Ви, че се свързахте с нас. Ще отговорим възможно най-скоро.',
       });
       form.reset();
+
+      // Send email notification to admin
+      try {
+        const response = await fetch('/api/send-email/contact-form-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        if (!response.ok) {
+          console.error('Failed to send contact form email notification', response.statusText);
+        }
+      } catch (emailError) {
+        console.error('Error sending contact form email notification:', emailError);
+      }
+
     } catch (error) {
       console.error("Error sending contact message:", error);
       toast({

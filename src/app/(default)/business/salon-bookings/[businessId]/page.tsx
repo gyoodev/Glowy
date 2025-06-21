@@ -152,6 +152,35 @@ export default function SalonBookingsPage() {
           relatedEntityId: bookingId,
         });
       }
+      
+      // Send email notification to client
+      if (booking.clientEmail && newStatus !== oldStatus) {
+        try {
+          const response = await fetch('/api/send-email/booking-status-change-client', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              clientEmail: booking.clientEmail,
+              clientName: booking.clientName || 'Клиент',
+              salonName: booking.salonName,
+              serviceName: booking.serviceName,
+              bookingDate: format(new Date(booking.date), 'dd.MM.yyyy', { locale: bg }),
+              bookingTime: booking.time,
+              newStatus: statusTranslations[newStatus],
+            }),
+          });
+
+          if (!response.ok) {
+            console.error('Failed to send booking status change email:', response.status, response.statusText);
+          } else {
+            console.log('Booking status change email sent successfully.');
+          }
+        } catch (emailError) {
+          console.error('Error sending booking status change email:', emailError);
+        }
+      }
 
     } catch (err) {
       console.error("Error updating booking status:", err);

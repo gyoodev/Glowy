@@ -93,6 +93,30 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const salonRef = adminDb.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
 
+      // Send email notification to admin
+      try {
+        const adminEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-email/new-payment-admin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            packageName: chosenPackage.name,
+            price: chosenPackage.price,
+            salonName: salonName, // Use the fetched salonName
+            businessId: businessId,
+            transactionId: transactionId,
+          }),
+        });
+
+        if (!adminEmailResponse.ok) {
+          console.error('Failed to send admin email notification for new payment:', await adminEmailResponse.text());
+        } else {
+          console.log('Admin email notification sent for new payment.');
+        }
+      } catch (emailError) {
+        console.error('Error sending admin email notification for new payment:', emailError);
+      }
       // Notify admins
       const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
       const adminUsersSnapshot = await adminUsersQuery.get();

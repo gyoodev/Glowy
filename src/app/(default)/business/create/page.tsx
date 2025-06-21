@@ -275,6 +275,25 @@ export default function CreateBusinessPage() {
       });
       await notifyAdminsOfNewSalon(data.name, docRef.id);
       router.push('/business/manage');
+
+      // Send email notification to admins about the new business
+      try {
+        const emailResponse = await fetch('/api/send-email/new-business-admin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            salonName: data.name,
+            salonId: docRef.id,
+          }),
+        });
+        if (!emailResponse.ok) {
+          console.error('Error sending new business email to admins:', emailResponse.statusText);
+        }
+      } catch (emailError) {
+        console.error('Error sending new business email to admins:', emailError);
+      }
     } catch (error: any) {
       console.error('Error creating business:', error);
       toast({

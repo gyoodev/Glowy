@@ -245,7 +245,7 @@ export default function SalonProfilePage() {
       setIsLoadingReviews(true);
       try {
         const reviewsCollectionRef = collection(firestore, 'reviews');
-        const q = query(reviewsCollectionRef, where('salonId', '==', salon.id), orderBy('date', 'desc'));
+        const q = query(reviewsCollectionRef, where('salonId', '==', salon.id), orderBy('date', 'desc'), limit(10)); // Limit to 10 reviews
         const querySnapshot = await getDocs(q);
         const reviewsData = querySnapshot.docs.map(docSnap => ({
           id: docSnap.id,
@@ -415,6 +415,8 @@ export default function SalonProfilePage() {
     const bookingServiceName = selectedService.name;
     const bookingDate = new Date(selectedBookingDate);
     const bookingTime = selectedBookingTime;
+ const bookingDuration = localSelectedService.duration;
+ const bookingPrice = localSelectedService.price;
     const localSelectedService = selectedService;
 
     let clientName = auth.currentUser.displayName || 'Клиент';
@@ -455,6 +457,58 @@ export default function SalonProfilePage() {
         title: "Резервацията е потвърдена!",
         description: "Успешно резервирахте " + bookingServiceName + " за " + format(bookingDate, 'PPP', { locale: bg }) + " в " + bookingTime + ".",
       });
+
+ // --- Start: Send Email Notifications ---
+      try {
+ // Fetch owner email for salon owner notification
+ const ownerProfile = await getUserProfile(salon.ownerId);
+ const ownerEmail = ownerProfile?.email;
+
+ // Email to Client
+ const clientEmailResponse = await fetch('/api/send-email/booking-created-client', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({
+          to: clientEmail,
+          clientName: clientName,
+          salonName: bookingSalonName,
+          serviceName: bookingServiceName,
+          bookingDate: format(bookingDate, 'PPP', { locale: bg }),
+          bookingTime: bookingTime,
+          bookingDuration: bookingDuration,
+          bookingPrice: bookingPrice,
+          salonAddress: salon.address,
+          salonPhoneNumber: salon.phoneNumber,
+ }),
+ });
+        if (!clientEmailResponse.ok) {
+ console.error(`[SalonProfilePage] Failed to send booking confirmation email to client: ${clientEmailResponse.status} ${clientEmailResponse.statusText}`);
+ }
+
+ // Email to Salon Owner (if email exists)
+ if (ownerEmail) {
+ const salonOwnerEmailResponse = await fetch('/api/send-email/booking-created-salon', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({
+            to: ownerEmail,
+            salonName: bookingSalonName,
+            serviceName: bookingServiceName,
+            bookingDate: format(bookingDate, 'PPP', { locale: bg }),
+            bookingTime: bookingTime,
+ clientName: clientName,
+ clientEmail: clientEmail,
+ clientPhoneNumber: clientPhoneNumber,
+ }),
+ });
+          if (!salonOwnerEmailResponse.ok) {
+ console.error(`[SalonProfilePage] Failed to send new booking email to salon owner: ${salonOwnerEmailResponse.status} ${salonOwnerEmailResponse.statusText}`);
+ }
+ }
+      } catch (emailError) {
+ console.error("[SalonProfilePage] Error sending booking emails:", emailError);
+ }
+ // --- End: Send Email Notifications ---
 
       const [hours, minutes] = bookingTime.split(':').map(Number);
       const bookingDateTime = new Date(bookingDate);
@@ -591,6 +645,35 @@ export default function SalonProfilePage() {
         });
       }
 
+ // --- Start: Send Email to Business Owner ---
+      if (salon.ownerId) {
+ try {
+ // Fetch the owner's email using their ID
+ const ownerProfile = await getUserProfile(salon.ownerId);
+ const ownerEmail = ownerProfile?.email;
+
+ if (ownerEmail) {
+ const emailResponse = await fetch('/api/send-email/new-review-business', {
+ method: 'POST',
+ headers: { 'Content-Type': 'application/json' },
+ body: JSON.stringify({
+              to: ownerEmail,
+              salonName: salon.name,
+              reviewerName: reviewerName,
+              rating: rating,
+              comment: comment,
+ }),
+ });
+ if (!emailResponse.ok) {
+ console.error(`[SalonProfilePage] Failed to send new review email: ${emailResponse.status} ${emailResponse.statusText}`);
+ }
+ }
+ } catch (emailError) {
+ console.error("[SalonProfilePage] Error sending new review email:", emailError);
+ }
+      }
+ // --- End: Send Email to Business Owner ---
+
       setShowReviewForm(false);
       // Show success toast only on successful submission
       toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив.", variant: "default" });
@@ -661,7 +744,7 @@ export default function SalonProfilePage() {
           alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
           layout="fill"
           objectFit="cover"
-          priority
+          priority={true} // Use boolean true for priority
           data-ai-hint="salon facade building"
         />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -839,7 +922,14 @@ export default function SalonProfilePage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {(salon.photos && salon.photos.length > 0) ? salon.photos.map((photo, index) => (
                           <div key={index} className="relative aspect-square rounded-lg overflow-hidden shadow-md hover:scale-105 transition-transform duration-300">
-                              <Image src={photo} alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")} layout="fill" objectFit="cover" data-ai-hint="salon style haircut" />
+                              {/* Corrected usage of next/image */}
+                          <Image
+                            src={photo}
+                            alt={"Снимка " + (index + 1) + " от галерията на " + salon.name + (salon.city ? " в " + salon.city : "")}
+                            width={300} // Provide appropriate width and height based on your design
+                            height={300}
+                            objectFit="cover"
+                          />
                           </div>
                       )) : <p className="text-muted-foreground col-span-full text-center">Няма добавени снимки в галерията.</p> }
                   </div>
