@@ -613,8 +613,8 @@ export default function SalonProfilePage() {
                     duration: 7000,
                 });
             } else {;
- // Keep the semicolon here after the closing brace of the if block
               let errorMessage = `Неуспешно изпращане на покана за отзив на ${userEmailForReminder}.`;
+
                if (!reminderResponse.ok) {
  if (reminderResponse.status === 429) {
                   errorMessage = "Твърде много заявки за имейли. Моля, опитайте по-късно.";
@@ -631,7 +631,8 @@ export default function SalonProfilePage() {
                     variant: "default",
                 });
             }
-          } catch (emailError) {;
+ }
+ } catch (emailError) {
             console.error("[SalonProfilePage] Error sending review reminder email:", emailError);
             toast({
  // Corrected the title and description
