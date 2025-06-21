@@ -625,7 +625,7 @@ export default function SalonProfilePage() {
                  toast({
                     title: "Проблем с изпращане на покана",
                     description: reminderResult.message,
-                    variant: "default",;
+                    variant: "default",
                 });
             }
           } catch (emailError) {
