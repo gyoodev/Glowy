@@ -10,6 +10,7 @@ import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
+import { Button } from '@/components/ui/button';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +19,7 @@ import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Keep Card imports
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
+import { Badge } from '@/components/ui/badge';
 import { bg } from 'date-fns/locale'; // Keep date-fns locale import
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
