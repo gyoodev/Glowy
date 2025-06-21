@@ -336,7 +336,7 @@ export default function SalonProfilePage() {
     if(salon?.id) { // Ensure salon.id exists before fetching related data
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews(salon.id);
-    }
+    };
   }, [salon?.id, firestore]); 
  // Depend on salon.id and firestore. Removed displayedReviews as it caused unnecessary refetches.
 
@@ -600,8 +600,8 @@ export default function SalonProfilePage() {
               serviceName: bookingServiceName || undefined,
               bookingDate: format(bookingDate, 'PPP', { locale: bg }),
               bookingTime: bookingTime,
-              salonId: salon.id, // Include salonId
-              userId: auth.currentUser?.uid // Include userId
+              salonId: salon.id, // Include salonId 
+              userId: auth.currentUser?.uid // Include userId;
             }); // Added closing parenthesis here
 
             if(reminderResponse.ok) {
@@ -625,7 +625,7 @@ export default function SalonProfilePage() {
                  toast({
                     title: "Проблем с изпращане на покана",
                     description: reminderResult.message,
-                    variant: "default",
+                    variant: "default",;
                 });
             }
           } catch (emailError) {
