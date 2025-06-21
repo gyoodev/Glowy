@@ -7,22 +7,22 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'; // Ad
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
 import dynamic from 'next/dynamic';
-import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
-// Add TabsTrigger here
-// Static import of BookingCalendar
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Keep Card imports
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
 import { bg } from 'date-fns/locale'; // Keep date-fns locale import
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
-const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), { // Moved TabsContent and TabsList here // Keep this import for Tabs component // Static import of BookingCalendar
+
+const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), { 
   loading: () => <Skeleton className="h-40 w-full rounded-lg" />,
  });
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
@@ -303,7 +303,7 @@ export default function SalonProfilePage() {
    const fetchMoreReviews = useCallback(async () => {
         if (!salon?.id || isLoadingReviews || !lastVisibleReview) return;
         await fetchSalonReviews(salon.id, lastVisibleReview);
-    }, [salon?.id, isLoadingReviews, lastVisibleReview]);
+    }, [salon?.id, isLoadingReviews, lastVisibleReview, fetchSalonReviews]);
 
   useEffect(() => {
     const fetchUserRoleAndCheckOwnership = async () => {
@@ -335,7 +335,7 @@ export default function SalonProfilePage() {
 
     if(salon?.id) { // Ensure salon.id exists before fetching related data
       fetchUserRoleAndCheckOwnership();
-      fetchSalonReviews();
+      fetchSalonReviews(salon.id);
     }
   }, [salon?.id, firestore]); 
  // Depend on salon.id and firestore. Removed displayedReviews as it caused unnecessary refetches.
