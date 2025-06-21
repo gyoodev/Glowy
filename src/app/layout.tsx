@@ -38,10 +38,10 @@ export default function RootLayout({
 
   return (
     <html lang="bg">
-      <head>
- <title>{String(metadata.title)}</title> {/* Set the title from metadata */}
+ <head>
+        <title>{String(metadata.title)}</title> {/* Set the title from metadata */}
         <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
- <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         {/* 

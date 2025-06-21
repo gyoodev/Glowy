@@ -76,12 +76,14 @@ export default function AdminUsersPage() {
     const functions = getFunctions();
     const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
 
+    // Ensure isSubmitting is true while the async operation is in progress
+    setIsSubmitting(true);
+
     try {
       const result = await deleteUserAdminFunction({ uid: userId });
       console.log(`[AdminUsersPage] Cloud Function 'deleteUserAdmin' result for UID ${userId}:`, result);
 
       toast({ title: "Успех", description: "Потребителят е изтрит успешно." });
-      console.log(`[AdminUsersPage] User ${userId} deleted successfully. Fetching updated user list.`);
       await fetchUsers();
     } catch (err: any) {
       console.error(`[AdminUsersPage] Error deleting user UID ${userId}:`, err);
@@ -89,25 +91,24 @@ export default function AdminUsersPage() {
       let errorTitle = "Грешка при изтриване";
 
       if (err.code === 'functions/internal') {
+        // Specific handling for internal function errors
         errorTitle = "Сървърна грешка при изтриване";
         errorMessage = `Възникна вътрешна грешка във Firebase Cloud Function 'deleteUserAdmin'. Моля, проверете логовете на функцията във Вашата Firebase конзола за повече детайли. (Код: ${err.code})`;
         console.error("[AdminUsersPage] Firebase Cloud Function 'deleteUserAdmin' reported an internal error. Check Firebase console logs for the function.");
       } else if (err.code) {
+        // Include the Firebase Functions error code if available
         errorMessage += ` (Код: ${err.code})`;
       }
-      if (err.message && err.code !== 'functions/internal') { // Don't append generic message if we have a specific one
+      if (err.message && err.code !== 'functions/internal') { 
+        // Include the error message, but avoid duplication if we have a specific 'internal' message
         errorMessage += ` Съобщение: ${err.message}`;
       }
       if (err.details) {
+        // Include any additional details provided by the function error
         errorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
       }
 
-      toast({
-        title: errorTitle,
-        description: errorMessage,
-        variant: "destructive",
-        duration: 10000, // Longer duration for important errors
-      });
+      toast({ title: errorTitle, description: errorMessage, variant: "destructive", duration: 10000 });
     } finally {
       setIsSubmitting(false);
       console.log(`[AdminUsersPage] Finished delete process for UID: ${userId}. isSubmitting set to false.`);
