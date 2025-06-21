@@ -9,8 +9,7 @@ import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWor
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import { ReviewCard } from '@/components/salon/review-card'; // Keep this
-import { Tabs, TabsContent, TabsList } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,8 +17,6 @@ import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/fire
 // Add TabsTrigger here
 import { TabsTrigger, TabsContent, TabsList } from '@/components/ui/tabs'; // Moved TabsContent and TabsList here
 import { Button } from '@/components/ui/button';
-import { sendReviewReminderEmail } from '@/app/actions/notificationActions';
-import { startAfter } from 'firebase/firestore';
 import type { BookingCalendarProps } from '@/components/booking/booking-calendar'; // Import the props type
 
 // Define the expected type for the dynamically imported component
