@@ -600,11 +600,14 @@ export default function SalonProfilePage() {
               serviceName: bookingServiceName || undefined,
               bookingDate: format(bookingDate, 'PPP', { locale: bg }),
               bookingTime: bookingTime,
-            });
-            if(reminderResult.success) {
+              salonId: salon.id, // Include salonId
+              userId: auth.currentUser?.uid // Include userId
+            }); // Added closing parenthesis here
+
+            if(reminderResponse.ok) {
                  toast({
                     title: "Изпратена покана за отзив",
-                    description: `Покана да оставите отзив беше изпратена на ${userEmailForReminder}.`,
+                    description: `Покана да оставите отзив беше изпратена.`,
                     variant: "default",
                     duration: 7000,
                 });
@@ -618,7 +621,7 @@ export default function SalonProfilePage() {
                  errorMessage += ` Грешка: ${errorData.error || reminderResponse.statusText}`;
  }
 
-                console.warn("Reminder email not sent:", reminderResult.message);
+                console.warn("Reminder email not sent:", errorMessage);
                  toast({
                     title: "Проблем с изпращане на покана",
                     description: reminderResult.message,
