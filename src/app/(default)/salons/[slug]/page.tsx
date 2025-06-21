@@ -33,7 +33,7 @@ const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
   loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
 });
 const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
-  // Consider a more specific skeleton for calendar if needed
+  // Explicitly import the default export
   loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
 });
 
