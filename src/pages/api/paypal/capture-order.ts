@@ -93,6 +93,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const salonRef = adminDb.collection('salons').doc(businessId);
       await salonRef.update({ promotion: newPromotion });
 
+      // Fetch salon name for emails and notifications
+      const salonDoc = await salonRef.get();
+      const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
+
       // Send email notification to admin
       try {
         const adminEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-email/new-payment-admin`, {
@@ -121,8 +125,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
       const adminUsersSnapshot = await adminUsersQuery.get();
       if (!adminUsersSnapshot.empty) {
-        const salonDoc = await salonRef.get();
-        const salonName = salonDoc.exists ? salonDoc.data()?.name : 'Неизвестен салон';
         const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
         const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
           return adminDb.collection('notifications').add({
