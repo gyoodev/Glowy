@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sendEmail } from '../index'; // Assuming your sendEmail utility is here
-import EmailTemplate from '../emailTemplate'; // Assuming your email template is here
+import { sendEmail } from './index'; // Corrected path
+import EmailTemplate from './emailTemplate'; // Corrected path
 
 export default async function handler(
   req: NextApiRequest,

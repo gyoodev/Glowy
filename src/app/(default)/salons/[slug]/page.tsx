@@ -593,8 +593,9 @@ export default function SalonProfilePage() {
  console.warn("[SalonProfilePage] User email not available for review reminder.");
  return;
  }
+
           try {
-            const reminderResponse = await fetch('/api/send-email/review-reminder', {
+            const reminderResponse = await fetch('/api/send-email/review-reminder', { // Use a relative path
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               serviceName: bookingServiceName || undefined,
@@ -624,8 +625,8 @@ export default function SalonProfilePage() {
                 console.warn("Reminder email not sent:", errorMessage);
                  toast({
                     title: "Проблем с изпращане на покана",
-                    description: reminderResult.message,
-                    variant: "default",;
+                    description: errorMessage, // Use the dynamically generated error message
+                    variant: "default",
                 });
             }
           } catch (emailError) {;
@@ -635,7 +636,8 @@ export default function SalonProfilePage() {
                 description: "Възникна грешка при опита за изпращане на покана за отзив по имейл.",
                 variant: "destructive",
             });
-          }
+          } // Missing closing curly brace for the try block
+
         }, delay); // Schedule the reminder
 
         // Store the timeout ID in useRef to clear it if needed (e.g., on component unmount)
