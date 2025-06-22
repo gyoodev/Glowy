@@ -40,6 +40,9 @@ const createBusinessSchema = z.object({
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], {
     errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
   }),
+  workingMode: z.enum(['appointment_only', 'walk_in_only'], {
+    errorMap: () => ({ message: 'Моля, изберете начин на работа.' }),
+  }),
   services: z.array(
     z.object({
       id: z.string().optional(),
@@ -84,6 +87,7 @@ export default function CreateBusinessPage() {
       address: '',
       city: '',
       priceRange: 'moderate',
+      workingMode: 'appointment_only', // Default value
       services: [{ id: uuidv4(), name: '', description: '', price: 0, duration: 30 }],
       atmosphereForAi: '',
       targetCustomerForAi: '',
@@ -308,7 +312,9 @@ export default function CreateBusinessPage() {
     let isValid = false;
     if (currentStep === 1) {
       isValid = await form.trigger(["name", "address", "city", "priceRange"]);
-    } else if (currentStep === 2) {
+      // Add workingMode to validation trigger for Step 1
+      isValid = await form.trigger(["name", "address", "city", "priceRange", "workingMode"]);
+    } else if (currentStep === 2) { // Step 2 is now Services
       isValid = await form.trigger(["services"]);
     } else {
       isValid = true;
@@ -428,6 +434,27 @@ export default function CreateBusinessPage() {
                       </FormItem>
                     )}
                   />
+ <FormField
+ control={form.control}
+ name="workingMode"
+ render={({ field }) => (
+ <FormItem>
+ <FormLabel>Начин на работа</FormLabel>
+ <Select onValueChange={field.onChange} defaultValue={field.value}>
+ <FormControl>
+ <SelectTrigger>
+ <SelectValue placeholder="Изберете начин на работа" />
+ </SelectTrigger>
+ </FormControl>
+ <SelectContent>
+ <SelectItem value="appointment_only">Със записване на час</SelectItem>
+ <SelectItem value="walk_in_only">Без записване на час</SelectItem>
+ </SelectContent>
+ </Select>
+ <FormMessage />
+ </FormItem>
+ )}
+ />
                 </motion.div>
               )}
 

@@ -1036,13 +1036,15 @@ export default function SalonProfilePage() {
             </div> {/* End Main content area */}
 
           <aside className="lg:w-1/3 space-y-8 sticky top-20">
-             <div id="booking-calendar-section">
-              <BookingCalendar
-                salonName={salon.name}
-                serviceName={selectedService?.name}
-                availability={salon.availability || {}}
-                onTimeSelect={handleTimeSelected}
-              />
+            {/* Conditionally render Booking Calendar based on workingMode */}
+            {salon.workingMode === 'appointment_only' && (
+               <div id="booking-calendar-section">
+                <BookingCalendar
+                  salonName={salon.name}
+                  serviceName={selectedService?.name}
+                  availability={salon.availability || {}}
+                  onTimeSelect={handleTimeSelected}
+                />
             </div>
             
             {selectedService && selectedBookingDate && selectedBookingTime && (

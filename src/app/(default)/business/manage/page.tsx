@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Scissors, CalendarDays, Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import {
   BarChart,
@@ -283,6 +283,16 @@ export default function BusinessManagePage() {
                         <Button variant="default" size="sm" asChild>
                           <Link href={`/business/edit/${business.id}`}>
                             <Edit3 className="mr-2 h-4 w-4" /> Редактирай
+                          </Link>
+                        </Button>
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/business/manage/${business.id}/services`}>
+                            <Scissors className="mr-2 h-4 w-4" /> Услуги
+                          </Link>
+                        </Button>
+                         <Button variant="outline" size="sm" asChild>
+                          <Link href={`/business/manage/${business.id}/availability`}>
+                            <CalendarDays className="mr-2 h-4 w-4" /> Наличност
                           </Link>
                         </Button>
                         <Button variant="secondary" size="sm" asChild>

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import type { Salon } from '@/types';
+import type { Salon, BusinessStatus } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Search, ListOrdered, ShoppingBag } from 'lucide-react'; // Added ShoppingBag for no salons case
 import { allBulgarianCities, mockServices as allMockServices } from '@/lib/mock-data';
-import { format, isFuture } from 'date-fns';
+import { format, isFuture, parseISO } from 'date-fns'; // Import parseISO
+import { where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
 import NewPageSlider from '@/components/layout/NewPageSlider'; // Import the new slider
@@ -60,7 +61,7 @@ export default function SalonDirectoryPage() {
       setIsLoading(true);
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
-        const q = query(salonsCollectionRef, orderBy('name'));
+        const q = query(salonsCollectionRef, where('status', '==', 'approved' as BusinessStatus), orderBy('name'));
         
         const salonsSnapshot = await getDocs(q);
         let salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
@@ -111,7 +112,7 @@ export default function SalonDirectoryPage() {
     // Sorting logic
     if (sortOrder === 'rating_desc') {
       tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    } else if (sortOrder === 'rating_asc') {
+    } else if (sortOrder === 'rating_asc') { // Should be maxPrice_desc? Sorting logic seems inconsistent with comments
       tempSalons.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
     } else if (sortOrder === 'name_asc') {
       tempSalons.sort((a, b) => a.name.localeCompare(b.name));
@@ -120,8 +121,13 @@ export default function SalonDirectoryPage() {
     } else if (sortOrder === 'default') {
       // Default sort: Promoted first, then by rating (desc), then by name (asc)
       tempSalons.sort((a, b) => {
-        const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt && isFuture(new Date(a.promotion.expiresAt));
-        const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt && isFuture(new Date(b.promotion.expiresAt));
+        const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt ? isFuture(parseISO(a.promotion.expiresAt)) : false;
+        const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt ? isFuture(parseISO(b.promotion.expiresAt)) : false;
+
+        // Check for valid dates before comparing
+        const aRating = a.rating ?? 0;
+        const bRating = b.rating ?? 0;
+
         if (aIsPromoted && !bIsPromoted) return -1;
         if (!aIsPromoted && bIsPromoted) return 1;
         if ((b.rating ?? 0) !== (a.rating ?? 0)) return (b.rating ?? 0) - (a.rating ?? 0);
@@ -216,8 +222,8 @@ export default function SalonDirectoryPage() {
             </div>
           ) : filteredSalons.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredSalons.map(salon => (
-                <SalonCard key={salon.id} salon={salon} />
+              {filteredSalons.map(salon => ( // The SalonCard component will handle rendering the badge based on createdAt
+                <SalonCard key={salon.id} salon={salon} showNewBadgeWithinDays={7} newBadgeText="Нов в Glaura" showPromotedBadge={true} />
               ))}
             </div>
           ) : (
