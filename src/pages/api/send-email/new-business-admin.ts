@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createTransport } from './index'; // Assuming index.ts is in the same directory
 import { emailTemplate } from './emailTemplate'; // Assuming emailTemplate.ts is in the same directory
-import nodemailer, { SendMailOptions } from 'nodemailer';
+import nodemailer, { type SendMailOptions } from 'nodemailer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
