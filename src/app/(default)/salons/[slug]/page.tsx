@@ -829,8 +829,8 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-
-{/* The surrounding fragment was likely the issue */}
+    <>
+      {/* The surrounding fragment was likely the issue */}
     {salon && (
  <script 
  type="application/ld+json"
@@ -1045,7 +1045,7 @@ export default function SalonProfilePage() {
                   availability={salon.availability || {}}
                   onTimeSelect={handleTimeSelected}
                 />
-            </div>
+            </div>) }
             
             {/* Corrected the JSX structure for the conditional rendering */}
               <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
@@ -1083,7 +1083,8 @@ export default function SalonProfilePage() {
             )}
           </aside>
         </div>
-      </div>
-    </div> {/* Ensure this div is closed correctly */}
+     
+    </div> 
+    </>
   );
 }
