@@ -1,0 +1,1 @@
+export type BusinessStatus = 'pending_approval' | 'approved' | 'rejected';
