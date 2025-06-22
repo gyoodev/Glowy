@@ -195,7 +195,7 @@ export default function SalonsDirectoryPage() {
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="rounded-lg border bg-card shadow-sm animate-pulse overflow-hidden">
                   <Skeleton className="h-48 w-full" />
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-2" key={`skeleton-content-${i}`}> {/* Added key to inner div as well for safety */}
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-full" />
                     <Skeleton className="h-4 w-5/6" />
@@ -203,7 +203,7 @@ export default function SalonsDirectoryPage() {
                     <Skeleton className="h-4 w-1/3" />
                   </div>
                   <div className="p-4 pt-0">
-                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" key={`skeleton-button-${i}`} /> {/* Added key to inner div as well for safety */}
                   </div>
                 </div>
               ))}
@@ -211,7 +211,7 @@ export default function SalonsDirectoryPage() {
           ) : filteredSalons.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSalons.map(salon => (
-                <div key={salon.id} className="relative">
+                <div key={salon.id} className="relative"> {/* Added key prop with salon.id */}
                   <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap gap-2 justify-end">
                     {salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt)) && (
                       <Badge variant="default" className="bg-primary hover:bg-primary/80 flex items-center gap-1">
@@ -227,7 +227,7 @@ export default function SalonsDirectoryPage() {
                       <Badge variant="secondary" className="flex items-center gap-1">Нов в Glaura.eu</Badge>
                     )}
                   </div>
-                  <SalonCard salon={salon} />
+                  <SalonCard salon={salon} key={`salon-card-${salon.id}`} /> {/* Added key to SalonCard for safety */}
                 </div>
               ))}
             </div>

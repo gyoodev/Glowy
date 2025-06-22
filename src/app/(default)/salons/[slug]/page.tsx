@@ -829,15 +829,11 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-    <>
-      {/* The surrounding fragment was likely the issue */}
-      {/* Added the fragment here to wrap the conditional script and the main div */}
    {salon && (
  <script 
  type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
  /> )}
- {/* Added closing parenthesis and semicolon here, assuming this was the end of the script block */}
  <div className="bg-background">
  <Image
           src={salon.heroImage || 'https://placehold.co/1200x400.png'}
