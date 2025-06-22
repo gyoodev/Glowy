@@ -102,6 +102,7 @@ export default function SalonsDirectoryPage() {
         salon.services?.some(service => service.price <= filters.maxPrice)
       );
     }
+    tempSalons = tempSalons.filter(salon => salon.status === 'approved');
 
     if (sortOrder === 'rating_desc') {
       tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
