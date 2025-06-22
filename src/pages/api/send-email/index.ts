@@ -11,7 +11,7 @@ export default async function handler(
  console.log('Received a POST request to send email.');
 
  // Example usage of the transporter (replace with actual email sending logic)
- const transporter = createTransport();
+ const transporter = initTransport();
  // await transporter.sendMail({...});
 
  res.status(200).json({ message: 'Email endpoint reached successfully.' });
@@ -26,9 +26,9 @@ export default async function handler(
   }
 }
 
-export function createTransport() {
+export function initTransport() {
  // Configure the transporter using environment variables
- const transporter = nodemailer.createTransport({
+ const transporter = nodemailer.initTransport({
  host: process.env.SMTP_HOST,
  port: parseInt(process.env.SMTP_PORT || '587', 10), // Default to 587 if not set
  secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
