@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { createTransport } from './index'; // Assuming index.ts is in the same directory
 import { emailTemplate } from './emailTemplate'; // Assuming emailTemplate.ts is in the same directory
-import nodemailer from 'nodemailer';
+import nodemailer, { SendMailOptions } from 'nodemailer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Replace with your admin email address(es)
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@glaura.eu';
 
-    const mailOptions: nodemailer.SendMailOptions = {
+    const mailOptions: SendMailOptions = {
       from: process.env.SMTP_FROM || 'noreply@glaura.eu', // Replace with your sender email
       to: adminEmail,
       subject: 'Glaura: Нов Бизнес Регистриран',
