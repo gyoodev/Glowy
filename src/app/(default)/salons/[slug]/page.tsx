@@ -1057,7 +1057,7 @@ export default function SalonProfilePage() {
                   </div>
                   <div className="flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 text-primary" />
-                    <span className="font-medium">Дата:</span>&nbsp;{format(selectedBookingDate, "PPP", { locale: bg })}
+                    <span className="font-medium">Дата:</span>&nbsp;{selectedBookingDate ? format(selectedBookingDate, "PPP", { locale: bg }) : 'Дата не е избрана'}
                   </div>
                   <div className="flex items-center">
                     <Clock className="mr-2 h-4 w-4 text-primary" />
