@@ -829,10 +829,10 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-    <div className="bg-background">
+    <>
       {/* The surrounding fragment was likely the issue */}
       {/* Added the fragment here to wrap the conditional script and the main div */}
-   <> {salon && (
+   {salon && (
  <script 
  type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
@@ -1082,8 +1082,7 @@ export default function SalonProfilePage() {
             )}
           </aside>
         </div>
-      </div>
-      </> {/* Closing fragment */}
+      </div> {/* Closing fragment */}
     </div>
   );
 }
