@@ -1,21 +1,21 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createTransport } from './index'; // Assuming index.ts is in the same directory
-import { emailTemplate } from './emailTemplate'; // Assuming emailTemplate.ts is in the same directory
-import nodemailer, { type SendMailOptions } from 'nodemailer';
+import { initTransporter } from './index';
+import { emailTemplate } from './emailTemplate';
+import { type SendMailOptions } from 'nodemailer';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { businessDetails } = req.body; // Assuming business details are sent in the request body
+  const { businessDetails } = req.body;
 
   if (!businessDetails) {
     return res.status(400).json({ message: 'Missing businessDetails in request body' });
   }
 
   try {
-    const transporter = await createTransport();
+    const transporter = initTransporter();
 
     const emailBodyContent = `
       <h2>Нов Бизнес Регистриран</h2>
@@ -26,23 +26,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         <li>Имейл: ${businessDetails.email || 'Непосочен'}</li>
         <li>Телефон: ${businessDetails.phone || 'Непосочен'}</li>
         <li>Адрес: ${businessDetails.address || 'Непосочен'}</li>
-        </ul>
+      </ul>
       <p>Можете да прегледате пълните детайли в административния панел.</p>
     `;
 
     const buttonText = 'Прегледай Бизнеса';
-    const buttonLink = 'https://glaura.eu/admin/businesses'; // Replace with the actual admin link to businesses
+    const buttonLink = 'https://glaura.eu/admin/businesses';
 
     const emailHtml = emailTemplate
       .replace('{Текстът да е тук според вида имейл...... }', emailBodyContent)
       .replace('{ Бутон за съответната дейност ...}', buttonText)
-       .replace('href="https://glaura.eu"', `href="${buttonLink}"`); // Replace the placeholder button link
+      .replace('href="https://glaura.eu"', `href="${buttonLink}"`);
 
-    // Replace with your admin email address(es)
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@glaura.eu';
 
-    const mailOptions: any = {
-      from: process.env.SMTP_FROM || 'noreply@glaura.eu', // Replace with your sender email
+    const mailOptions: SendMailOptions = {
+      from: process.env.SMTP_FROM || 'noreply@glaura.eu',
       to: adminEmail,
       subject: 'Glaura: Нов Бизнес Регистриран',
       html: emailHtml,

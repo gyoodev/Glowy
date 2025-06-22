@@ -1,7 +1,6 @@
+import nodemailer, { Transporter } from 'nodemailer';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createTransport } from './index'; // Assuming createTransport is exported from index.ts
-import { emailTemplate } from './emailTemplate'; // Assuming emailTemplate is exported from emailTemplate.ts
-import nodemailer from 'nodemailer';
+import { emailTemplate } from './emailTemplate';
 
 export default async function handler(
   req: NextApiRequest,
@@ -11,16 +10,25 @@ export default async function handler(
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { paymentDetails } = req.body; // Expect payment details in the request body
+  const { paymentDetails } = req.body;
 
   if (!paymentDetails) {
     return res.status(400).json({ message: 'Missing payment details in request body' });
   }
 
   try {
-    const transporter = await createTransport();
+    const transporter: Transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-    // Define the specific content for the new payment email (for admins)
+    // emailContent, buttonText, etc. – everything remains the same...
+
     const emailContent = `
       <p>Получено е ново плащане.</p>
       <p>Детайли за плащането:</p>
@@ -34,53 +42,36 @@ export default async function handler(
       <p>Моля, проверете административния панел за повече информация.</p>
     `;
 
-    // Define button details (optional for this email type)
-    const buttonText = 'Виж плащанията в админ панела'; // Placeholder button text
-    const buttonUrl = 'https://glaura.eu/admin/payments'; // Placeholder button URL
+    const buttonText = 'Виж плащанията в админ панела';
+    const buttonUrl = 'https://glaura.eu/admin/payments';
 
-    // Replace placeholders in the HTML template
     let emailHtml = emailTemplate.replace(
       '{Текстът да е тук според вида имейл...... }',
       emailContent
     );
 
-    // Optionally include the button HTML if a button is desired
-    if (buttonText && buttonUrl) {
-      const buttonHtml = `<a href="${buttonUrl}" class="cta-button">${buttonText}</a>`;
-       emailHtml = emailHtml.replace(
-         '<a href="https://glaura.eu" class="cta-button">{ Бутон за съответната дейност ...}</a>',
-         buttonHtml
-       );
-    } else {
-       // Remove the button placeholder if no button is needed
-       emailHtml = emailHtml.replace(
-         '<a href="https://glaura.eu" class="cta-button">{ Бутон за съответната дейност ...}</a>',
-         ''
-       );
-    }
+    const buttonHtml = `<a href="${buttonUrl}" class="cta-button">${buttonText}</a>`;
+    emailHtml = emailHtml.replace(
+      '<a href="https://glaura.eu" class="cta-button">{ Бутон за съответната дейност ...}</a>',
+      buttonHtml
+    );
 
-
-    // Define admin email recipient (replace with your actual admin email address/es)
-    const adminEmail = process.env.ADMIN_EMAIL_RECIPIENT; // Use environment variable for admin email
-
+    const adminEmail = process.env.ADMIN_EMAIL_RECIPIENT;
     if (!adminEmail) {
-         console.error("ADMIN_EMAIL_RECIPIENT environment variable is not set.");
-         return res.status(500).json({ message: 'Admin recipient email not configured.' });
+      console.error('ADMIN_EMAIL_RECIPIENT is not set.');
+      return res.status(500).json({ message: 'Admin email not configured.' });
     }
 
-
-    const mailOptions = {
-      from: process.env.SMTP_FROM_EMAIL || '"Glaura Notifications" <noreply@glaura.eu>', // Replace with your desired sender email
-      to: adminEmail, // Send to the admin email address
-      subject: 'Ново плащане в Glaura', // Email subject
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM_EMAIL || '"Glaura Notifications" <noreply@glaura.eu>',
+      to: adminEmail,
+      subject: 'Ново плащане в Glaura',
       html: emailHtml,
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
 
     res.status(200).json({ message: 'New payment email sent to admin successfully' });
   } catch (error: any) {
-    console.error('Error sending new payment email to admin:', error);
-    res.status(500).json({ message: 'Failed to send new payment email to admin', error: error.message });
+    console.error('Error sending new payment email:', error);
+    res.status(500).json({ message: 'Failed to send new payment email', error: error.message });
   }
 }

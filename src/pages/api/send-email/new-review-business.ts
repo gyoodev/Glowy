@@ -1,23 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createTransport } from './index'; // Assuming createTransport is exported from index.ts
-import { emailTemplate } from './emailTemplate'; // Assuming emailTemplate is exported from emailTemplate.ts
-import type { Transporter } from 'nodemailer';
+import { createTransport, Transporter } from 'nodemailer';
+import { emailTemplate } from './emailTemplate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { businessEmail, reviewDetails } = req.body; // Expect business email and review details in the request body
+  const { businessEmail, reviewDetails } = req.body;
 
   if (!businessEmail || !reviewDetails) {
     return res.status(400).json({ message: 'Missing businessEmail or reviewDetails in request body' });
   }
 
   try {
-    const transporter: Transporter = createTransport();
+    const transporter: Transporter = createTransport({
+      host: process.env.SMTP_HOST,
+      port: Number(process.env.SMTP_PORT),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
-    // Define your email content here, using the reviewDetails
     const emailBody = `
       <p>Поздравления!</p>
       <p>Вашият салон получи нова оценка:</p>
@@ -30,17 +36,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     `;
 
     const buttonText = "Вижте оценките";
-    const buttonUrl = `https://glaura.eu/business/manage/reviews`; // Replace with the actual URL to the business reviews page
+    const buttonUrl = `https://glaura.eu/business/manage/reviews`;
 
     const htmlContent = emailTemplate
       .replace('{Текстът да е тук според вида имейл...... }', emailBody)
       .replace('{ Бутон за съответната дейност ...}', buttonText)
-      .replace('href="https://glaura.eu"', `href="${buttonUrl}"`); // Replace the default button link
+      .replace('href="https://glaura.eu"', `href="${buttonUrl}"`);
 
     await transporter.sendMail({
-      from: process.env.SMTP_USER, // Sender address from environment variables
-      to: businessEmail, // Business email address
-      subject: 'Получихте нова оценка за Вашия салон', // Email subject
+      from: process.env.SMTP_USER,
+      to: businessEmail,
+      subject: 'Получихте нова оценка за Вашия салон',
       html: htmlContent,
     });
 
