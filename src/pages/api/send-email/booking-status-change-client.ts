@@ -43,7 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.log(`Email sent to client ${clientEmail} for booking status change`);
     res.status(200).json({ message: 'Email sent successfully' });
   } catch (error) {
-    console.error('Error sending booking status change email to client:', error);
+    console.error('Error sending booking status change email to client:', error as any);
     res.status(500).json({ message: 'Error sending email', error: error.message });
   }
 }
