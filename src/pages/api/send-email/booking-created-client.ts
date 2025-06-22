@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createTransport } from './index'; // Assuming createTransport is exported from index.ts
+import { initTransporter } from './index'; // Assuming createTransport is exported from index.ts
 import { emailTemplate } from './emailTemplate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const transporter = createTransport();
+    const transporter = initTransporter();
 
     // --- Define email specific content and button ---
     const emailBody = `Здравей ${clientName},<br/><br/>Твоята резервация е успешно създадена. Ето подробности:<br/><br/>${JSON.stringify(bookingDetails, null, 2).replace(/\\n/g, '<br/>')}<br/><br/>Благодарим ти, че избра Glaura!`; // Placeholder content
