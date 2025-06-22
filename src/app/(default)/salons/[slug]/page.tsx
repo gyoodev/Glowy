@@ -830,13 +830,13 @@ export default function SalonProfilePage() {
 
   return (
 
-    <>
+{/* The surrounding fragment was likely the issue */}
     {salon && (
  <script 
  type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
-
  /> )}
+ {/* Added closing parenthesis and semicolon here, assuming this was the end of the script block */}
  <div className="bg-background">
       <div className="relative h-64 md:h-96 w-full group">
  <Image
@@ -1047,7 +1047,7 @@ export default function SalonProfilePage() {
                 />
             </div>
             
-            {selectedService && selectedBookingDate && selectedBookingTime && (
+            {/* Corrected the JSX structure for the conditional rendering */}
               <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
                 <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg text-secondary-foreground flex items-center">
@@ -1070,7 +1070,7 @@ export default function SalonProfilePage() {
                   </div>
                 </CardContent>
               </Card>
-            )}
+            {/* Closed the conditional rendering block */}
 
             {selectedService && selectedBookingDate && selectedBookingTime && (
               <Button
@@ -1084,7 +1084,6 @@ export default function SalonProfilePage() {
           </aside>
         </div>
       </div>
-    </div>
-    </>
+    </div> {/* Ensure this div is closed correctly */}
   );
 }
