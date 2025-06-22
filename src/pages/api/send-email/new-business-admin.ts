@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Replace with your admin email address(es)
     const adminEmail = process.env.ADMIN_EMAIL || 'admin@glaura.eu';
 
-    const mailOptions: SendMailOptions = {
+    const mailOptions: any = {
       from: process.env.SMTP_FROM || 'noreply@glaura.eu', // Replace with your sender email
       to: adminEmail,
       subject: 'Glaura: Нов Бизнес Регистриран',
