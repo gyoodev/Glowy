@@ -22,9 +22,9 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
                       salon.promotion.expiresAt &&
                       isFuture(new Date(salon.promotion.expiresAt));
 
-  const threeDaysAgo = new Date();
-  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-  const isNew = salon.createdAt && new Date(salon.createdAt) > threeDaysAgo;
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const isNew = salon.createdAt && new Date(salon.createdAt) > sevenDaysAgo;
 
   const handleUnfavoriteClick = () => {
     if (onToggleFavorite && salon.id) {
@@ -44,7 +44,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
         {isNew && (
           <Badge variant="secondary" className="py-1 px-2 text-xs shadow-md">
             <Sparkles className="h-3 w-3 mr-1" />
-            Нов в Glowy
+            Нов в Glaura
           </Badge>
         )}
       </div>

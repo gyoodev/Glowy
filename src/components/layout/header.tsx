@@ -21,9 +21,9 @@ import { useToast } from '@/hooks/use-toast';
 // DropdownMenu components are no longer needed here for profile
 
 const navItems = [
+  { href: '/', label: 'Начало' },
   { href: '/salons', label: 'Салони' },
   { href: '/recommendations', label: 'Glaura Препоръка' }, // Assuming this should also be updated
-  { href: '/about-glowy', label: 'За Glaura' }, // Assuming this is the "About Glowy" page
   { href: '/contact', label: 'Контакти' },
 ];
 
