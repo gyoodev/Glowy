@@ -829,16 +829,16 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-    <>
+    <div className="bg-background">
       {/* The surrounding fragment was likely the issue */}
-    {salon && (
+      {/* Added the fragment here to wrap the conditional script and the main div */}
+   <> {salon && (
  <script 
  type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
  /> )}
  {/* Added closing parenthesis and semicolon here, assuming this was the end of the script block */}
  <div className="bg-background">
-      <div className="relative h-64 md:h-96 w-full group">
  <Image
           src={salon.heroImage || 'https://placehold.co/1200x400.png'}
           alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
@@ -853,7 +853,6 @@ export default function SalonProfilePage() {
             <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto">{salon.description?.substring(0,100)}...</p>
           </div>
         </div>
-      </div>
 
       <div className="container mx-auto py-10 px-6">
         <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
@@ -1049,14 +1048,14 @@ export default function SalonProfilePage() {
             
             {/* Corrected the JSX structure for the conditional rendering */}
               <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                <CardHeader className="pb-3 pt-4">
+               <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg text-secondary-foreground flex items-center">
                     <Info className="mr-2 h-5 w-5" />
                     Вашата Резервация
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2 text-secondary-foreground">
-                  <div className="flex items-center">
+                 <div className="flex items-center">
                     <Scissors className="mr-2 h-4 w-4 text-primary" />
                     <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
                   </div>
@@ -1069,8 +1068,8 @@ export default function SalonProfilePage() {
                     <span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}
                   </div>
                 </CardContent>
+
               </Card>
-            {/* Closed the conditional rendering block */}
 
             {selectedService && selectedBookingDate && selectedBookingTime && (
               <Button
@@ -1083,8 +1082,8 @@ export default function SalonProfilePage() {
             )}
           </aside>
         </div>
-     
-    </div> 
-    </>
+      </div>
+      </> {/* Closing fragment */}
+    </div>
   );
 }
