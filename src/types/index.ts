@@ -1,6 +1,7 @@
 
 export * from './booking';
 export * from './user';
+export * from './business';
 export * from './review';
 export * from './salon';
 export * from './service';
