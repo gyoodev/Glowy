@@ -220,12 +220,6 @@ export default function SalonDirectoryPage() {
                 Моля, проверете по-късно или ако сте собственик на салон, регистрирайте го.
               </p>
             </div>
-          ) : filteredSalons.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredSalons.map(salon => ( // The SalonCard component will handle rendering the badge based on createdAt
-                <SalonCard key={salon.id} salon={salon} showNewBadgeWithinDays={7} newBadgeText="Нов в Glaura" showPromotedBadge={true} />
-              ))}
-            </div>
           ) : (
             <div className="text-center py-12">
               <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
