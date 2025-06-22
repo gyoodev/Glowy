@@ -12,8 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
-import { Scissors, CalendarDays, Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   BarChart,
   Bar,
@@ -27,6 +27,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format, subMonths, startOfMonth } from 'date-fns';
+import { Scissors, CalendarDays } from 'lucide-react'; // Import from lucide-react
 import { bg } from 'date-fns/locale';
 import { mapSalon, mapBooking } from '@/utils/mappers';
 
