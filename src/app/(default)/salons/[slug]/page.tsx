@@ -1053,7 +1053,7 @@ export default function SalonProfilePage() {
                 <CardContent className="text-sm space-y-2 text-secondary-foreground">
                  <div className="flex items-center">
                     <Scissors className="mr-2 h-4 w-4 text-primary" />
-                    <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
+ <span className="font-medium">Услуга:</span>&nbsp;{selectedService && selectedService.name}
                   </div>
                   <div className="flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 text-primary" />
