@@ -829,14 +829,14 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-   {salon && (
+   <> {salon && (
  <script 
  type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
  /> )}
  <div className="bg-background">
  <Image
-          src={salon.heroImage || 'https://placehold.co/1200x400.png'}
+ src={salon.heroImage || 'https://placehold.co/1200x400.png'}
           alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
           layout="fill"
           objectFit="cover"
@@ -930,7 +930,7 @@ export default function SalonProfilePage() {
                   )}
                   <div className="mt-6">
                     <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-                      <MapPin className="mr-2 h-5 w-5 text-primary" /> Местоположение на Картата
+                      <MapPin className="mr-2 h-5 w-5 text-primary" />Местоположение на Картата
                     </h3>
                       <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
                        {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( 
@@ -1079,6 +1079,6 @@ export default function SalonProfilePage() {
           </aside>
         </div>
       </div> {/* Closing fragment */}
-    </div>
+    </div></>
   );
 }
