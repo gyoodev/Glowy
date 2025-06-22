@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createTransport } from './index'; // Assuming createTransport is exported from index.ts
+import { initTransporter } from './index'; // Assuming createTransport is exported from index.ts
 import { emailTemplate } from './emailTemplate';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const transporter = await createTransport();
+    const transporter = await initTransporter();
 
     // Define the specific content for the salon booking confirmation email
     const emailBody = `
