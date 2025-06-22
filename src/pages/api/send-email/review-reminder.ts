@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { sendEmail } from './index'; // Corrected path
-import EmailTemplate from './emailTemplate'; // Corrected path
+import { createTransport } from './index'; // Corrected path
+import { emailTemplate } from './emailTemplate';
+// import { sendEmail } from './index'; // Removed import
 
 export default async function handler(
   req: NextApiRequest,
@@ -23,9 +24,16 @@ export default async function handler(
         <p>Екипът на Glowy</p>
       `;
 
-      const emailHtml = EmailTemplate({ content });
+      const emailHtml = emailTemplate.replace('{bodyContent}', content).replace('{button}', '');
 
-      await sendEmail({ to, subject, html: emailHtml });
+      const transporter = createTransport();
+
+      await transporter.sendMail({
+        from: process.env.EMAIL_FROM, // Replace with your sender email
+        to,
+        subject,
+        html: emailHtml,
+      });
 
       res.status(200).json({ message: 'Review reminder email sent successfully' });
     } catch (error) {
