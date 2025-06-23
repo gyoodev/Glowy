@@ -247,7 +247,7 @@ export default function BusinessManagePage() {
                   </CardContent>
                 </Card>
               )}
-
+ 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8">
                 {userBusinesses.map((business) => (
                   <div key={business.id} className="space-y-0">

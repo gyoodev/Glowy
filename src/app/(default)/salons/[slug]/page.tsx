@@ -837,13 +837,15 @@ export default function SalonProfilePage() {
  /> )}
  <div className="bg-background">
  <Image
- src={salon.heroImage || 'https://placehold.co/1200x400.png'}
-          alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")}
-          layout="fill"
-          objectFit="cover"
-          priority={true} // Use boolean true for priority
-          data-ai-hint="salon facade building"
-        />
+ src={salon.heroImage || "/placeholder-image.jpg"}
+        alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")} // Added descriptive alt text
+        className="w-full h-64 md:h-80 lg:h-96 object-cover" // Adjusted responsive height
+        style={{ objectFit: 'cover' }} // Ensure image covers the container
+ width={1200} // Provide an approximate width for better optimization
+ height={400} // Provide an approximate height
+ priority // Use boolean true for priority
+ data-ai-hint="salon facade building"
+ />
         <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
           <div className="text-center text-white p-4">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">{salon.name}</h1>
@@ -851,7 +853,7 @@ export default function SalonProfilePage() {
           </div>
         </div>
 
-      <div className="container mx-auto py-10 px-6">
+ <div className="container mx-auto px-4 py-10 mt-40 relative z-10">
         <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
           <div className="lg:w-2/3"> {/* Main content area */}
             

@@ -22,49 +22,21 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useMemo } from 'react';
-import { v4 as uuidv4 } from 'uuid';
 
-interface SalonServiceData {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  duration: number;
-}
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
   city: z.string().min(2, 'Моля, изберете град.'),
-  priceRange: z.enum(['cheap', 'moderate', 'expensive'], {
-    errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }),
-  }),
-  workingMode: z.enum(['appointment_only', 'walk_in_only'], {
-    errorMap: () => ({ message: 'Моля, изберете начин на работа.' }),
-  }),
-  services: z.array(
-    z.object({
-      id: z.string().optional(),
-      name: z.string().min(1, "Името на услугата е задължително."),
-      description: z.string().optional(),
-      price: z.coerce.number({ invalid_type_error: "Цената трябва да е число."}).min(0, "Цената трябва да е положително число."),
-      duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число."}).min(5, "Продължителността трябва да е поне 5 минути (в минути).")
-    })
-  ).min(1, "Моля, добавете поне една услуга."),
+  priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
+  workingMethod: z.enum(['appointment_only', 'walk_in_only'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
 });
+
 type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
 
-const targetCustomerOptions = [
-  { value: 'жени', label: 'Жени' },
-  { value: 'мъже', label: 'Мъже' },
-  { value: 'унисекс', label: 'Унисекс (Жени и Мъже)' },
-  { value: 'младежи', label: 'Младежи' },
-  { value: 'семейства', label: 'Семейства' },
-];
 
 export default function CreateBusinessPage() {
   const { toast } = useToast();
@@ -73,12 +45,16 @@ export default function CreateBusinessPage() {
   const [isBusinessUser, setIsBusinessUser] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const firestore = getFirestore();
-  const [selectedCategory, setSelectedCategory] = useState<string | ''>('');
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const totalSteps = 3;
-
+  const [currentStep, setCurrentStep] = useState(1); // Start at step 1
+  const totalSteps = 2; // Reduced from 3 to 2
+  const targetCustomerOptions = [
+    { value: 'жени', label: 'Жени' },
+    { value: 'мъже', label: 'Мъже' },
+    { value: 'унисекс', label: 'Унисекс (Жени и Мъже)' },
+    { value: 'младежи', label: 'Младежи' },
+    { value: 'семейства', label: 'Семейства' },
+  ];
+  
   const form = useForm<CreateBusinessFormValues>({
     resolver: zodResolver(createBusinessSchema),
     defaultValues: {
@@ -86,19 +62,12 @@ export default function CreateBusinessPage() {
       description: '',
       address: '',
       city: '',
-      priceRange: 'moderate',
-      workingMode: 'appointment_only', // Default value
-      services: [{ id: uuidv4(), name: '', description: '', price: 0, duration: 30 }],
-      atmosphereForAi: '',
+ workingMethod: 'appointment', // Corrected field name based on schema
+      atmosphereForAi: '', 
       targetCustomerForAi: '',
-      uniqueSellingPointsForAi: '',
+      uniqueSellingPointsForAi: '', // Keep for AI description generation in Step 2
     },
-    mode: "onChange",
-  });
-
-  const { fields: serviceFields, append: appendService, remove: removeService } = useFieldArray({
-    control: form.control,
-    name: "services"
+    mode: "onChange", // Keep for real-time validation feedback
   });
 
   useEffect(() => {
@@ -153,40 +122,27 @@ export default function CreateBusinessPage() {
 
   const handleGenerateDescription = async () => {
     const formValues = form.getValues();
-    const serviceDescriptionString = formValues.services
-      .map(s => `${s.name} (Цена: ${s.price} лв., Продължителност: ${s.duration} мин.)`)
-      .join(', ');
 
-    if (formValues.services.length === 0 || formValues.services.some(s => !s.name)) {
-        toast({
-            title: 'Липсват услуги',
-            description: 'Моля, добавете и изберете име за поне една услуга, преди да генерирате описание.',
-            variant: 'destructive'
-        });
-        return;
-    }
-
-    const aiInputData = {
+    const aiInputData: Parameters<typeof generateSalonDescription>[0] = {
       salonName: formValues.name || 'Моят Салон',
-      serviceDescription: serviceDescriptionString,
-      atmosphereDescription: formValues.atmosphereForAi,
-      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === formValues.targetCustomerForAi)?.label || formValues.targetCustomerForAi,
-      uniqueSellingPoints: formValues.uniqueSellingPointsForAi,
+      serviceDescription: 'различни услуги за красота', // Default description as services are not added here
+ atmosphereDescription: formValues.atmosphereForAi,
+ uniqueSellingPoints: formValues.uniqueSellingPointsForAi, // Corrected field name
     };
 
     if (!aiInputData.salonName || !aiInputData.serviceDescription || !aiInputData.atmosphereDescription || !aiInputData.targetCustomerDescription || !aiInputData.uniqueSellingPoints) {
-      toast({
+ toast({
         title: 'Непълна информация за AI',
         description: 'Моля, попълнете името на салона, поне една услуга с име, и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
         variant: 'destructive',
       });
-      form.trigger(['name', 'services', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
+ form.trigger(['name', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
       return;
     }
     
     setIsAiGenerating(true);
     try {
-      const result = await generateSalonDescription(aiInputData);
+      const result = await generateSalonDescription(aiInputData); // Use the correct flow
       if (result.salonDescription) {
         form.setValue('description', result.salonDescription, { shouldValidate: true });
         toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
@@ -201,44 +157,6 @@ export default function CreateBusinessPage() {
     }
   };
 
-  const categorizedServices = useMemo(() => {
-    return mockServices.reduce((acc, service) => {
-      if (service.category) {
-        if (!acc[service.category]) {
-          acc[service.category] = [];
-        }
-        acc[service.category].push(service);
-      }
-      return acc;
-    }, {} as Record<string, Service[]>);
-  }, []);
-
-  const serviceCategories = useMemo(() => Object.keys(categorizedServices), [categorizedServices]);
-
-  const handleAddSelectedService = () => {
-    if (selectedService) {
-      const existingServiceIndex = form.getValues('services').findIndex(
-        (service) => service.id === selectedService.id || service.name === selectedService.name
-      );
-
-      const newServiceId = selectedService.id || uuidv4();
-      if (existingServiceIndex === -1) {
-        appendService({
-          id: newServiceId,
-          name: selectedService.name,
-          description: selectedService.description || '',
-          price: selectedService.price,
-          duration: selectedService.duration,
-        });
-        setSelectedService(null);
-      } else {
-        toast({
-          title: 'Дублирана услуга', description: `Услугата "${selectedService.name}" вече е добавена.`, variant: 'default'
-        });
-      }
-    }
-  };
-
   const onSubmit: SubmitHandler<CreateBusinessFormValues> = async (data) => {
     if (!auth.currentUser) {
       toast({ title: 'Грешка', description: 'Потребителят не е удостоверен.', variant: 'destructive' });
@@ -250,14 +168,8 @@ export default function CreateBusinessPage() {
         description: data.description,
         address: data.address,
         city: data.city,
-        priceRange: data.priceRange,
-        services: data.services.map(s => ({
-            id: s.id || uuidv4(),
-            name: s.name,
-            description: (s as Service).description || '',
-            price: Number(s.price), 
-            duration: Number(s.duration), 
-        })),
+ priceRange: data.priceRange, // Ensure this is included
+ workingMethod: data.workingMethod, // Include workingMethod
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
         uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
@@ -311,12 +223,10 @@ export default function CreateBusinessPage() {
   const nextStep = async () => {
     let isValid = false;
     if (currentStep === 1) {
-      isValid = await form.trigger(["name", "address", "city", "priceRange"]);
-      // Add workingMode to validation trigger for Step 1
-      isValid = await form.trigger(["name", "address", "city", "priceRange", "workingMode"]);
-    } else if (currentStep === 2) { // Step 2 is now Services
-      isValid = await form.trigger(["services"]);
-    } else {
+      isValid = await form.trigger(["name", "address", "city", "priceRange", "workingMethod"]); // Validation for step 1 fields
+    } else if (currentStep === 2) { // Step 2 is now Description and AI Details
+      isValid = await form.trigger(["description", "atmosphereForAi", "targetCustomerForAi", "uniqueSellingPointsForAi"]);
+    }  else {
       isValid = true;
     }
     
@@ -436,8 +346,8 @@ export default function CreateBusinessPage() {
                   />
  <FormField
  control={form.control}
- name="workingMode"
- render={({ field }) => (
+ name="workingMethod"
+ render={({ field }) => ( // Using workingMethod based on schema
  <FormItem>
  <FormLabel>Начин на работа</FormLabel>
  <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -459,128 +369,8 @@ export default function CreateBusinessPage() {
               )}
 
               {currentStep === 2 && (
-                <motion.div key="step2" initial="hidden" animate="visible" exit="exit" variants={stepMotionVariants} className="space-y-6">
-                  <h2 className="text-xl font-semibold text-primary border-b pb-4 mb-4">Стъпка 2: Услуги</h2>
-                  <div className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <FormItem>
-                          <FormLabel>Категория на услуга</FormLabel>
-                          <Select onValueChange={(value) => { setSelectedCategory(value); setSelectedService(null); }} value={selectedCategory}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Изберете категория" />
-                                  </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
- {Object.keys(categorizedServices).map(category => (
-                                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                          </Select>
-                      </FormItem>
-                       <FormItem>
-                          <FormLabel>Име на услуга</FormLabel>
-                           <Select onValueChange={(value) => setSelectedService(categorizedServices[selectedCategory]?.find(s => s.id === value) || null)} value={selectedService?.id || ''} disabled={!selectedCategory}>
-                              <FormControl>
-                                  <SelectTrigger>
-                                      <SelectValue placeholder="Изберете услуга" />
-                                  </SelectTrigger>
-                              </FormControl>
-                               <SelectContent>
- {selectedCategory && categorizedServices[selectedCategory]?.map(service => (
-                                      <SelectItem key={service.id} value={service.id}>{service.name}</SelectItem>
-                                  ))}
-                              </SelectContent>
-                           </Select>
-                      </FormItem>
-                       <Button type="button" onClick={handleAddSelectedService} disabled={!selectedService} className="md:mt-7">Добави избрана услуга</Button>
-                    </div>
-                 
-                  <div className="space-y-4 border p-4 rounded-md bg-muted/20">
-                    {serviceFields.map((item, index) => (
-                      <div key={item.id} className="grid grid-cols-1 md:grid-cols-10 gap-3 items-end border-b pb-4 last:border-b-0">
-                        <FormField
-                          control={form.control}
-                          name={`services.${index}.name`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-3">
-                            <FormLabel className="text-xs">Име на услугата</FormLabel>
-                            <FormControl>
-                            <Input placeholder="напр. Подстригване" {...field} className="text-xs min-h-[2.25rem] py-1.5" />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`services.${index}.description`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-3">
-                              <FormLabel className="text-xs">Описание (по избор)</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Кратко описание..." {...field} rows={1} className="text-xs min-h-[2.25rem] py-1.5"/>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`services.${index}.price`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-1">
-                              <FormLabel className="text-xs">Цена (лв.)</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="50" {...field} className="text-xs min-h-[2.25rem] py-1.5"/>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name={`services.${index}.duration`}
-                          render={({ field }) => (
-                            <FormItem className="md:col-span-2">
-                              <FormLabel className="text-xs">Продълж. (мин.)</FormLabel>
-                              <FormControl>
-                                <Input type="number" placeholder="60" {...field} className="text-xs min-h-[2.25rem] py-1.5"/>
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => removeService(index)}
-                          className="md:col-span-1 h-9"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => appendService({ id: uuidv4(), name: "", description: "", price: 0, duration: 30 })}
-                      className="mt-2"
-                    >
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Добави Услуга
-                    </Button>
-                    <FormMessage>{form.formState.errors.services?.message || form.formState.errors.services?.root?.message}</FormMessage>
-                  </div>
-                  </div>
-                </motion.div>
-              )}
-
-              {currentStep === 3 && (
-                 <motion.div key="step3" initial="hidden" animate="visible" exit="exit" variants={stepMotionVariants} className="space-y-6">
-                  <h2 className="text-xl font-semibold text-primary border-b pb-2">Стъпка 3: Описание и AI Детайли</h2>
+                 <motion.div key="step2" initial="hidden" animate="visible" exit="exit" variants={stepMotionVariants} className="space-y-6">
+                  <h2 className="text-xl font-semibold text-primary border-b pb-2">Стъпка 2: Описание и AI Детайли</h2>
                   <div className="space-y-2 pt-4">
                     <h3 className="text-md font-medium text-foreground">Детайли за AI Генериране на Описание</h3>
                     <p className="text-xs text-muted-foreground">

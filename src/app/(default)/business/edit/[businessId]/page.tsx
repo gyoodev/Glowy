@@ -482,7 +482,7 @@ export default function EditBusinessPage() {
                       {form.watch('newHeroImageUrl') && form.watch('newHeroImageUrl')?.trim() !== '' && (
                         <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
                           <Image src={form.watch('newHeroImageUrl')!} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
-                          <Button
+                          <Button // Keep this button for removing the hero image
                               type="button"
                               variant="destructive"
                               size="icon"
@@ -518,7 +518,7 @@ export default function EditBusinessPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {form.watch('photos')!.map((photoUrl, index) => (
                             <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
-                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail"/>
+                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail"/> {/* Ensure objectFit="cover" and layout="fill" */}
                               <Button
                                 type="button"
                                 variant="destructive"
