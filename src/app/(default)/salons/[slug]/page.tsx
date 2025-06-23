@@ -951,7 +951,7 @@ export default function SalonProfilePage() {
                         key={service.id}
  service={service}
  isBookingEnabled={salon.workingMethod === 'appointment'}
- onBook={salon.workingMethod === 'appointment' ? handleBookService : undefined} // Only pass onBook if workingMethod is appointment_only
+ { ...(salon.workingMethod === 'appointment' && { onBook: handleBookService }) } // Conditionally add onBook
  />
                     )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                   </div>
