@@ -5,7 +5,7 @@ import { Tag } from 'lucide-react'; // Using Tag as a default icon
 
 interface ServiceListItemProps {
   service: Service;
-  onBook: (serviceId: string) => void;
+  onBook?: (serviceId: string) => void;
   isBookingEnabled: boolean;
 }
 
