@@ -31,7 +31,7 @@ import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
 import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
-import { mapSalon } from '@/utils/mappers';
+import { mapSalon } from '@/utils/mappers'; 
 import { auth } from '@/lib/firebase';
 
 // Keep predefinedTimeSlots as it might be used for working hours or future availability features not tied to a specific date picker
@@ -84,6 +84,7 @@ const editBusinessSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
   website: z.string().url({ message: "Невалиден URL адрес на уебсайт." }).optional().or(z.literal('')),
+  workingMethod: z.enum(['appointment', 'no_appointment']).optional(),
   workingHours: z.record(z.string(), z.object({
     open: z.string(),
     close: z.string(),
@@ -109,6 +110,7 @@ export default function EditBusinessPage() {
   const [business, setBusiness] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
 
   const sortedBulgarianCities = useMemo(() => [...allBulgarianCities].sort((a, b) => a.localeCompare(b, 'bg')), []);
 
@@ -124,6 +126,7 @@ export default function EditBusinessPage() {
       phone: '',
       email: '',
       website: '',
+      workingMethod: 'appointment',
       workingHours: defaultWorkingHours,
       heroImage: '',
       photos: [],
@@ -144,9 +147,7 @@ export default function EditBusinessPage() {
       }
     });
     return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [businessId, router, authInstance]);
-
+ }, [businessId, router]);
   const fetchBusinessData = async (userId: string) => { 
     if (!businessId) {
       setLoading(false);
@@ -184,6 +185,7 @@ export default function EditBusinessPage() {
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
             website: businessData.website || '',
+            workingMethod: businessData.workingMethod || 'appointment',
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
@@ -234,11 +236,12 @@ export default function EditBusinessPage() {
         name: data.name,
         description: data.description,
         address: data.address,
-        city: data.city,
+ city: data.city,
         priceRange: data.priceRange,
         phoneNumber: data.phone, 
         email: data.email,
         website: data.website,
+        workingMethod: data.workingMethod,
         workingHours: data.workingHours,
         heroImage: data.newHeroImageUrl?.trim() || data.heroImage || '',
         photos: data.photos || [],
@@ -267,7 +270,6 @@ export default function EditBusinessPage() {
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-6">
-        <Skeleton className="h-10 w-1/4 mb-6" />
         <Card>
           <CardHeader>
             <Skeleton className="h-6 w-1/2" />
@@ -285,11 +287,11 @@ export default function EditBusinessPage() {
     );
   }
   if (!business) return null;
-
   const today = new Date();
   today.setHours(0,0,0,0);
 
   return (
+    <>
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-4xl mx-auto shadow-xl">
         <CardHeader>
@@ -410,6 +412,29 @@ export default function EditBusinessPage() {
                         />
                          {form.formState.errors.website && <p className="text-sm text-destructive">{form.formState.errors.website.message}</p>}
                       </div>
+                       <div className="space-y-2">
+ <Label htmlFor="workingMethod">Метод на работа</Label>
+                          <Controller
+ name="workingMethod"
+                            control={form.control}
+                            render={({ field }) => (
+ <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger id="workingMethod">
+ <SelectValue placeholder="Изберете метод" />
+ </SelectTrigger>
+ <SelectContent>
+ <SelectItem value="appointment">С резервация на час</SelectItem>
+ <SelectItem value="no_appointment">Без резервации</SelectItem>
+ </SelectContent>
+ </Select>
+                            )}
+                          />
+                          {form.formState.errors.workingMethod && <p className="text-sm text-destructive">{form.formState.errors.workingMethod.message}</p>}
+                       </div>
+                       
                        <div className="space-y-2">
                           <Label htmlFor="priceRange">Ценови диапазон</Label>
                           <Controller
@@ -607,6 +632,7 @@ export default function EditBusinessPage() {
         </form>
       </Card>
     </div>
+    </>
   );
 }
 

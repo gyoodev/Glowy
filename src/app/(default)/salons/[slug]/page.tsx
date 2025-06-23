@@ -941,6 +941,7 @@ export default function SalonProfilePage() {
                     </TabsContent>
                 <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                   <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
+
                     <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
                   </h2>
                   <div className="space-y-1">
@@ -1031,29 +1032,30 @@ export default function SalonProfilePage() {
             </div> {/* End Main content area */}
 
           <aside className="lg:w-1/3 space-y-8 sticky top-20">
-            {/* Conditionally render Booking Calendar based on workingMode */}
+            {/* Conditionally render Booking Calendar and Your Reservation Card/Button based on workingMode */}
             {salon.workingMode === 'appointment_only' && (
-               <div id="booking-calendar-section">
-                <BookingCalendar
-                  salonName={salon.name}
-                  serviceName={selectedService?.name}
-                  availability={salon.availability || {}}
-                  onTimeSelect={handleTimeSelected}
-                />
-            </div>) }
-            
-            {/* Corrected the JSX structure for the conditional rendering */}
+             <>
+                <div id="booking-calendar-section">
+                  <BookingCalendar
+                    salonName={salon.name}
+                    serviceName={selectedService?.name}
+                    availability={salon.availability || {}}
+                    onTimeSelect={handleTimeSelected}
+                  />
+              </div>
+
+              {/* Your Reservation Card */}
               <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-               <CardHeader className="pb-3 pt-4">
+                <CardHeader className="pb-3 pt-4">
                   <CardTitle className="text-lg text-secondary-foreground flex items-center">
                     <Info className="mr-2 h-5 w-5" />
                     Вашата Резервация
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-sm space-y-2 text-secondary-foreground">
-                 <div className="flex items-center">
+                  <div className="flex items-center">
                     <Scissors className="mr-2 h-4 w-4 text-primary" />
- <span className="font-medium">Услуга:</span>&nbsp;{selectedService && selectedService.name}
+                    <span className="font-medium">Услуга:</span>&nbsp;{selectedService && selectedService.name}
                   </div>
                   <div className="flex items-center">
                     <CalendarDays className="mr-2 h-4 w-4 text-primary" />
@@ -1064,8 +1066,9 @@ export default function SalonProfilePage() {
                     <span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}
                   </div>
                 </CardContent>
-
               </Card>
+             </>
+            )}
 
             {selectedService && selectedBookingDate && selectedBookingTime && (
               <Button

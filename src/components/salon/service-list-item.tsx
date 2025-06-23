@@ -6,9 +6,10 @@ import { Tag } from 'lucide-react'; // Using Tag as a default icon
 interface ServiceListItemProps {
   service: Service;
   onBook: (serviceId: string) => void;
+  isBookingEnabled: boolean;
 }
 
-export function ServiceListItem({ service, onBook }: ServiceListItemProps) {
+export function ServiceListItem({ service, onBook, isBookingEnabled }: ServiceListItemProps) {
   // Use service.categoryIcon if available, otherwise default to Tag
   const IconComponent = service.categoryIcon || Tag;
 
@@ -27,9 +28,11 @@ export function ServiceListItem({ service, onBook }: ServiceListItemProps) {
           <span>{service.duration || 'N/A'} мин.</span>
         </div>
       </div>
+      {isBookingEnabled && (
       <Button onClick={() => onBook(service.id)} size="sm" className="mt-2 sm:mt-0 self-start sm:self-center">
         Резервирай
       </Button>
+      )}
     </div>
   );
 }
