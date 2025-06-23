@@ -185,7 +185,7 @@ export default function EditBusinessPage() {
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
             website: businessData.website || '',
- workingMethod: businessData.workingMethod || 'appointment',
+ workingMode: businessData.workingMethod || 'appointment',
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
