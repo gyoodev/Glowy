@@ -11,8 +11,8 @@ import type { UserProfile, Salon, Booking } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
-import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
-import Image from 'next/image';
+import { PlusCircle, Edit3, Eye, List, CalendarCheck, Gift, MessageSquareText, BarChart3, LineChart as LineChartIcon, Scissors, CalendarDays } from 'lucide-react';
+import Image from 'next/image'; 
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   BarChart,
@@ -27,8 +27,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { format, subMonths, startOfMonth } from 'date-fns';
-import { Scissors, CalendarDays } from 'lucide-react'; // Import from lucide-react
-import { bg } from 'date-fns/locale';
+import { bg } from 'date-fns/locale'; 
 import { mapSalon, mapBooking } from '@/utils/mappers';
 
 const NUM_MONTHS_FOR_CHARTS = 6; // Display data for the last 6 months
@@ -251,7 +250,7 @@ export default function BusinessManagePage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8">
                 {userBusinesses.map((business) => (
-                  <div key={business.id} className="space-y-0"> {/* Removed space-y-4 to put chart dialog inside card footer */}
+                  <div key={business.id} className="space-y-0">
                     <Card className="shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
                       <CardHeader className="p-0">
                         <Link href={`/salons/${salonNameToSlug(business.name)}`} aria-label={`Преглед на ${business.name}`}>
@@ -291,7 +290,7 @@ export default function BusinessManagePage() {
                             <Scissors className="mr-2 h-4 w-4" /> Услуги
                           </Link>
                         </Button>
-                         <Button variant="outline" size="sm" asChild>
+                        <Button variant="outline" size="sm" asChild>
                           <Link href={`/business/manage/${business.id}/availability`}>
                             <CalendarDays className="mr-2 h-4 w-4" /> Наличност
                           </Link>
@@ -355,8 +354,3 @@ export default function BusinessManagePage() {
     </div>
   );
 }
-    
-    
-    
-
-    
