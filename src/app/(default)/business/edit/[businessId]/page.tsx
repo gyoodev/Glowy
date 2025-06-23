@@ -84,8 +84,8 @@ const editBusinessSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
   website: z.string().url({ message: "Невалиден URL адрес на уебсайт." }).optional().or(z.literal('')),
-  workingMethod: z.enum(['appointment', 'no_appointment']).optional(),
-  workingHours: z.record(z.string(), z.object({
+ workingMethod: z.enum(['appointment', 'walk_in']).optional(),
+ workingHours: z.record(z.string(), z.object({
     open: z.string(),
     close: z.string(),
     isOff: z.boolean(),
@@ -185,7 +185,7 @@ export default function EditBusinessPage() {
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
             website: businessData.website || '',
-            workingMethod: businessData.workingMethod || 'appointment',
+ workingMethod: businessData.workingMethod || 'appointment',
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
@@ -427,7 +427,7 @@ export default function EditBusinessPage() {
  </SelectTrigger>
  <SelectContent>
  <SelectItem value="appointment">С резервация на час</SelectItem>
- <SelectItem value="no_appointment">Без резервации</SelectItem>
+ <SelectItem value="walk_in">Без резервации</SelectItem>
  </SelectContent>
  </Select>
                             )}

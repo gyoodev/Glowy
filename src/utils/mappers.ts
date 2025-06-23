@@ -155,6 +155,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
     status: raw.status || 'approved', // Default to 'approved' for existing salons
+    workingMethod: raw.workingMethod || 'walk_in', // Map the workingMethod
   };
 }
 
