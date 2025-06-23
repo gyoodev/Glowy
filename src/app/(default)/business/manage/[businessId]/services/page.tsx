@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -24,6 +25,7 @@ import { mockServices as predefinedServices } from '@/lib/mock-data';
 import type { Service, Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
 import { AlertTriangle, ArrowLeft, Loader2, PlusCircle, Scissors, Trash2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
 const manualServiceSchema = z.object({
   name: z.string().min(3, "Името на услугата трябва да е поне 3 символа."),
