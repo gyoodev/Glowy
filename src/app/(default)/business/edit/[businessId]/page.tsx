@@ -84,7 +84,7 @@ const editBusinessSchema = z.object({
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
   website: z.string().url({ message: "Невалиден URL адрес на уебсайт." }).optional().or(z.literal('')),
- workingMethod: z.enum(['appointment', 'walk_in']).optional(),
+  workingMethod: z.enum(['appointment', 'walk_in']).optional(),
  workingHours: z.record(z.string(), z.object({
     open: z.string(),
     close: z.string(),
@@ -185,7 +185,7 @@ export default function EditBusinessPage() {
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
             website: businessData.website || '',
- workingMode: businessData.workingMethod || 'appointment',
+            workingMethod: businessData.workingMethod || 'appointment',
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
