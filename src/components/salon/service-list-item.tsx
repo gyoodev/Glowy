@@ -29,9 +29,9 @@ export function ServiceListItem({ service, onBook, isBookingEnabled }: ServiceLi
         </div>
       </div>
       {isBookingEnabled && (
-      <Button onClick={() => onBook(service.id)} size="sm" className="mt-2 sm:mt-0 self-start sm:self-center">
-        Резервирай
-      </Button>
+        <Button onClick={() => onBook(service.id)} size="sm" className="mt-2 sm:mt-0 self-start sm:self-center">
+          Резервирай
+        </Button>
       )}
     </div>
   );
