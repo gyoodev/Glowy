@@ -127,7 +127,7 @@ export default function EditBusinessPage() {
       email: '',
       website: '',
       workingMethod: 'appointment',
-      workingHours: defaultWorkingHours as CorrectTypeForWorkingMode['workingHours'],
+ workingHours: defaultWorkingHours,
       heroImage: '',
       photos: [],
       newHeroImageUrl: '',
