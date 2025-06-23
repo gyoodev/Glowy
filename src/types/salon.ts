@@ -20,7 +20,7 @@ export interface Salon {
   email?: string;
   website?: string;
   services?: Service[];
-  workingMode?: 'appointment_only' | 'walk_in_only' | 'both'; // Added optional workingMode property
+  workingMethod?: 'appointment' | 'walk_in' | 'both'; // Renamed workingMode to workingMethod with updated types
   photos?: string[];
   heroImage?: string;
   location?: { lat: number; lng: number };
