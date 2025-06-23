@@ -1,4 +1,3 @@
-typescriptreact
 import React from 'react';
 
 const InventoryManagementPage: React.FC = () => {
