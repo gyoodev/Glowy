@@ -127,6 +127,7 @@ export default function CreateBusinessPage() {
       salonName: formValues.name || 'Моят Салон',
       serviceDescription: 'различни услуги за красота', // Default description as services are not added here
  atmosphereDescription: formValues.atmosphereForAi,
+ targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === formValues.targetCustomerForAi)?.label || formValues.targetCustomerForAi,
  uniqueSellingPoints: formValues.uniqueSellingPointsForAi, // Corrected field name
     };
 
@@ -144,6 +145,17 @@ export default function CreateBusinessPage() {
     try {
       const result = await generateSalonDescription(aiInputData); // Use the correct flow
       if (result.salonDescription) {
+        if (result.salonDescription) {
+            let generatedDescription = result.salonDescription;
+              const maxLength = 300;
+                if (generatedDescription.length > maxLength) {
+                    generatedDescription = generatedDescription.substring(0, maxLength) + '...';
+                      }
+                        form.setValue('description', generatedDescription, { shouldValidate: true });
+                          toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
+                          }
+      
+        }
         form.setValue('description', result.salonDescription, { shouldValidate: true });
         toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
       } else {
