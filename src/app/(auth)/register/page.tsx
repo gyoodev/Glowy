@@ -180,8 +180,9 @@ export default function RegisterPage() {
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
-          console.log('New Google user detected.');
           // New Google User
+          console.log('New Google user detected. Showing role selection bubble.');
+
           let numericIdForUser: number | undefined = undefined;
           try {
             const counterDocRef = doc(firestore, 'counters', 'users');
@@ -221,13 +222,14 @@ export default function RegisterPage() {
           await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
 
           // Show role selection bubble for new Google sign-ups
+          // Ensure these are called after the user document is set
           setGoogleUserId(user.uid);
           setShowRoleSelectionBubble(true);
           console.log('State updated: googleUserId =', user.uid, ', showRoleSelectionBubble =', true);
 
-
         } else {
           // Existing User signing in with Google
+          console.log('Existing user signed in with Google. Redirecting to homepage.');
           localStorage.setItem('isUserLoggedIn', 'true');
           router.push('/'); // Redirect existing users directly
         }
