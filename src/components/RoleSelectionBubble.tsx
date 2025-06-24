@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { firestore } from '@/lib/firebase';
 
 interface RoleSelectionBubbleProps {
     userId: string;
@@ -18,7 +18,7 @@ const RoleSelectionBubble: React.FC<RoleSelectionBubbleProps> = ({ userId, onRol
     const handleSaveRole = async () => {
         setIsSubmitting(true);
         try {
-            const userRef = doc(db, 'users', userId);
+            const userRef = doc(firestore, 'users', userId);
             await updateDoc(userRef, {
                 role: selectedRole,
             });
