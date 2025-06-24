@@ -285,7 +285,8 @@ export default function RegisterPage() {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-xl rounded-lg p-6 md:p-8">
+ <>
+ <Card className="w-full max-w-md shadow-xl rounded-lg p-6 md:p-8">
       <CardHeader className="text-center space-y-2">
         <CardTitle className="text-3xl font-bold flex items-center justify-center gap-3">
           <UserPlus className="h-8 w-8 text-primary" />
@@ -512,5 +513,6 @@ export default function RegisterPage() {
     {showRoleSelectionBubble && googleUserId && (
       <RoleSelectionBubble userId={googleUserId} onRoleSelected={handleRoleSelected} />
     )}
-  );
+ </>
+ );
 }
