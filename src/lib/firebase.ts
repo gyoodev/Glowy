@@ -48,7 +48,7 @@ if (!getApps().length) {
 }
 
 const authInstance = getAuth(app);
-export const firestoreInstance = getFirestore(app);
+const firestoreInstance = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined') {
@@ -315,4 +315,4 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
 }
 
 // Export the initialized instances
-export { app, authInstance as auth, analytics, FieldValue };
+export { app, authInstance as auth, analytics, firestoreInstance as firestore,FieldValue };
