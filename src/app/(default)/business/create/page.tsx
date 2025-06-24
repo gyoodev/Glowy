@@ -29,7 +29,7 @@ const createBusinessSchema = z.object({
   address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
   city: z.string().min(2, 'Моля, изберете град.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
-  workingMethod: z.enum(['appointment_only', 'walk_in_only'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
+  workingMethod: z.enum(['appointment', 'walk_in'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
   targetCustomerForAi: z.string().min(1, 'Моля, изберете целевите клиенти.'),
   uniqueSellingPointsForAi: z.string().min(5, 'Моля, опишете уникалните предимства за AI генерацията.'),
