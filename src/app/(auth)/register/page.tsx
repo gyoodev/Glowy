@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 import { UserPlus, Mail, KeyRound, Phone, Chrome, Eye, EyeOff } from 'lucide-react';
 import { AuthError } from 'firebase/auth';
 import { auth, subscribeToNewsletter } from '@/lib/firebase';
-import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, createUserWithEmailAndPassword, connectAuthEmulator } from 'firebase/auth';
 import { getFirestore, collection, doc, setDoc, getDoc, Timestamp, addDoc } from 'firebase/firestore';
 
 const registerSchema = z.object({
@@ -45,6 +45,8 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRoleSelectionBubble, setShowRoleSelectionBubble] = useState(false);
+  const [googleUserId, setGoogleUserId] = useState<string | null>(null);
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -167,63 +169,63 @@ export default function RegisterPage() {
     setIsSubmitting(true);
     const provider = new GoogleAuthProvider();
     try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        console.log('Google Sign-Up successful:', user);
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      console.log('Google Sign-Up/In successful:', user);
 
-        if (user) {
-            const userRef = doc(collection(firestore, 'users'), user.uid);
-            const docSnap = await getDoc(userRef);
+      if (user) {
+        const userRef = doc(collection(firestore, 'users'), user.uid);
+        const docSnap = await getDoc(userRef);
 
-            if (!docSnap.exists()) {
-                let numericIdForUser: number | undefined = undefined;
-                try {
-                    const counterDocRef = doc(firestore, 'counters', 'users');
-                    const counterDocSnap = await getDoc(counterDocRef);
-                    if (counterDocSnap.exists()) {
-                        numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
-                    } else {
-                        numericIdForUser = 1;
-                    }
-                    await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
-                } catch (counterError) {
-                    console.error("Error updating user counter for Google sign-up:", counterError);
-                }
-
-                await setDoc(userRef, {
-                    userId: user.uid,
-                    email: user.email,
-                    numericId: numericIdForUser,
-                    displayName: user.displayName,
-                    name: user.displayName, // Also set name field
-                    phoneNumber: user.phoneNumber || '+359', // Default to +359 if no phone from Google
-                    createdAt: Timestamp.fromDate(new Date()),
-                    role: 'customer', // Default role for Google sign-up, can be changed later
-                });
-
-                // Create welcome notification for new Google user
-                await addDoc(collection(firestore, 'notifications'), {
-                    userId: user.uid,
-                    message: 'Добре дошли в Glowy! Радваме се да Ви видим. Вашият профил е създаден чрез Google.',
-                    link: '/account',
-                    read: false,
-                    createdAt: Timestamp.fromDate(new Date()),
-                    type: 'welcome_user',
-                });
-
-                // Placeholder for notifying admins (better done server-side)
-                await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
+        if (!docSnap.exists()) {
+          // New Google User
+          let numericIdForUser: number | undefined = undefined;
+          try {
+            const counterDocRef = doc(firestore, 'counters', 'users');
+            const counterDocSnap = await getDoc(counterDocRef);
+            if (counterDocSnap.exists()) {
+              numericIdForUser = (counterDocSnap.data()?.count || 0) + 1;
+            } else {
+              numericIdForUser = 1;
             }
+            await setDoc(counterDocRef, { count: numericIdForUser }, { merge: true });
+          } catch (counterError) {
+            console.error("Error updating user counter for Google sign-up:", counterError);
+          }
 
-            // Check if the user already exists with a different provider
-            if (result.operationType === 'link') {
-                // This case is unlikely with signInWithPopup directly for sign-up,
-                // but good to be aware of for account linking scenarios.
-            } else if (result.operationType === 'signIn' && !docSnap.exists()) {
-                // User exists but signed in with Google for the first time, document created above.
-            } else if (result.operationType === 'signIn' && docSnap.exists()) {
-                // User exists and signed in with Google again - no need to create document.
-            }
+          await setDoc(userRef, {
+            userId: user.uid,
+            email: user.email,
+            numericId: numericIdForUser,
+            displayName: user.displayName,
+            name: user.displayName, // Also set name field
+            phoneNumber: user.phoneNumber || '+359', // Default to +359 if no phone from Google
+            createdAt: Timestamp.fromDate(new Date()),
+            role: 'customer', // Default role for Google sign-up, will be prompted to select
+          });
+
+          // Create welcome notification for new Google user
+          await addDoc(collection(firestore, 'notifications'), {
+            userId: user.uid,
+            message: 'Добре дошли в Glowy! Радваме се да Ви видим. Вашият профил е създаден чрез Google.',
+            link: '/account',
+            read: false,
+            createdAt: Timestamp.fromDate(new Date()),
+            type: 'welcome_user',
+          });
+
+          // Placeholder for notifying admins (better done server-side)
+          await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
+
+          // Show role selection bubble for new Google sign-ups
+          setGoogleUserId(user.uid);
+          setShowRoleSelectionBubble(true);
+
+        } else {
+          // Existing User signing in with Google
+          localStorage.setItem('isUserLoggedIn', 'true');
+          router.push('/'); // Redirect existing users directly
+        }
 
             if (user.email && form.getValues('subscribeNewsletter')) {
             const newsletterResult = await subscribeToNewsletter(user.email);
@@ -235,10 +237,10 @@ export default function RegisterPage() {
 
         }
 
-
-        localStorage.setItem('isUserLoggedIn', 'true');
+        // This toast is for both new and existing Google sign-ins/ups that didn't trigger the bubble
         toast({
-          title: 'Регистрация с Google успешна',
+          title: docSnap.exists() ? 'Влизане с Google успешно' : 'Регистрация с Google успешна',
+
           description: `Добре дошли, ${user.displayName || user.email}!`,
         });
 
@@ -274,6 +276,12 @@ export default function RegisterPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleRoleSelected = () => {
+    setShowRoleSelectionBubble(false);
+    setGoogleUserId(null); // Clear user ID
+    router.push('/account'); // Redirect to account page after role selection
   };
 
   return (
@@ -500,5 +508,9 @@ export default function RegisterPage() {
         </form>
       </Form>
     </Card>
+
+    {showRoleSelectionBubble && googleUserId && (
+      <RoleSelectionBubble userId={googleUserId} onRoleSelected={handleRoleSelected} />
+    )}
   );
 }
