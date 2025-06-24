@@ -68,9 +68,5 @@ const RoleSelectionBubble: React.FC<RoleSelectionBubbleProps> = ({ userId, onRol
         </div>
     );
 };
-            </Button>
-        </div>
-    );
-};
 
 export default RoleSelectionBubble;
