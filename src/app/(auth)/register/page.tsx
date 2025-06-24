@@ -171,6 +171,7 @@ export default function RegisterPage() {
     const provider = new GoogleAuthProvider();
     try {
       const result = await signInWithPopup(auth, provider);
+      console.log('Google Sign-Up/In successful:', result);
       const user = result.user;
       console.log('Google Sign-Up/In successful:', user);
 
@@ -179,6 +180,7 @@ export default function RegisterPage() {
         const docSnap = await getDoc(userRef);
 
         if (!docSnap.exists()) {
+          console.log('New Google user detected.');
           // New Google User
           let numericIdForUser: number | undefined = undefined;
           try {
@@ -221,6 +223,8 @@ export default function RegisterPage() {
           // Show role selection bubble for new Google sign-ups
           setGoogleUserId(user.uid);
           setShowRoleSelectionBubble(true);
+          console.log('State updated: googleUserId =', user.uid, ', showRoleSelectionBubble =', true);
+
 
         } else {
           // Existing User signing in with Google
