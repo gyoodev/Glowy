@@ -369,8 +369,8 @@ export default function CreateBusinessPage() {
  </SelectTrigger>
  </FormControl>
  <SelectContent>
- <SelectItem value="appointment_only">Със записване на час</SelectItem>
- <SelectItem value="walk_in_only">Без записване на час</SelectItem>
+ <SelectItem value="appointment">Със записване на час</SelectItem>
+ <SelectItem value="walk_in">Без записване на час</SelectItem>
  </SelectContent>
  </Select>
  <FormMessage />
