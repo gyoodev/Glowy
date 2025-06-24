@@ -153,12 +153,12 @@ export default function CreateBusinessPage() {
                       }
                         form.setValue('description', generatedDescription, { shouldValidate: true });
                           toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
-                          }
-      
+
+        } else {
+ toast({ title: 'Грешка при генериране', description: result.error || 'AI не успя да генерира описание.', variant: 'destructive' });
         }
-        form.setValue('description', result.salonDescription, { shouldValidate: true });
-        toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
       } else {
+ console.error('AI response did not contain salonDescription:', result);
         toast({ title: 'Грешка при генериране', description: result.error || 'AI не успя да генерира описание.', variant: 'destructive' });
       }
     } catch (error) {
