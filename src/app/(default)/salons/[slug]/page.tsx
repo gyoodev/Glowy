@@ -1064,4 +1064,5 @@ export default function SalonProfilePage() {
           </div> {/* End of bg-background div */}
         </div> {/* End of container mx-auto */}
  </>
-)
+  );
+}
