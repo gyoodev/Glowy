@@ -830,70 +830,58 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   return (
-   <> {salon && (
- <script 
- type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(generateSalonSchema(salon)) }}
- /> )}
- <div className="bg-background">
- <Image
- src={salon.heroImage || "/placeholder-image.jpg"}
-        alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")} // Added descriptive alt text
-        className="w-full h-64 md:h-80 lg:h-96 object-cover" // Adjusted responsive height
-        style={{ objectFit: 'cover' }} // Ensure image covers the container
- width={1200} // Provide an approximate width for better optimization
- height={400} // Provide an approximate height
- priority // Use boolean true for priority
- data-ai-hint="salon facade building"
- />
-        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-          <div className="text-center text-white p-4">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">{salon.name}</h1>
-            <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto">{salon.description?.substring(0,100)}...</p>
-          </div>
-        </div>
+  <>
+    {salon && (
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateSalonSchema(salon))
+        }}
+      />
+    )}
 
- <div className="container mx-auto px-4 py-10 mt-40 relative z-10">
-        <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
-          <div className="lg:w-2/3"> {/* Main content area */}
-            
-            {/* Salon Header Info - Moved above Tabs */}
-            <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
-                  <div>
-                  <div className="flex items-center mb-1">
-                      <Star className="h-6 w-6 text-yellow-400 fill-yellow-400 mr-2" />
-                      <span className="text-2xl font-bold">{salon.rating?.toFixed(1) ?? '0.0'}</span>
-                      <span className="ml-2 text-muted-foreground">({displayedReviews.length || salon.reviewCount || 0} отзива)</span>
-                  </div>
-                  <div className="flex items-center text-muted-foreground text-sm">
-                      <MapPin className="h-4 w-4 mr-1.5 text-primary" /> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}
-                  </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-3 sm:mt-0">
-                      {isPromotionActive && (
-                      <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
-                          <Gift className="h-3 w-3 mr-1" /> Промотиран
-                      </Badge>
-                      )}
-                      {salon.priceRange && (
-                          <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
-                          {priceRangeTranslations[salon.priceRange] || salon.priceRange}
-                          </Badge>
-                      )}
-                      {auth.currentUser && salon?.id && (
-                      <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleToggleFavorite}
-                          className={`py-2 px-3 text-sm sm:text-base flex items-center ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
-                          aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
-                      >
-                          <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
-                          {isFavorite ? "Премахни от любими" : "Добави в любими"}
-                      </Button>
-                      )}
-                  </div>
+    <div className="relative w-full h-[400px] overflow-hidden mb-8"> {/* Reverted back to fixed height and removed top margin */}
+      <Image src={salon.heroImage || "/placeholder-image.jpg"} alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")} className="object-cover" fill sizes="100vw" priority data-ai-hint="Salon facade building" /> {/* Reverted image classes */}
+      {/* Overlay to darken image and make text readable */}
+      <div className="absolute inset-0 bg-black/50"></div> {/* Slightly increased opacity */}
+      {/* Hero Image Overlay with Salon Info */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-shadow-lg">{salon.name}</h1> {/* Added text-shadow for readability */}
+        <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto text-shadow-md">{salon.description?.substring(0, 100)}...</p> {/* Added text-shadow */}
+      </div>
+    </div>
+
+    <div className="container mx-auto px-4 py-6"> {/* Main content container */}
+      <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
+        <div className="lg:w-2/3"> {/* Main content area */}
+          
+          {/* Salon Header Info - Moved above Tabs */}
+          <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-4"> {/* Reverted flex direction */}
+                <div className="flex items-center gap-4 mt-3 sm:mt-0">
+                    {isPromotionActive && (
+                    <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
+                        <Gift className="h-3 w-3 mr-1" /> Промотиран
+                    </Badge>
+ ) }
+
+ {salon.priceRange && (
+                        <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
+                        {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+ </Badge>
+ )}{auth.currentUser && salon?.id && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleToggleFavorite}
+                        className={`py-2 px-3 text-sm sm:text-base flex items-center ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`}
+                        aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                    >
+                        <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
+                        {isFavorite ? "Премахни от любими" : "Добави в любими"}
+                    </Button>
+                    )}
+                </div>
               </div>
               <p className="text-foreground leading-relaxed">{salon.description}</p>
             </div>
@@ -915,7 +903,7 @@ export default function SalonProfilePage() {
               </TabsList>
 
               <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><Info className="mr-2 h-5 w-5 text-primary"/>Информация за Салона</h3>
+                <h3 className="text-xl font-semibold mb-4 text-foreground">Информация за Салона</h3> {/* Removed Info icon */}
                 <ul className="space-y-2 text-sm text-muted-foreground">
                     <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
                     <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
@@ -932,114 +920,99 @@ export default function SalonProfilePage() {
                       </Card>
                   )}
                   <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
-                      <MapPin className="mr-2 h-5 w-5 text-primary" />Местоположение на Картата
-                    </h3>
+                    <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3> {/* Removed MapPin icon */}
                       <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
-                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( 
+                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( // Check for address or coordinates
                         <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
 )}
                       </div>
                     </div>
                     </TabsContent>
-                <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-
-                    <Sparkles className="mr-2 h-6 w-6 text-primary" /> Нашите Услуги
-                  </h2>
-                  <div className="space-y-1">
-                    {(salon.services && salon.services.length > 0) ? salon.services.map(service => (
-                      <ServiceListItem
-                        key={service.id}
- service={service}
- isBookingEnabled={salon.workingMethod === 'appointment'}
- { ...(salon.workingMethod === 'appointment' && { onBook: handleBookService }) } // Conditionally add onBook
- />
-                    )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
+              <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
+                <div className="space-y-1">
+                  {(salon.services && salon.services.length > 0) ? salon.services.map(service => (
+                    <ServiceListItem
+                      key={service.id}
+                      service={service}
+                      isBookingEnabled={salon.workingMethod === 'appointment'}
+                      { ...(salon.workingMethod === 'appointment' && { onBook: handleBookService }) } // Conditionally add onBook
+                    />
+                  )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
+                </div>
+              </TabsContent>
+              <TabsContent value="reviews" id="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center"><MessageSquare className="mr-2 h-5 w-5 text-primary"/>Отзиви</h3>
+                {isLoadingReviews ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <Card key={i} className="shadow-sm">
+                        <CardHeader>
+                          <Skeleton className="h-5 w-1/3 mb-1" />
+                          <Skeleton className="h-4 w-1/4" />
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                          <Skeleton className="h-4 w-full" />
+                          <Skeleton className="h-4 w-2/3" />
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                </TabsContent>
+                ) : displayedReviews.length > 0 ? (
+                  <div className="space-y-6">
+                    {displayedReviews.map(review => (
+                      <ReviewCard key={review.id} review={review} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
+                )}
 
-                <TabsContent value="reviews" id="reviews" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                  <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                    <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Отзиви от Клиенти
-                  </h2>
-                  {isLoadingReviews ? (
-                       <div className="space-y-4">
-                          {[...Array(3)].map((_, i) => (
-                          <Card key={i} className="shadow-sm">
-                              <CardHeader>
-                              <Skeleton className="h-5 w-1/3 mb-1" />
-                              <Skeleton className="h-4 w-1/4" />
-                              </CardHeader>
-                              <CardContent className="space-y-2">
-                              <Skeleton className="h-4 w-full" />
-                              <Skeleton className="h-4 w-2/3" />
-                              </CardContent>
-                          </Card>
-                          ))}
-                      </div>
-                  ) : displayedReviews.length > 0 ? (
+                {/* Load More Button */}
+                {hasMoreReviews && !isLoadingReviews && displayedReviews.length > 0 && (
+                  <div className="mt-6 text-center">
+                    <Button onClick={fetchMoreReviews}>
+                      Зареди още отзиви
+                    </Button>
+                  </div>
+                )}
+                {auth.currentUser && (
+                  <div className="mt-6">
+                    {showReviewForm ? (
+                      <AddReviewForm
+                        onAddReview={handleReviewSubmit}
+                        onCancel={() => setShowReviewForm(false)}
+                      />
+                    ) : (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowReviewForm(true)}
+                        data-ai-hint="Add review button"
+                        className="w-full"
+                      >
+                        Добави Отзив
+                      </Button>
+                    )}
+                  </div>
+                )}
+                {auth.currentUser && userReviews.length > 0 && !showReviewForm && (
+                  <div className="mt-8 bg-card p-6 rounded-lg shadow-md">
+                    <h3 className="text-xl font-semibold mb-4 text-foreground flex items-center">
+                      <ThumbsUp className="mr-2 h-5 w-5 text-primary" /> Вашите Отзиви за този салон
+                    </h3>
                     <div className="space-y-6">
-                      {displayedReviews.map(review => (
+                      {userReviews.map(review => (
                         <ReviewCard key={review.id} review={review} />
                       ))}
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
-                  )}
-
-                  {/* Load More Button */}
-                  {hasMoreReviews && !isLoadingReviews && displayedReviews.length > 0 && (
-                    <div className="mt-6 text-center">
-                      <Button
-                        onClick={fetchMoreReviews}
-                      >
-                        Зареди още отзиви
-                      </Button>
-                    </div>
-                  )}
-                   {auth.currentUser && (
-                      <div className="mt-6">
-                      {showReviewForm ? (
-                          <AddReviewForm
-                          onAddReview={handleReviewSubmit}
-                          onCancel={() => setShowReviewForm(false)}
-                          />
-                      ) : (
-                          <Button
-                          variant="outline"
-                          onClick={() => setShowReviewForm(true)}
-                          data-ai-hint="Add review button"
-                          className="w-full"
-                          >
-                          Добави Отзив
-                          </Button>
-                      )}
-                      </div>
-                  )}
-                   {auth.currentUser && userReviews.length > 0 && !showReviewForm && (
-                      <div className="mt-8 bg-card p-6 rounded-lg shadow-md">
-                           <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                              <ThumbsUp className="mr-2 h-6 w-6 text-primary" /> Вашите Отзиви за този салон
-                           </h2>
-                           <div className="space-y-6">
-                              {userReviews.map(review => (
-                                  <ReviewCard key={review.id} review={review} />
-                              ))}
-                           </div>
-                      </div>
-                    )}
-                </TabsContent>
-                <TabsContent value="gallery" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                   <h2 className="text-2xl font-semibold mb-4 text-foreground flex items-center">
-                    <ImageIcon className="mr-2 h-6 w-6 text-primary" /> Галерия
-                  </h2>
-                   <SalonGallery photos={salon.photos || []} salonName={salon.name || ''} salonCity={salon.city || ''} />
-                </TabsContent>
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="gallery" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
+                <SalonGallery photos={salon.photos || []} salonName={salon.name || ''} salonCity={salon.city || ''} />
+              </TabsContent>
               </Tabs>
             </div> {/* End Main content area */}
-
-          <aside className="lg:w-1/3 space-y-8 sticky top-20">
             {/* Conditionally render Booking Calendar and Your Reservation Card/Button based on workingMode */}
             {salon.workingMethod === 'appointment' && (
               <>
@@ -1078,7 +1051,7 @@ export default function SalonProfilePage() {
                       </CardContent>
                     </Card>
                      <Button
-                      onClick={handleConfirmBooking}
+                      onClick={handleConfirmBooking} // Keep booking handler
                       className="w-full py-6 text-lg font-semibold"
                       disabled={!auth.currentUser}
                     >
@@ -1088,9 +1061,7 @@ export default function SalonProfilePage() {
                 )}
              </>
             )}
-          </aside>
-        </div>
-      </div> {/* Closing fragment */}
-    </div></>
-  );
-}
+          </div> {/* End of bg-background div */}
+        </div> {/* End of container mx-auto */}
+ </>
+);
