@@ -126,22 +126,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         console.error('Error sending admin email notification for new payment:', emailError);
       }
       // Notify admins
-      const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
-      const adminUsersSnapshot = await adminUsersQuery.get();
-      if (!adminUsersSnapshot.empty) {
-        const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
-        const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
-          return adminDb.collection('notifications').add({
-            userId: adminDoc.id,
-            message: notificationMessage,
-            link: '/admin/payments',
-            read: false,
-            createdAt: FieldValue.serverTimestamp(),
-            type: 'new_payment_admin',
-            relatedEntityId: businessId,
+      if (adminDb) {
+        const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
+        const adminUsersSnapshot = await adminUsersQuery.get();
+        if (!adminUsersSnapshot.empty) {
+          const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
+          const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
+            return adminDb.collection('notifications').add({
+              userId: adminDoc.id,
+              message: notificationMessage,
+              link: '/admin/payments',
+              read: false,
+              createdAt: FieldValue.serverTimestamp(),
+              type: 'new_payment_admin',
+              relatedEntityId: businessId,
+            });
           });
-        });
-        await Promise.all(adminNotificationsPromises);
+          await Promise.all(adminNotificationsPromises);
+        }
+      } else {
+        console.warn('adminDb is null, skipping admin notification.');
       }
 
       console.log(`Successfully captured PayPal order ${orderID} for business ${businessId} and package ${packageId} in ${paypalMode.toUpperCase()} environment. Firestore updated.`);
