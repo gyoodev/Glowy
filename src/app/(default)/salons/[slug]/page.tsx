@@ -31,6 +31,10 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
+ const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { 
+  loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
+  ssr: false
+});
 
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
@@ -95,13 +99,12 @@ function generateSalonSchema(salon: Salon) {
 
 export default function SalonProfilePage() {
   const params = useParams();
-  const slug = params?.slug;
+  const slugParam = params?.slug;
 
-  const plainSlug = useMemo(() => {
-    if (!slug) return undefined;
-    const currentSlug = Array.isArray(slug) ? slug[0] : slug;
-    return (currentSlug as string | undefined);
-  }, [slug]);
+  const slug = useMemo(() => {
+    if (!slugParam) return undefined;
+    return Array.isArray(slugParam) ? slugParam[0] : slugParam;
+  }, [slugParam]);
 
 
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -125,7 +128,7 @@ export default function SalonProfilePage() {
 
 
   useEffect(() => {
-    const salonNameFromSlug = plainSlug ? plainSlug.replace(/_/g, ' ') : undefined;
+    const salonNameFromSlug = slug ? slug.replace(/_/g, ' ') : undefined;
     console.log("[SalonProfilePage] Derived salonNameFromSlug for Firestore query:", salonNameFromSlug);
 
     const fetchSalonByName = async (name: string) => {
@@ -185,7 +188,7 @@ export default function SalonProfilePage() {
     } else {
       console.log("[SalonProfilePage] No valid salon name from slug, cannot fetch salon.");
       setIsLoading(false);
-      if (slug && !plainSlug) {
+      if (slug) {
         toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
       }
     }
@@ -195,7 +198,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [plainSlug, firestore, toast, slug]);
+  }, [slug, firestore, toast]);
 
   const fetchSalonReviews = async (salonId: string, startAfterDoc: any = null) => {
     if (!salonId) return;
@@ -725,11 +728,13 @@ export default function SalonProfilePage() {
                   )}
                   <div className="mt-6">
                     <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
-                      <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
-                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : (
-                        <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
-)}
-                      </div>
+                      {salon.location?.lat && salon.location?.lng ? (
+                          <MapboxMap latitude={salon.location.lat} longitude={salon.location.lng} />
+                      ) : (
+                        <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
+                          <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
+                        </div>
+                      )}
                     </div>
                     </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
@@ -868,4 +873,3 @@ export default function SalonProfilePage() {
  </>
   );
 }
-
