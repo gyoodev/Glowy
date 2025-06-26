@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 
 
 const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
-  ssr: false, // This component needs access to the window object
+  ssr: false, // This component needs access to the window object,
   loading: () => <Skeleton className="w-full h-64 rounded-lg" />,
 });
 
