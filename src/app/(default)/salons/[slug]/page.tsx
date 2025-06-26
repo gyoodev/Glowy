@@ -728,19 +728,11 @@ export default function SalonProfilePage() {
                       </Card>
                   )}
                   <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
-                      {salon.location?.lat && salon.location?.lng ? (
-                          <LeafletMap latitude={salon.location.lat} longitude={salon.location.lng} />
-                      ) : salon.address ? (
-                        <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
-                          <p className="text-muted-foreground">Адресът е посочен, но няма информация за показване на карта.</p>
-                        </div>
- ) : (
-                        <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
-                          <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
-                        </div>
-                      )}
-                    </div>
+ <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
+ <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
+ <p className="text-muted-foreground">Картата не е налична в момента.</p>
+ </div>
+ </div>
                     </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
