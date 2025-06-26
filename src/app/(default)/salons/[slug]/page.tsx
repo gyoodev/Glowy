@@ -114,17 +114,14 @@ function generateSalonSchema(salon: Salon) {
 
 export default function SalonProfilePage() {
   const params = useParams();
-  // Use useMemo to get a plain string slug, preventing issues with params object enumeration
   const plainSlug = useMemo(() => {
-    const s = params?.slug;
-    // The slug can be a string or an array of strings depending on the route segment.
-    // For `[slug]`, it's a string. For `[...slug]`, it's an array.
-    // This handles both cases safely.
+    if (!params) return undefined;
+    const s = params.slug;
     if (Array.isArray(s)) {
       return s[0];
     }
     return s as string | undefined;
-  }, [params?.slug]);
+  }, [params]);
 
 
   const [salon, setSalon] = useState<Salon | null>(null);
