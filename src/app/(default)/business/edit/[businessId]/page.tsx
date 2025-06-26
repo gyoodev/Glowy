@@ -268,13 +268,13 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
 
-    const dataToUpdate: Partial<Salon> & { location?: { lat: number, lng: number } | null } = {
+    const dataToUpdate: Partial<Salon> = {
         name: data.name,
         description: data.description,
         region: data.region,
         city: data.city,
         address: data.address,
-        location: (typeof data.lat === 'number' && typeof data.lng === 'number') ? { lat: data.lat, lng: data.lng } : null,
+        location: (typeof data.lat === 'number' && typeof data.lng === 'number') ? { lat: data.lat, lng: data.lng } : undefined,
         priceRange: data.priceRange,
         phoneNumber: data.phone, 
         email: data.email,
@@ -294,7 +294,7 @@ export default function EditBusinessPage() {
 
     try {
       const businessRef = doc(firestore, 'salons', businessId);
-      await updateDoc(businessRef, dataToUpdate as any);
+      await updateDoc(businessRef, dataToUpdate);
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
       
       const profile = await getUserProfile(auth.currentUser!.uid);
