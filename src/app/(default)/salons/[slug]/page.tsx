@@ -114,14 +114,15 @@ function generateSalonSchema(salon: Salon) {
 
 export default function SalonProfilePage() {
   const params = useParams();
+  const slug = params?.slug;
+
   const plainSlug = useMemo(() => {
-    if (!params) return undefined;
-    const s = params.slug;
-    if (Array.isArray(s)) {
-      return s[0];
+    if (!slug) return undefined;
+    if (Array.isArray(slug)) {
+      return slug[0];
     }
-    return s as string | undefined;
-  }, [params]);
+    return slug as string | undefined;
+  }, [slug]);
 
 
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -204,9 +205,8 @@ export default function SalonProfilePage() {
       fetchSalonByName(salonNameFromSlug);
     } else {
       console.log("[SalonProfilePage] No valid salon name from slug, cannot fetch salon.");
-      setSalon(null);
       setIsLoading(false);
-      // Only toast if params has been processed and plainSlug is still undefined,
+      // Only toast if slug has been processed and plainSlug is still undefined,
       // indicating an actual issue with the slug from URL.
       if (params && Object.keys(params).length > 0 && !plainSlug) {
         toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
