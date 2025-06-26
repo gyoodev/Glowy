@@ -37,6 +37,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method ' + req.method + ' Not Allowed');
   }
 
+  if (!adminDb) {
+    return res.status(503).json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs for details.' });
+  }
+
   if (!clientId || !clientSecret) {
     console.error("PayPal API credentials not configured on the server for capture-order. Check PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
     return res.status(500).json({ success: false, message: 'PayPal API credentials not configured on the server. Please contact support or check server logs.' });

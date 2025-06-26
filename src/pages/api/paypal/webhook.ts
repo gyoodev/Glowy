@@ -18,6 +18,10 @@ const verifyWebhookSignature = async (req: NextApiRequest, rawBody: Buffer): Pro
 };
 
 const updatePromotionInFirestore = async (paymentDetails: { packageId: string; businessId: string; paymentMethod: 'paypal'; transactionId: string }) => {
+  if (!adminDb) {
+    throw new Error('Firebase Admin SDK not initialized on the server.');
+  }
+
   if (!paymentDetails?.businessId || !paymentDetails?.packageId) {
     console.error("Missing required payment details for Firestore update in webhook.");
     return;

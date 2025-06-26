@@ -20,6 +20,10 @@ async function verifyAdmin(request: NextRequest): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDb) {
+      return NextResponse.json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs for details.' }, { status: 503 });
+    }
+
     const isAdmin = await verifyAdmin(request);
     if (!isAdmin) {
       return NextResponse.json({ success: false, message: 'Unauthorized: Admin access required.' }, { status: 403 });

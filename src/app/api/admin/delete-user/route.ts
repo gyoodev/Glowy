@@ -26,6 +26,10 @@ async function verifyAdmin(request: NextRequest): Promise<boolean> {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!adminDb) {
+      return NextResponse.json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs for details.' }, { status: 503 });
+    }
+    
     const isAdmin = await verifyAdmin(request);
     if (!isAdmin) {
       return NextResponse.json({ success: false, message: 'Unauthorized: Admin access required.' }, { status: 403 });
@@ -54,8 +58,10 @@ export async function POST(request: NextRequest) {
     if (error.code === 'auth/user-not-found') {
       message = 'User not found in Firebase Authentication. They may have already been deleted. Cleaning up Firestore entry.';
       try {
-        const { uid } = await request.json(); // Re-read UID for safety
-        if (uid) await adminDb.collection('users').doc(uid).delete();
+        if (adminDb) { // Check again before trying to clean up
+          const { uid } = await request.json(); // Re-read UID for safety
+          if (uid) await adminDb.collection('users').doc(uid).delete();
+        }
       } catch (cleanupError) {
         console.error("Firestore cleanup failed after user-not-found error:", cleanupError);
       }
