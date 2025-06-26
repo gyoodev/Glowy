@@ -31,7 +31,7 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
- const MapboxMap = dynamic(() => import('@/components/map/MapboxMap'), { 
+ const LeafletMap = dynamic(() => import('@/components/map/MapboxMap'), { 
   loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
   ssr: false
 });
@@ -729,7 +729,7 @@ export default function SalonProfilePage() {
                   <div className="mt-6">
                     <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
                       {salon.location?.lat && salon.location?.lng ? (
-                          <MapboxMap latitude={salon.location.lat} longitude={salon.location.lng} />
+                          <LeafletMap latitude={salon.location.lat} longitude={salon.location.lng} />
                       ) : (
                         <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
                           <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
