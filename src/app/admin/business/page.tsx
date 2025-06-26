@@ -10,11 +10,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertTriangle, List, Trash2, UserPlus, Loader2 } from 'lucide-react'; // Added Loader2
-
+import { AlertTriangle, List, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { getDoc } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { mapSalon } from '@/utils/mappers';
 
@@ -72,6 +72,10 @@ export default function AdminBusinessPage() {
 
   const handleCreateBusiness = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!newBusiness.name || !newBusiness.city || !newBusiness.address || !newBusiness.ownerId) {
+      toast({ title: 'Грешка', description: 'Моля, попълнете всички полета.', variant: 'destructive' });
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     console.log("AdminBusinessPage: Attempting to create new business:", newBusiness);
@@ -93,7 +97,7 @@ export default function AdminBusinessPage() {
         description: `Нов салон "${newBusiness.name}" е добавен с ID: ${docRef.id}`,
       });
       setNewBusiness({ name: '', city: '', address: '', ownerId: '' });
-      await fetchSalons(); 
+      await fetchSalons(filterStatus); 
     } catch (err: any) {
       console.error('AdminBusinessPage: Error creating business:', err);
       setError('Неуспешно създаване на бизнес.');
@@ -110,7 +114,6 @@ export default function AdminBusinessPage() {
     try {
       const businessDocRef = doc(firestoreInstance, 'salons', businessId);
       
-      // Fetch current data to get ownerId
       const businessDocSnap = await getDoc(businessDocRef);
       if (!businessDocSnap.exists()) {
         throw new Error('Бизнесът не беше намерен.');
@@ -122,13 +125,12 @@ export default function AdminBusinessPage() {
       await updateDoc(businessDocRef, { status: newStatus });
       toast({ title: 'Статусът е променен', description: `Статусът на бизнеса е успешно променен на "${newStatus}".` });
 
-      // Notify the business owner
       if (ownerId) {
         const notificationMessage = `Статусът на Вашия салон "${salonName}" беше променен на "${newStatus === 'approved' ? 'Одобрен' : newStatus === 'rejected' ? 'Отхвърлен' : 'Очаква одобрение'}".`;
         await addDoc(collection(firestoreInstance, 'notifications'), {
           userId: ownerId,
           message: notificationMessage,
-          link: `/business/manage`, // Link to the business owner's manage page
+          link: `/business/manage`,
           read: false,
           createdAt: serverTimestamp(),
           type: 'salon_status_change',
@@ -138,11 +140,10 @@ export default function AdminBusinessPage() {
          toast({
             title: 'Известие изпратено',
             description: 'Собственикът на салона беше уведомен за промяната на статуса.',
-            variant: 'default' // Or 'success' if available
+            variant: 'default'
           });
       }
 
-      // Optimistically update state and filter based on the new status
       setSalons(prevSalons => prevSalons.map(s => s.id === businessId ? { ...s, status: newStatus } : s).filter(s => filterStatus === 'all' || s.status === filterStatus));
       console.log(`AdminBusinessPage: Status updated for business ID ${businessId} to ${newStatus}.`);
     } catch (err: any) {
@@ -151,7 +152,7 @@ export default function AdminBusinessPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [firestoreInstance, toast, filterStatus]); // Added fetchSalons dependency? No, optimistic update is better.
+  }, [firestoreInstance, toast, filterStatus]);
 
   const handleDeleteBusiness = useCallback(async (businessId: string, businessName: string) => {
     console.log(`AdminBusinessPage: Confirmation prompt for deleting business: ID=${businessId}, Name=${businessName}`);
@@ -167,7 +168,7 @@ export default function AdminBusinessPage() {
         await deleteDoc(businessDocRef);
         console.log(`AdminBusinessPage: Successfully deleted business ID: ${businessId} from Firestore.`);
         toast({ title: 'Салонът е изтрит', description: `Салон "${businessName}" беше успешно изтрит.` });
-        await fetchSalons(); 
+        await fetchSalons(filterStatus); 
         console.log("AdminBusinessPage: Salon list refreshed after deletion.");
     } catch (err: any) {
         console.error(`AdminBusinessPage: Error deleting business ID ${businessId}:`, err.message, err.code, err.stack);
@@ -176,9 +177,8 @@ export default function AdminBusinessPage() {
         setIsSubmitting(false);
         console.log("AdminBusinessPage: Deletion process finished, isSubmitting set to false.");
     }
-  }, [firestoreInstance, toast, fetchSalons]);
+  }, [firestoreInstance, toast, fetchSalons, filterStatus]);
 
-  // Refetch salons when filterStatus changes
   useEffect(() => {
     fetchSalons(filterStatus);
   }, [fetchSalons, filterStatus]);
@@ -224,8 +224,46 @@ export default function AdminBusinessPage() {
   return (
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на бизнеси (Салони)</h1>
+      
+      <Card className="mb-8 shadow-md">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold flex items-center">
+            <UserPlus className="mr-2 h-6 w-6 text-primary" />
+            Ръчно създаване на бизнес
+          </CardTitle>
+          <CardDescription>
+            Създайте нов салон и го асоциирайте със съществуващ потребител (собственик).
+          </CardDescription>
+        </CardHeader>
+        <form onSubmit={handleCreateBusiness}>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <Label htmlFor="name">Име на салона</Label>
+              <Input id="name" value={newBusiness.name} onChange={(e) => setNewBusiness({ ...newBusiness, name: e.target.value })} required disabled={isSubmitting} />
+            </div>
+            <div>
+              <Label htmlFor="city">Град</Label>
+              <Input id="city" value={newBusiness.city} onChange={(e) => setNewBusiness({ ...newBusiness, city: e.target.value })} required disabled={isSubmitting} />
+            </div>
+            <div>
+              <Label htmlFor="address">Адрес</Label>
+              <Input id="address" value={newBusiness.address} onChange={(e) => setNewBusiness({ ...newBusiness, address: e.target.value })} required disabled={isSubmitting} />
+            </div>
+            <div>
+              <Label htmlFor="ownerId">ID на собственик</Label>
+              <Input id="ownerId" value={newBusiness.ownerId} onChange={(e) => setNewBusiness({ ...newBusiness, ownerId: e.target.value })} required disabled={isSubmitting} />
+            </div>
+          </CardContent>
+          <CardFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
+              {isSubmitting ? 'Създаване...' : 'Създай бизнес'}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
 
-      {/* Form for creating a new business - Omitted for brevity in this specific fix, assuming it's unchanged from previous state */}
+
      <div className="mb-6 flex items-center space-x-4">
         <Label htmlFor="statusFilter" className="flex-shrink-0">Покажи салони със статус:</Label>
         <Select onValueChange={(value: typeof filterStatus) => setFilterStatus(value)} value={filterStatus}>
