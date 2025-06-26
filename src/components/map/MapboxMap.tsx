@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
@@ -17,18 +17,19 @@ interface LeafletMapProps {
   markerText?: string;
 }
 
-const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom = 15, markerText }) => {
-  useEffect(() => {
-    // This effect runs only on the client side
-    // Fix the default icon path issue in Leaflet when used with bundlers like Webpack
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: iconRetinaUrl.src,
-      iconUrl: iconUrl.src,
-      shadowUrl: shadowUrl.src,
-    });
-  }, []);
+// Fix the default icon path issue in Leaflet when used with bundlers like Webpack.
+// This is done once at the module level to avoid issues with React StrictMode.
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: iconRetinaUrl.src,
+    iconUrl: iconUrl.src,
+    shadowUrl: shadowUrl.src,
+  });
+}
 
+const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom = 15, markerText }) => {
+  // The useEffect for icon setup has been removed and is now handled at the module level.
   return (
     <MapContainer center={center} zoom={zoom} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
       <TileLayer
