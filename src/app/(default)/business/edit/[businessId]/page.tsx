@@ -32,7 +32,7 @@ import { z } from 'zod';
 import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers'; 
-import { auth } from '@/lib/firebase';
+import { auth, getUserProfile } from '@/lib/firebase';
 
 const generateFullDayTimeOptions = () => {
   const options = [];
@@ -153,11 +153,15 @@ export default function EditBusinessPage() {
       const docSnap = await getDoc(businessRef);
       if (docSnap.exists()) {
         const businessData = mapSalon(docSnap.data(), docSnap.id);
-        if (businessData.ownerId !== userId) {
+        const profile = await getUserProfile(userId);
+        
+        // Authorization check: allow owner or admin
+        if (businessData.ownerId !== userId && profile?.role !== 'admin') {
           toast({ title: 'Неоторизиран достъп', description: 'Нямате права да редактирате този бизнес.', variant: 'destructive' });
-          router.push('/business/manage');
+          router.push('/business/manage'); // Redirect non-owner/non-admin users
           return;
         }
+
         setBusiness(businessData);
 
         let initialWorkingHours = { ...defaultWorkingHours };
@@ -195,7 +199,12 @@ export default function EditBusinessPage() {
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
-        router.push('/business/manage');
+        const profile = await getUserProfile(userId);
+        if (profile?.role === 'admin') {
+            router.push('/admin/business');
+        } else {
+            router.push('/business/manage');
+        }
       }
     } catch (error) {
       console.error('Error fetching business:', error);
@@ -268,7 +277,14 @@ export default function EditBusinessPage() {
       const businessRef = doc(firestore, 'salons', businessId);
       await updateDoc(businessRef, dataToUpdate as any);
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
-      router.push('/business/manage');
+      
+      const profile = await getUserProfile(auth.currentUser!.uid);
+      if (profile?.role === 'admin') {
+        router.push('/admin/business');
+      } else {
+        router.push('/business/manage');
+      }
+
     } catch (error: any) {
       console.error('Error updating business:', error);
       toast({ title: 'Грешка', description: error.message || 'Неуспешно актуализиране на данни за бизнеса.', variant: 'destructive' });
@@ -634,5 +650,3 @@ export default function EditBusinessPage() {
     </>
   );
 }
-
-    
