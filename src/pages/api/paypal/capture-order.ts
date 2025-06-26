@@ -127,12 +127,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       // Notify admins
       if (adminDb) {
-        const adminUsersQuery = adminDb.collection('users').where('role', '==', 'admin');
+        const db = adminDb; // Create a locally scoped constant
+        const adminUsersQuery = db.collection('users').where('role', '==', 'admin');
         const adminUsersSnapshot = await adminUsersQuery.get();
         if (!adminUsersSnapshot.empty) {
           const notificationMessage = 'Ново плащане за промоция \'' + chosenPackage.name + '\' (' + chosenPackage.price + ' EUR) за салон \'' + salonName + '\' (ID: ' + businessId + ').';
           const adminNotificationsPromises = adminUsersSnapshot.docs.map(adminDoc => {
-            return adminDb.collection('notifications').add({
+            return db.collection('notifications').add({
               userId: adminDoc.id,
               message: notificationMessage,
               link: '/admin/payments',
