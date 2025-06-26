@@ -117,12 +117,14 @@ export default function SalonProfilePage() {
   // Use useMemo to get a plain string slug, preventing issues with params object enumeration
   const plainSlug = useMemo(() => {
     const s = params?.slug;
-    if (typeof s === 'string') return s;
-    // For a [slug] route, s should be a string. Array handling is for [...slug].
-    // If it's an array for [slug], it's unexpected, but we take the first part.
-    if (Array.isArray(s) && s.length > 0) return s[0];
-    return undefined;
-  }, [params]);
+    // The slug can be a string or an array of strings depending on the route segment.
+    // For `[slug]`, it's a string. For `[...slug]`, it's an array.
+    // This handles both cases safely.
+    if (Array.isArray(s)) {
+      return s[0];
+    }
+    return s as string | undefined;
+  }, [params?.slug]);
 
 
   const [salon, setSalon] = useState<Salon | null>(null);
