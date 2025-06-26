@@ -604,6 +604,8 @@ export default function SalonProfilePage() {
   const dayOfWeekIndex = new Date().getDay();
   const todayKey = daysOrder[dayOfWeekIndex === 0 ? 6 : dayOfWeekIndex - 1];
   
+  const hasServices = salon.services && salon.services.length > 0;
+  
   return (
   <>
     {salon && (
@@ -626,7 +628,7 @@ export default function SalonProfilePage() {
 
     <div className="container mx-auto px-4 py-6">
       <div className="flex flex-col lg:flex-row gap-8">
-        <div className="lg:w-2/3">
+        <div className={cn("w-full", hasServices && salon.workingMethod === 'appointment' && "lg:w-2/3")}>
           
           <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
             <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
@@ -814,51 +816,52 @@ export default function SalonProfilePage() {
               </TabsContent>
               </Tabs>
             </div>
-            {salon.workingMethod === 'appointment' && (
-              <>
-                <div id="booking-calendar-section">
+            
+            {hasServices && salon.workingMethod === 'appointment' && (
+              <div className="lg:w-1/3">
+                <div id="booking-calendar-section" className="sticky top-20">
                   <BookingCalendar
                     salonName={salon.name}
                     serviceName={selectedService?.name}
                     availability={salon.availability || {}}
                     onTimeSelect={handleTimeSelected}
                   />
-                </div>
 
-                {selectedService && selectedBookingDate && selectedBookingTime && (
-                  <>
-                    <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
-                      <CardHeader className="pb-3 pt-4">
-                        <CardTitle className="text-lg text-secondary-foreground flex items-center">
-                          <Info className="mr-2 h-5 w-5" />
-                          Вашата Резервация
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-sm space-y-2 text-secondary-foreground">
-                        <div className="flex items-center">
-                          <Scissors className="mr-2 h-4 w-4 text-primary" />
-                          <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
-                        </div>
-                        <div className="flex items-center">
-                          <CalendarDays className="mr-2 h-4 w-4 text-primary" />
-                          <span className="font-medium">Дата:</span>&nbsp;{format(selectedBookingDate, "PPP", { locale: bg })}
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="mr-2 h-4 w-4 text-primary" />
-                          <span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}
-                        </div>
-                      </CardContent>
-                    </Card>
-                     <Button
-                      onClick={handleConfirmBooking}
-                      className="w-full py-6 text-lg font-semibold"
-                      disabled={!auth.currentUser}
-                    >
-                      {auth.currentUser ? "Запази час" : "Влезте за да резервирате"}
-                    </Button>
-                  </>
-                )}
-             </>
+                  {selectedService && selectedBookingDate && selectedBookingTime && (
+                    <div className="mt-4">
+                      <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
+                        <CardHeader className="pb-3 pt-4">
+                          <CardTitle className="text-lg text-secondary-foreground flex items-center">
+                            <Info className="mr-2 h-5 w-5" />
+                            Вашата Резервация
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="text-sm space-y-2 text-secondary-foreground">
+                          <div className="flex items-center">
+                            <Scissors className="mr-2 h-4 w-4 text-primary" />
+                            <span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}
+                          </div>
+                          <div className="flex items-center">
+                            <CalendarDays className="mr-2 h-4 w-4 text-primary" />
+                            <span className="font-medium">Дата:</span>&nbsp;{format(selectedBookingDate, "PPP", { locale: bg })}
+                          </div>
+                          <div className="flex items-center">
+                            <Clock className="mr-2 h-4 w-4 text-primary" />
+                            <span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}
+                          </div>
+                        </CardContent>
+                      </Card>
+                       <Button
+                        onClick={handleConfirmBooking}
+                        className="w-full py-6 text-lg font-semibold"
+                        disabled={!auth.currentUser}
+                      >
+                        {auth.currentUser ? "Запази час" : "Влезте за да резервирате"}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -866,4 +869,3 @@ export default function SalonProfilePage() {
   );
 }
 
-    
