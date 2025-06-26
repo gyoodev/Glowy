@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -16,7 +15,7 @@ export interface BookingCalendarProps {
   onTimeSelect?: (date: Date | undefined, time: string | undefined) => void;
 }
 
-export function BookingCalendar({ salonName, serviceName, availability = {}, onTimeSelect }: BookingCalendarProps) {
+export default function BookingCalendar({ salonName, serviceName, availability = {}, onTimeSelect }: BookingCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
