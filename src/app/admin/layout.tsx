@@ -161,19 +161,27 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             </h1>
             <nav className="space-y-1">
               {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={cn(
-                    "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
-                    !isDesktopSidebarOpen && "justify-center",
-                    isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
+                <Tooltip key={item.label}>
+                  <TooltipTrigger asChild>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
+                        !isDesktopSidebarOpen && "justify-center",
+                        isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
+                      )}
+                      aria-label={isDesktopSidebarOpen ? undefined : item.label}
+                    >
+                      <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
+                      {isDesktopSidebarOpen && <span>{item.label}</span>}
+                    </Link>
+                  </TooltipTrigger>
+                  {!isDesktopSidebarOpen && (
+                    <TooltipContent side="right" sideOffset={5}>
+                      <p>{item.label}</p>
+                    </TooltipContent>
                   )}
-                  aria-label={isDesktopSidebarOpen ? undefined : item.label} // Add aria-label when collapsed for accessibility
-                >
-                  <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
-                  {isDesktopSidebarOpen && <span>{item.label}</span>}
-                </Link>
+                </Tooltip>
               ))}
             </nav>
           </div>
