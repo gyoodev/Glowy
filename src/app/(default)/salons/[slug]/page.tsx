@@ -775,7 +775,7 @@ export default function SalonProfilePage() {
                         {isMapLoading ? (
                         <Skeleton className="h-full w-full" />
                         ) : mapCoordinates ? (
-                        <LeafletMap center={[mapCoordinates.lat, mapCoordinates.lng]} markerText={salon.name} />
+                        <LeafletMap key={salon.id} center={[mapCoordinates.lat, mapCoordinates.lng]} markerText={salon.name} />
                         ) : (
                         <div className="w-full h-full flex items-center justify-center bg-muted/50">
                             <p className="text-muted-foreground">Местоположението не може да бъде показано на картата.</p>
