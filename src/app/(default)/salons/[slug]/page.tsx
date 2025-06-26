@@ -14,7 +14,6 @@ import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageI
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
-import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
@@ -26,6 +25,11 @@ import { ServiceListItem } from '@/components/salon/service-list-item';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
+
+const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
+  ssr: false,
+  loading: () => <Skeleton className="w-full h-64 rounded-lg" />,
+});
 
 const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), { 
   loading: () => <Skeleton className="h-40 w-full rounded-lg" />,
