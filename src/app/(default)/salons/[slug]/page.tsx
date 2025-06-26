@@ -208,7 +208,7 @@ export default function SalonProfilePage() {
       setIsLoading(false);
       // Only toast if slug has been processed and plainSlug is still undefined,
       // indicating an actual issue with the slug from URL.
-      if (params && Object.keys(params).length > 0 && !plainSlug) {
+      if (slug && !plainSlug) {
         toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
       }
     }
@@ -218,7 +218,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [plainSlug, firestore, toast, params]); // params is included for the conditional toast logic
+  }, [plainSlug, firestore, toast, slug]); // Depend on the primitive slug
 
   const fetchSalonReviews = async (salonId: string, startAfterDoc: any = null) => {
     if (!salonId) return;
