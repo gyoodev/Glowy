@@ -31,11 +31,6 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
  const SalonGallery = dynamic(() => import('@/components/salon/SalonGallery'), {
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
- const LeafletMap = dynamic(() => import('@/components/map/MapboxMap'), { 
-  loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
-  ssr: false
-});
-
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
@@ -730,7 +725,11 @@ export default function SalonProfilePage() {
                     <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
                       {salon.location?.lat && salon.location?.lng ? (
                           <LeafletMap latitude={salon.location.lat} longitude={salon.location.lng} />
-                      ) : (
+                      ) : salon.address ? (
+                        <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
+                          <p className="text-muted-foreground">Адресът е посочен, но няма информация за показване на карта.</p>
+                        </div>
+ ) : (
                         <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
                           <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
                         </div>
