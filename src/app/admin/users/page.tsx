@@ -2,8 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getFirestore, collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { getFunctions, httpsCallable, type HttpsCallableResult } from 'firebase/functions';
+import { getFirestore, collection, getDocs } from 'firebase/firestore';
 import { auth } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,71 +64,86 @@ export default function AdminUsersPage() {
   }, [fetchUsers]);
 
   const handleDeleteUser = useCallback(async (userId: string, userEmail?: string) => {
-    console.log(`[AdminUsersPage] Attempting to delete user. UID: ${userId}, Email: ${userEmail}`);
+    console.log(`[AdminUsersPage] Attempting to delete user via API route. UID: ${userId}, Email: ${userEmail}`);
+    
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребител ${userEmail || userId}? Тази операция е необратима и ще изтрие потребителя от Firebase Authentication и неговия документ от Firestore.`)) {
       console.log(`[AdminUsersPage] User deletion cancelled by admin. UID: ${userId}`);
       return;
     }
 
-    setIsSubmitting(true);
-    console.log(`[AdminUsersPage] Calling 'deleteUserAdmin' Cloud Function for UID: ${userId}`);
-    const functions = getFunctions();
-    const deleteUserAdminFunction = httpsCallable(functions, 'deleteUserAdmin');
+    if (!auth.currentUser) {
+      toast({ title: 'Грешка', description: 'Трябва да сте влезли като администратор, за да извършите това действие.', variant: 'destructive' });
+      return;
+    }
 
-    // Ensure isSubmitting is true while the async operation is in progress
     setIsSubmitting(true);
 
     try {
-      const result = await deleteUserAdminFunction({ uid: userId });
-      console.log(`[AdminUsersPage] Cloud Function 'deleteUserAdmin' result for UID ${userId}:`, result);
+      const idToken = await auth.currentUser.getIdToken();
 
-      toast({ title: "Успех", description: "Потребителят е изтрит успешно." });
+      const response = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ uid: userId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Грешка от страна на сървъра.');
+      }
+
+      toast({ title: "Успех", description: result.message || "Потребителят е изтрит успешно." });
       await fetchUsers();
     } catch (err: any) {
       console.error(`[AdminUsersPage] Error deleting user UID ${userId}:`, err);
-      let errorMessage = "Неуспешно изтриване на потребителя.";
-      let errorTitle = "Грешка при изтриване";
-
-      if (err.code === 'functions/internal') {
-        // Specific handling for internal function errors
-        errorTitle = "Сървърна грешка при изтриване";
-        errorMessage = `Възникна вътрешна грешка във Firebase Cloud Function 'deleteUserAdmin'. Моля, проверете логовете на функцията във Вашата Firebase конзола за повече детайли. (Код: ${err.code})`;
-        console.error("[AdminUsersPage] Firebase Cloud Function 'deleteUserAdmin' reported an internal error. Check Firebase console logs for the function.");
-      } else if (err.code) {
-        // Include the Firebase Functions error code if available
-        errorMessage += ` (Код: ${err.code})`;
-      }
-      if (err.message && err.code !== 'functions/internal') { 
-        // Include the error message, but avoid duplication if we have a specific 'internal' message
-        errorMessage += ` Съобщение: ${err.message}`;
-      }
-      if (err.details) {
-        // Include any additional details provided by the function error
-        errorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
-      }
-
-      toast({ title: errorTitle, description: errorMessage, variant: "destructive", duration: 10000 });
+      toast({
+        title: "Грешка при изтриване",
+        description: err.message || "Неуспешно изтриване на потребителя.",
+        variant: "destructive",
+        duration: 8000
+      });
     } finally {
       setIsSubmitting(false);
-      console.log(`[AdminUsersPage] Finished delete process for UID: ${userId}. isSubmitting set to false.`);
+      console.log(`[AdminUsersPage] Finished delete process for UID: ${userId}.`);
     }
   }, [fetchUsers, toast]);
 
   const handleUpdateUserRole = useCallback(async (userId: string, newRole: UserProfile['role']) => {
     setIsSubmitting(true);
-    setError(null);
-    const functions = getFunctions();
-    const updateUserRoleAdminFunction = httpsCallable(functions, 'updateUserRoleAdmin');
+    
+    if (!auth.currentUser) {
+      toast({ title: 'Грешка', description: 'Трябва да сте влезли като администратор.', variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      await updateUserRoleAdminFunction({ uid: userId, role: newRole });
-      toast({ title: "Успех", description: `Ролята на потребител ${userId} е актуализирана.` });
-      setEditingUserId(null);
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/admin/update-user-role', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ uid: userId, role: newRole }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Грешка от страна на сървъра при актуализиране на роля.');
+      }
+
+      toast({ title: "Успех", description: `Ролята на потребителя е актуализирана.` });
+      setEditingUserId(null); // Close the edit UI on success
       await fetchUsers();
     } catch (err: any) {
-      console.error('Error updating user role via function:', err);
-      setError('Грешка при актуализация на ролята: ' + err.message + '. Уверете се, че Cloud Function "updateUserRoleAdmin" е deploy-ната и работи коректно.');
-      toast({ title: 'Грешка при актуализация на ролята', description: err.message, variant: 'destructive' });
+      console.error('Error updating user role:', err);
+      toast({ title: 'Грешка при актуализация на роля', description: err.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -137,50 +151,53 @@ export default function AdminUsersPage() {
 
   const handleCreateUser = useCallback(async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!newUser.password && !confirm("Ще създадете потребител без парола. Той ще може да влезе само чрез Google или друг oAuth доставчик, или ще трябва да нулира паролата си. Продължавате ли?")) {
+    if (!newUser.password && !window.confirm("Ще създадете потребител без парола. Той ще може да влезе само чрез Google или друг oAuth доставчик, или ще трябва да нулира паролата си. Продължавате ли?")) {
       return;
     }
     setIsSubmitting(true);
-    setError(null);
-    const functions = getFunctions(auth.app);
-    const createUserAdminFunction = httpsCallable(functions, 'createUserAdmin');
+
+    if (!auth.currentUser) {
+      toast({ title: 'Грешка', description: 'Трябва да сте влезли като администратор.', variant: 'destructive' });
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
-      const userDataToSend: any = {
-        email: newUser.email,
-        displayName: newUser.displayName,
-        phoneNumber: newUser.phoneNumber,
-        role: newUser.role,
-      };
-      if (newUser.password) {
-        userDataToSend.password = newUser.password;
-      }
+      const idToken = await auth.currentUser.getIdToken();
+      
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify(newUser),
+      });
 
-      const result = await createUserAdminFunction(userDataToSend) as HttpsCallableResult<any>;
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Грешка от страна на сървъра при създаване на потребител.');
+      }
 
       toast({
         title: "Потребителят е създаден",
-        description: 'UID: ' + (result.data?.uid || 'N/A') + '. Firestore документът за този потребител трябва да бъде създаден от createUserAdmin Cloud Function.',
+        description: 'Нов потребител е създаден успешно с UID: ' + (result.uid || 'N/A'),
       });
       setNewUser({ email: '', password: '', displayName: '', phoneNumber: '', role: 'customer' });
       await fetchUsers();
-    } catch (err: any)
-       {
-      console.error('Error creating user via function:', err);
-      let detailedErrorMessage = 'Грешка при създаване на потребител: ' + err.message;
-      if (err.code === 'functions/internal') {
-        detailedErrorMessage = `Възникна вътрешна грешка във Firebase Cloud Function 'createUserAdmin'. Моля, проверете логовете на функцията във Вашата Firebase конзола. (Код: ${err.code})`;
-         console.error("[AdminUsersPage] Firebase Cloud Function 'createUserAdmin' reported an internal error. Check Firebase console logs for the function.");
-      } else if (err.details) {
-        detailedErrorMessage += ` Детайли: ${JSON.stringify(err.details)}`;
-      }
-      setError(detailedErrorMessage);
-      toast({ title: 'Грешка при създаване на потребител', description: detailedErrorMessage, variant: 'destructive', duration: 10000 });
+
+    } catch (err: any) {
+      console.error('Error creating user:', err);
+      toast({
+        title: 'Грешка при създаване на потребител',
+        description: err.message,
+        variant: 'destructive'
+      });
     } finally {
       setIsSubmitting(false);
     }
   }, [newUser, fetchUsers, toast]);
-
 
   if (isLoading && users.length === 0) {
     return (
@@ -227,12 +244,12 @@ export default function AdminUsersPage() {
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на потребители</h1>
 
-      {error && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Грешка</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
+      {error && !isSubmitting && <Alert variant="destructive" className="mb-4"><AlertTriangle className="h-4 w-4" /><AlertTitle>Грешка</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>}
 
       <Card className="mb-8 shadow-md">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold flex items-center"><UserPlus className="mr-2 h-6 w-6 text-primary"/>Създаване на нов потребител</CardTitle>
-          <CardDescription>Използва Firebase Cloud Function за създаване.</CardDescription>
+          <CardDescription>Използва API Route за създаване на потребители.</CardDescription>
         </CardHeader>
         <form onSubmit={handleCreateUser}>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -301,9 +318,6 @@ export default function AdminUsersPage() {
               {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
               {isSubmitting ? 'Създаване...' : 'Създай потребител'}
             </Button>
-            <p className="mt-2 text-xs text-muted-foreground">
-                Забележка: Изисква deploy-ната Firebase Cloud Function 'createUserAdmin'.
-            </p>
           </CardFooter>
         </form>
       </Card>
