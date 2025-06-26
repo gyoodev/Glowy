@@ -22,6 +22,7 @@ import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // K
 import { Badge } from '@/components/ui/badge';
 import { bg } from 'date-fns/locale'; // Keep date-fns locale import
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 
 const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), { 
@@ -34,35 +35,14 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
-  monday: "Пон",
-  tuesday: "Вт",
-  wednesday: "Ср",
-  thursday: "Четв",
-  friday: "Пет",
-  saturday: "Съб",
-  sunday: "Нед",
+  monday: "Понеделник",
+  tuesday: "Вторник",
+  wednesday: "Сряда",
+  thursday: "Четвъртък",
+  friday: "Петък",
+  saturday: "Събота",
+  sunday: "Неделя",
 };
-
-function formatWorkingHours(workingHours?: WorkingHoursStructure): string {
-  if (!workingHours || typeof workingHours !== 'object' || Object.keys(workingHours).length === 0) {
-    return 'Няма предоставено работно време';
-  }
-
-  const parts: string[] = [];
-  daysOrder.forEach(dayKey => {
-    const dayInfo = workingHours![dayKey] as DayWorkingHours | undefined;
-    if (dayInfo) {
-      if (dayInfo.isOff || !dayInfo.open || !dayInfo.close) {
-        parts.push(`${dayTranslations[dayKey] || dayKey}: Почивен ден`);
-      } else {
-        parts.push(`${dayTranslations[dayKey] || dayKey}: ${dayInfo.open} - ${dayInfo.close}`);
-      }
-    } else {
-       parts.push(`${dayTranslations[dayKey] || dayKey}: Няма информация`);
-    }
-  });
-  return parts.join('; ') || 'Няма предоставено работно време';
-}
 
 function generateSalonSchema(salon: Salon) {
   const daysOrderForSchema: Record<string, string> = {
@@ -828,6 +808,11 @@ export default function SalonProfilePage() {
 
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
+  const dayOfWeekIndex = new Date().getDay();
+  // JS getDay() is 0 for Sunday, 1 for Monday, etc.
+  // Our daysOrder is Monday-first.
+  const todayKey = daysOrder[dayOfWeekIndex === 0 ? 6 : dayOfWeekIndex - 1];
+  
   return (
   <>
     {salon && (
@@ -902,12 +887,42 @@ export default function SalonProfilePage() {
               </TabsList>
 
               <TabsContent value="info" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
-                <h3 className="text-xl font-semibold mb-4 text-foreground">Информация за Салона</h3> {/* Removed Info icon */}
-                <ul className="space-y-2 text-sm text-muted-foreground">
-                    <li className="flex items-center"><MapPin className="h-4 w-4 mr-2 text-primary"/> {salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</li>
-                    <li className="flex items-center"><Phone className="h-4 w-4 mr-2 text-primary"/> {salon.phoneNumber || 'Няма предоставен телефон'}</li>
-                    <li className="flex items-center"><CalendarDays className="h-4 w-4 mr-2 text-primary"/> {formatWorkingHours(salon.workingHours)}</li>
-                </ul>
+                <h3 className="text-xl font-semibold mb-4 text-foreground">Информация за Салона</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <MapPin className="h-4 w-4 mr-2 text-primary flex-shrink-0"/>
+                    <span>{salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</span>
+                  </div>
+                  <div className="flex items-center text-sm text-muted-foreground">
+                    <Phone className="h-4 w-4 mr-2 text-primary flex-shrink-0"/>
+                    <span>{salon.phoneNumber || 'Няма предоставен телефон'}</span>
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <h4 className="text-lg font-semibold mb-3 text-foreground flex items-center">
+                    <Clock className="mr-2 h-5 w-5 text-primary" />
+                    Работно време
+                  </h4>
+                  <ul className="space-y-2 text-sm">
+                    {daysOrder.map(dayKey => {
+                        const dayInfo = salon.workingHours?.[dayKey];
+                        const isToday = dayKey === todayKey;
+                        
+                        return (
+                            <li key={dayKey} className={cn("flex justify-between items-center p-2 rounded-md", isToday && "bg-secondary")}>
+                                <span className={cn("font-medium", isToday ? "text-primary" : "text-foreground")}>{dayTranslations[dayKey] || dayKey}</span>
+                                {dayInfo && !dayInfo.isOff && dayInfo.open && dayInfo.close ? (
+                                    <span className="font-mono text-foreground">{dayInfo.open} – {dayInfo.close}</span>
+                                ) : (
+                                    <span className="text-muted-foreground italic">Почивен ден</span>
+                                )}
+                            </li>
+                        )
+                    })}
+                  </ul>
+                </div>
+
                 {!isPromotionActive && userRole === 'business' && isSalonOwner && (
                     <Card className="shadow-md my-4 border-primary bg-secondary/30 dark:bg-secondary/50">
                         <CardHeader className="pb-3 pt-4"><CardTitle className="text-lg text-secondary-foreground flex items-center"><Gift className="mr-2 h-5 w-5" />Рекламирайте Вашия Салон</CardTitle></CardHeader>
@@ -919,7 +934,7 @@ export default function SalonProfilePage() {
                       </Card>
                   )}
                   <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3> {/* Removed MapPin icon */}
+                    <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
                       <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
                        {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( // Check for address or coordinates
                         <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
