@@ -1,9 +1,26 @@
 'use client';
 
 import 'leaflet/dist/leaflet.css';
-import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.webpack.css';
-import 'leaflet-defaulticon-compatibility';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+
+// Import marker images directly for Next.js to handle
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+// Fix for default icon path issue in Next.js
+// This ensures that Leaflet can find the icon images
+if (L.Icon.Default.prototype._getIconUrl) {
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+}
+  
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: markerIcon2x.src,
+    iconUrl: markerIcon.src,
+    shadowUrl: markerShadow.src,
+});
+
 
 interface LeafletMapProps {
   latitude: number;
