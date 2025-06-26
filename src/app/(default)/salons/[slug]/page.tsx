@@ -38,6 +38,11 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
 
+ const LeafletMap = dynamic(() => import('@/components/map/MapboxMap'), { 
+  loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
+  ssr: false
+});
+
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
   monday: "Понеделник",
@@ -126,7 +131,44 @@ export default function SalonProfilePage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const reminderTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  const [mapCoordinates, setMapCoordinates] = useState<LatLng | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(true);
 
+
+  useEffect(() => {
+    if (salon) {
+      setIsMapLoading(true);
+      // Priority 1: Use stored coordinates if they exist
+      if (salon.location && salon.location.lat && salon.location.lng) {
+        setMapCoordinates(salon.location);
+        setIsMapLoading(false);
+        return;
+      }
+
+      // Priority 2: Geocode the address if no stored coordinates
+      const geocodeAddress = async () => {
+        if (salon.address && salon.city) {
+          const fullAddress = `${salon.address}, ${salon.city}, ${salon.region || ''}`;
+          try {
+            const response = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data.lat && data.lng) {
+                setMapCoordinates({ lat: data.lat, lng: data.lng });
+              }
+            } else {
+              console.error("Geocoding failed with status:", response.status);
+            }
+          } catch (error) {
+            console.error("Failed to geocode address:", error);
+          }
+        }
+        setIsMapLoading(false);
+      };
+
+      geocodeAddress();
+    }
+  }, [salon]);
 
   useEffect(() => {
     const salonNameFromSlug = slug ? slug.replace(/_/g, ' ') : undefined;
@@ -728,11 +770,19 @@ export default function SalonProfilePage() {
                       </Card>
                   )}
                   <div className="mt-6">
- <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
- <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center bg-muted/50">
- <p className="text-muted-foreground">Картата не е налична в момента.</p>
- </div>
- </div>
+                    <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
+                    <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md border">
+                        {isMapLoading ? (
+                        <Skeleton className="h-full w-full" />
+                        ) : mapCoordinates ? (
+                        <LeafletMap center={[mapCoordinates.lat, mapCoordinates.lng]} markerText={salon.name} />
+                        ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-muted/50">
+                            <p className="text-muted-foreground">Местоположението не може да бъде показано на картата.</p>
+                        </div>
+                        )}
+                    </div>
+                    </div>
                     </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
