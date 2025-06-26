@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useRef } from 'react';
@@ -16,17 +15,6 @@ interface LeafletMapProps {
   markerText?: string;
 }
 
-// Fix the default icon path issue in Leaflet when used with bundlers like Webpack.
-// This is done once at the module level to avoid issues with React StrictMode.
-if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: iconRetinaUrl.src,
-    iconUrl: iconUrl.src,
-    shadowUrl: shadowUrl.src,
-  });
-}
-
 const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom = 15, markerText }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -41,7 +29,18 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom = 15, markerText }
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       }).addTo(map);
 
-      const marker = L.marker(center).addTo(map);
+      // Explicitly create a new Icon instance to avoid issues with default paths in bundlers.
+      const defaultIcon = new L.Icon({
+        iconUrl: iconUrl.src,
+        iconRetinaUrl: iconRetinaUrl.src,
+        shadowUrl: shadowUrl.src,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowSize: [41, 41],
+      });
+
+      const marker = L.marker(center, { icon: defaultIcon }).addTo(map);
       if (markerText) {
         marker.bindPopup(markerText);
       }
@@ -55,7 +54,7 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, zoom = 15, markerText }
         mapInstanceRef.current = null;
       }
     };
-  }, [center, zoom, markerText]); // Dependencies ensure the map can update if props change, though the current logic doesn't handle updates, just initial render and cleanup.
+  }, [center, zoom, markerText]);
 
   // The div that will contain the map. Its ref is used by Leaflet to mount the map.
   return <div ref={mapContainerRef} style={{ height: '100%', width: '100%' }} />;
