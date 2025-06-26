@@ -13,9 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { AlertTriangle, Trash2, UserPlus, Loader2, Copy } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { mapUserProfile } from '@/utils/mappers';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface NewUserFormState {
   email: string;
@@ -62,6 +63,22 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({
+        title: 'Копирано!',
+        description: `UID е копиран в клипборда.`,
+      });
+    }, (err) => {
+      console.error('Could not copy text: ', err);
+      toast({
+        title: 'Грешка',
+        description: 'Неуспешно копиране на UID.',
+        variant: 'destructive',
+      });
+    });
+  };
 
   const handleDeleteUser = useCallback(async (userId: string, userEmail?: string) => {
     console.log(`[AdminUsersPage] Attempting to delete user via API route. UID: ${userId}, Email: ${userEmail}`);
@@ -350,7 +367,26 @@ export default function AdminUsersPage() {
                 <TableBody className="bg-card divide-y divide-border">
                     {users.map(user => (
                     <TableRow key={user.id}>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.id}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate" title={user.id}>{user.id}</span>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 shrink-0"
+                                  onClick={() => handleCopy(user.id)}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Копирай UID</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.email || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.displayName || user.name || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">{user.role || 'N/A'}</TableCell>
