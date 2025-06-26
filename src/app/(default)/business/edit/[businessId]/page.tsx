@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -12,20 +12,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image'; // Keep Image import
-import { ImagePlus, Trash2, Edit, Clock, ChevronsUpDown, Check, FileText, Loader2 } from 'lucide-react'; // Remove CalendarDays, Briefcase, CalendarCheck
+import Image from 'next/image';
+import { ImagePlus, Trash2, Edit, Clock, ChevronsUpDown, Check, FileText, Loader2 } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { format, parse } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { allBulgarianCities } from '@/lib/mock-data';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'; // Keep Popover imports
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command'; // Keep Command imports
+import { bulgarianRegionsAndCities } from '@/lib/mock-data';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { cn } from '@/lib/utils'; // Removed capitalizeFirstLetter as it's not used
+import { cn } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
@@ -34,17 +34,9 @@ import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers'; 
 import { auth } from '@/lib/firebase';
 
-// Keep predefinedTimeSlots as it might be used for working hours or future availability features not tied to a specific date picker
-
-const predefinedTimeSlots = Array.from({ length: 20 }, (_, i) => { // From 08:00 to 17:30 in 30 min intervals
-  const hour = Math.floor(i / 2) + 8;
-  const minute = (i % 2) * 30;
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-});
-
 const generateFullDayTimeOptions = () => {
   const options = [];
-  for (let i = 0; i < 48; i++) { // 24 hours * 2 slots per hour
+  for (let i = 0; i < 48; i++) {
     const hour = Math.floor(i / 2);
     const minute = (i % 2) * 30;
     options.push(`${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
@@ -78,14 +70,15 @@ const defaultWorkingHours: WorkingHoursStructure = daysOfWeek.reduce((acc, day) 
 const editBusinessSchema = z.object({
   name: z.string().min(1, 'Името на салона е задължително.'),
   description: z.string().min(1, 'Описанието е задължително.'),
+  region: z.string().min(1, 'Моля, изберете област.'),
+  city: z.string().min(1, 'Моля, изберете град.'),
   address: z.string().optional(),
-  city: z.string().optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
   website: z.string().url({ message: "Невалиден URL адрес на уебсайт." }).optional().or(z.literal('')),
   workingMethod: z.enum(['appointment', 'walk_in', 'both']).optional(),
- workingHours: z.record(z.string(), z.object({
+  workingHours: z.record(z.string(), z.object({
     open: z.string(),
     close: z.string(),
     isOff: z.boolean(),
@@ -95,11 +88,10 @@ const editBusinessSchema = z.object({
   newHeroImageUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
   newGalleryPhotoUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
   availability: z.record(z.string(), z.array(z.string())).optional(),
- services: z.array(z.any()).optional(), // Removed serviceSchema validation
+  services: z.array(z.any()).optional(),
 });
 
 type EditBusinessFormValues = z.infer<typeof editBusinessSchema>;
-
 
 export default function EditBusinessPage() {
   const router = useRouter();
@@ -110,24 +102,24 @@ export default function EditBusinessPage() {
   const [business, setBusiness] = useState<Salon | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
-
-  const sortedBulgarianCities = useMemo(() => [...allBulgarianCities].sort((a, b) => a.localeCompare(b, 'bg')), []);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
 
   const businessId = params?.businessId as string;
+  
   const form = useForm<EditBusinessFormValues>({
     resolver: zodResolver(editBusinessSchema),
     defaultValues: {
       name: '',
       description: '',
-      address: '',
+      region: '',
       city: '',
+      address: '',
       priceRange: 'moderate',
       phone: '',
       email: '',
       website: '',
- workingMethod: 'appointment',
- workingHours: defaultWorkingHours,
+      workingMethod: 'appointment',
+      workingHours: defaultWorkingHours,
       heroImage: '',
       photos: [],
       newHeroImageUrl: '',
@@ -137,18 +129,19 @@ export default function EditBusinessPage() {
     },
   });
 
+  const selectedRegion = form.watch('region');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        router.push('/login');
-      } else {
-        fetchBusinessData(user.uid);
-      }
-    });
-    return () => unsubscribe();
- }, [businessId, router]);
-  const fetchBusinessData = async (userId: string) => { 
+    if (selectedRegion) {
+        const regionData = bulgarianRegionsAndCities.find(r => r.region === selectedRegion);
+        setAvailableCities(regionData ? regionData.cities : []);
+    } else {
+        setAvailableCities([]);
+    }
+  }, [selectedRegion]);
+
+
+  const fetchBusinessData = useCallback(async (userId: string) => { 
     if (!businessId) {
       setLoading(false);
       toast({ title: 'Грешка', description: 'Липсва ID на бизнеса.', variant: 'destructive' });
@@ -175,12 +168,18 @@ export default function EditBusinessPage() {
             }
           }
         }
+        
+        if (businessData.region) {
+            const regionData = bulgarianRegionsAndCities.find(r => r.region === businessData.region);
+            setAvailableCities(regionData ? regionData.cities : []);
+        }
 
         form.reset({
             name: businessData.name,
             description: businessData.description,
-            address: businessData.address || '',
+            region: businessData.region || '',
             city: businessData.city || '',
+            address: businessData.address || '',
             priceRange: businessData.priceRange || 'moderate',
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
@@ -192,7 +191,7 @@ export default function EditBusinessPage() {
             newHeroImageUrl: businessData.heroImage || '',
             newGalleryPhotoUrl: '',
             availability: businessData.availability || {},
-            services: businessData.services || [], // Keep services data without detailed mapping
+            services: businessData.services || [],
         });
       } else {
         toast({ title: 'Не е намерен', description: 'Бизнесът не е намерен.', variant: 'destructive' });
@@ -204,7 +203,18 @@ export default function EditBusinessPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [businessId, firestore, form, router, toast]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push('/login');
+      } else {
+        fetchBusinessData(user.uid);
+      }
+    });
+    return () => unsubscribe();
+ }, [businessId, router, fetchBusinessData]);
 
   const handleAddGalleryPhotoUrl = () => {
     const newGalleryPhotoUrl = form.getValues('newGalleryPhotoUrl');
@@ -227,7 +237,6 @@ export default function EditBusinessPage() {
     form.setValue('photos', currentPhotos.filter(url => url !== photoUrlToRemove));
   };
 
-
   const onSubmit: SubmitHandler<EditBusinessFormValues> = async (data) => {
     if (!businessId || !business) return;
     setSaving(true);
@@ -235,8 +244,9 @@ export default function EditBusinessPage() {
     const dataToUpdate: Partial<Salon> = {
         name: data.name,
         description: data.description,
+        region: data.region,
+        city: data.city,
         address: data.address,
- city: data.city,
         priceRange: data.priceRange,
         phoneNumber: data.phone, 
         email: data.email,
@@ -246,7 +256,7 @@ export default function EditBusinessPage() {
         heroImage: data.newHeroImageUrl?.trim() || data.heroImage || '',
         photos: data.photos || [],
         services: data.services?.map(s => ({
-          id: s.id || `custom_service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // Ensure ID for new custom services
+          id: s.id || `custom_service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
           name: s.name,
           description: s.description || '',
           price: Number(s.price),
@@ -287,8 +297,6 @@ export default function EditBusinessPage() {
     );
   }
   if (!business) return null;
-  const today = new Date();
-  today.setHours(0,0,0,0);
 
   return (
     <>
@@ -328,7 +336,53 @@ export default function EditBusinessPage() {
                         />
                         {form.formState.errors.name && <p className="text-sm text-destructive">{form.formState.errors.name.message}</p>}
                       </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="region">Област</Label>
+                        <Controller
+                            name="region"
+                            control={form.control}
+                            render={({ field }) => (
+                                <Select
+                                    value={field.value}
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                        form.setValue('city', ''); // Reset city on region change
+                                    }}
+                                >
+                                    <SelectTrigger id="region">
+                                        <SelectValue placeholder="Изберете област" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {bulgarianRegionsAndCities.map(regionData => (
+                                            <SelectItem key={regionData.region} value={regionData.region}>{regionData.region}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                         {form.formState.errors.region && <p className="text-sm text-destructive">{form.formState.errors.region.message}</p>}
+                      </div>
                        <div className="space-y-2">
+                        <Label htmlFor="city">Град</Label>
+                        <Controller
+                            name="city"
+                            control={form.control}
+                            render={({ field }) => (
+                                <Select value={field.value} onValueChange={field.onChange} disabled={!selectedRegion}>
+                                    <SelectTrigger id="city">
+                                        <SelectValue placeholder={selectedRegion ? "Изберете град" : "Първо изберете област"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableCities.map(city => (
+                                            <SelectItem key={city} value={city}>{city}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        />
+                        {form.formState.errors.city && <p className="text-sm text-destructive">{form.formState.errors.city.message}</p>}
+                      </div>
+                      <div className="space-y-2">
                         <Label htmlFor="address">Адрес</Label>
                         <Controller
                           name="address"
@@ -336,56 +390,6 @@ export default function EditBusinessPage() {
                           render={({ field }) => <Input id="address" {...field} />}
                         />
                       </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="city">Град</Label>
-                        <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button
-                              variant="outline"
-                              role="combobox"
-                              aria-expanded={cityPopoverOpen}
-                              className="w-full justify-between font-normal"
-                            >
-                              {form.watch('city')
-                                ? sortedBulgarianCities.find(
-                                    (city) => city === form.watch('city')
-                                  )
-                                : "Изберете град..."}
-                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                            <Command>
-                              <CommandInput placeholder="Търсене на град..." />
-                              <CommandList>
-                                <CommandEmpty>Няма намерен град.</CommandEmpty>
-                                <CommandGroup>
-                                  {sortedBulgarianCities.map((city) => (
-                                    <CommandItem
-                                      key={city}
-                                      value={city}
-                                      onSelect={(currentValue) => {
-                                        form.setValue('city', currentValue === form.watch('city') ? "" : currentValue);
-                                        setCityPopoverOpen(false);
-                                      }}
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          form.watch('city') === city ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {city}
-                                    </CommandItem>
-                                  ))}
-                                </CommandGroup>
-                              </CommandList>
-                            </Command>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="phone">Телефон</Label>
                          <Controller
@@ -413,28 +417,27 @@ export default function EditBusinessPage() {
                          {form.formState.errors.website && <p className="text-sm text-destructive">{form.formState.errors.website.message}</p>}
                       </div>
                        <div className="space-y-2">
- <Label htmlFor="workingMethod">Метод на работа</Label>
+                         <Label htmlFor="workingMethod">Метод на работа</Label>
                           <Controller
- name="workingMethod"
+                             name="workingMethod"
                             control={form.control}
                             render={({ field }) => (
- <Select
+                               <Select
                                 value={field.value}
                                 onValueChange={field.onChange}
                               >
                                 <SelectTrigger id="workingMethod">
- <SelectValue placeholder="Изберете метод" />
- </SelectTrigger>
- <SelectContent>
- <SelectItem value="appointment">С резервация на час</SelectItem>
- <SelectItem value="walk_in">Без резервации</SelectItem>
- </SelectContent>
- </Select>
+                                 <SelectValue placeholder="Изберете метод" />
+                                 </SelectTrigger>
+                                 <SelectContent>
+                                 <SelectItem value="appointment">С резервация на час</SelectItem>
+                                 <SelectItem value="walk_in">Без резервации</SelectItem>
+                                 </SelectContent>
+                               </Select>
                             )}
                           />
                           {form.formState.errors.workingMethod && <p className="text-sm text-destructive">{form.formState.errors.workingMethod.message}</p>}
                        </div>
-                       
                        <div className="space-y-2">
                           <Label htmlFor="priceRange">Ценови диапазон</Label>
                           <Controller
@@ -457,7 +460,6 @@ export default function EditBusinessPage() {
                             )}
                           />
                       </div>
-
                       <div className="space-y-2 md:col-span-2">
                         <Label htmlFor="description">Описание</Label>
                          <Controller
@@ -469,7 +471,6 @@ export default function EditBusinessPage() {
                       </div>
                     </div>
                   </section>
-
                   <section>
                     <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
                     <div className="space-y-2">
@@ -482,7 +483,7 @@ export default function EditBusinessPage() {
                       {form.watch('newHeroImageUrl') && form.watch('newHeroImageUrl')?.trim() !== '' && (
                         <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
                           <Image src={form.watch('newHeroImageUrl')!} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
-                          <Button // Keep this button for removing the hero image
+                          <Button
                               type="button"
                               variant="destructive"
                               size="icon"
@@ -496,7 +497,6 @@ export default function EditBusinessPage() {
                       )}
                     </div>
                   </section>
-
                   <section>
                     <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия (URL адреси)</h3>
                     <div className="space-y-4">
@@ -513,12 +513,11 @@ export default function EditBusinessPage() {
                               <ImagePlus size={18} className="mr-2"/> Добави URL
                           </Button>
                       </div>
-
                       {(form.watch('photos') && form.watch('photos')!.length > 0) ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {form.watch('photos')!.map((photoUrl, index) => (
                             <div key={`gallery-${index}-${photoUrl}`} className="relative group aspect-square">
-                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail"/> {/* Ensure objectFit="cover" and layout="fill" */}
+                              <Image src={photoUrl} alt={`Снимка от галерия ${index + 1}`} layout="fill" objectFit="cover" className="rounded-md border" data-ai-hint="salon interior detail"/>
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -636,3 +635,4 @@ export default function EditBusinessPage() {
   );
 }
 
+    

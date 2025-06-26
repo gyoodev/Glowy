@@ -2,14 +2,14 @@
 'use client';
 import type { Metadata } from 'next';
 import Image from 'next/image';
-import Link from 'next/link'; // Keep Link for general use
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react'; // Added useMemo
+import Link from 'next/link';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, DayWorkingHours, NotificationType, LatLng } from '@/types';
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ServiceListItem } from '@/components/salon/service-list-item';
-import { ReviewCard } from '@/components/salon/review-card'; // Keep this
+import { ReviewCard } from '@/components/salon/review-card';
 import { Button } from '@/components/ui/button';
 import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Home } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
@@ -17,10 +17,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
 import { BookingCalendar } from '@/components/booking/booking-calendar';
 import { mapSalon } from '@/utils/mappers';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'; // Keep Card imports
-import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns'; // Keep date-fns imports
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
-import { bg } from 'date-fns/locale'; // Keep date-fns locale import
+import { bg } from 'date-fns/locale';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -76,6 +76,7 @@ function generateSalonSchema(salon: Salon) {
     "address": {
       "@type": "PostalAddress",
       "streetAddress": salon.address || 'Няма предоставен адрес',
+      "addressRegion": salon.region || undefined,
       "addressLocality": salon.city || 'Не е посочен град',
     },
     "telephone": salon.phoneNumber || 'Няма предоставен телефон',
@@ -98,10 +99,8 @@ export default function SalonProfilePage() {
 
   const plainSlug = useMemo(() => {
     if (!slug) return undefined;
-    if (Array.isArray(slug)) {
-      return slug[0];
-    }
-    return slug as string | undefined;
+    const currentSlug = Array.isArray(slug) ? slug[0] : slug;
+    return (currentSlug as string | undefined);
   }, [slug]);
 
 
@@ -109,8 +108,8 @@ export default function SalonProfilePage() {
   const [displayedReviews, setDisplayedReviews] = useState<Review[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [lastVisibleReview, setLastVisibleReview] = useState<any>(null); // State to hold the last document snapshot
-  const [hasMoreReviews, setHasMoreReviews] = useState(true); // State to track if there are more reviews
+  const [lastVisibleReview, setLastVisibleReview] = useState<any>(null);
+  const [hasMoreReviews, setHasMoreReviews] = useState(true);
   const [userReviews, setUserReviews] = useState<Review[]>([]);
   const [selectedService, setSelectedService] = useState<Service | undefined>(undefined);
   const { toast } = useToast();
@@ -186,8 +185,6 @@ export default function SalonProfilePage() {
     } else {
       console.log("[SalonProfilePage] No valid salon name from slug, cannot fetch salon.");
       setIsLoading(false);
-      // Only toast if slug has been processed and plainSlug is still undefined,
-      // indicating an actual issue with the slug from URL.
       if (slug && !plainSlug) {
         toast({ title: "Грешен адрес", description: "Не може да се определи името на салона от URL адреса.", variant: "destructive" });
       }
@@ -198,7 +195,7 @@ export default function SalonProfilePage() {
         clearTimeout(reminderTimeoutId.current);
       }
     };
-  }, [plainSlug, firestore, toast, slug]); // Depend on the primitive slug
+  }, [plainSlug, firestore, toast, slug]);
 
   const fetchSalonReviews = async (salonId: string, startAfterDoc: any = null) => {
     if (!salonId) return;
@@ -217,7 +214,7 @@ export default function SalonProfilePage() {
           reviewsCollectionRef,
           where('salonId', '==', salonId),
           orderBy('date', 'desc'),
-          startAfter(startAfterDoc), // Start fetching after the last document
+          startAfter(startAfterDoc),
           limit(10)
         );
       }
@@ -228,55 +225,25 @@ export default function SalonProfilePage() {
         ...docSnap.data()
       })) as Review[];
 
-      // Update last visible document
       if (querySnapshot.docs.length > 0) {
         setLastVisibleReview(querySnapshot.docs[querySnapshot.docs.length - 1]);
       } else {
-        setLastVisibleReview(null); // No documents returned
+        setLastVisibleReview(null);
       }
 
-      // Check if there are potentially more reviews
       setHasMoreReviews(querySnapshot.docs.length === 10);
 
       if (startAfterDoc) {
-        // Append to existing reviews if loading more
         setDisplayedReviews(prevReviews => [...prevReviews, ...reviewsData]);
       } else {
-        // Replace reviews for the first load
         setDisplayedReviews(reviewsData);
       }
-
-      // Recalculate average rating and count only if this is the initial load or the total set has changed
-      // A more accurate way is to get the total count from the salon document and calculate,
-      // but this is simpler for displaying based on fetched reviews.
-      // For simplicity here, let's recalculate based on all displayed reviews after appending.
-       if (startAfterDoc) {
-            // Recalculate based on the combined list
-            const totalDisplayed = [...displayedReviews, ...reviewsData]; // Use the combined list
-            if (totalDisplayed.length > 0) {
-                const totalRating = totalDisplayed.reduce((acc, rev) => acc + rev.rating, 0);
-                const newAverageRating = totalRating / totalDisplayed.length;
-                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: totalDisplayed.length }) : null);
-            } else {
-                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
-            }
-       } else {
-            // Recalculate for the first batch
-            if (reviewsData.length > 0) {
-                const totalRating = reviewsData.reduce((acc, rev) => acc + rev.rating, 0);
-                const newAverageRating = totalRating / reviewsData.length;
-                setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: newAverageRating, reviewCount: reviewsData.length }) : null);
-            } else {
-                 setSalon(prevSalon => prevSalon ? ({ ...prevSalon, rating: 0, reviewCount: 0 }) : null);
-            }
-       }
-
     } catch (error) {
       console.error("[SalonProfilePage] Error fetching salon reviews:", error);
       if (!startAfterDoc) {
          setDisplayedReviews([]);
       }
-      setHasMoreReviews(false); // Assume no more reviews on error
+      setHasMoreReviews(false);
     } finally {
       setIsLoadingReviews(false);
     }
@@ -293,7 +260,7 @@ export default function SalonProfilePage() {
         setUserRole(null);
         setIsSalonOwner(false);
         setIsFavorite(false);
-        setUserProfile(null); // Reset user profile state
+        setUserProfile(null);
         return;
       }
       try {
@@ -312,15 +279,14 @@ export default function SalonProfilePage() {
       }
     };
     if(salon?.id) {
-       fetchSalonReviews(salon.id); // Fetch initial reviews on salon load
+       fetchSalonReviews(salon.id);
     };
 
-    if(salon?.id) { // Ensure salon.id exists before fetching related data
+    if(salon?.id) {
       fetchUserRoleAndCheckOwnership();
       fetchSalonReviews(salon.id);
     };
-  }, [salon?.id, firestore]); 
- // Depend on salon.id and firestore. Removed displayedReviews as it caused unnecessary refetches.
+  }, [salon?.id, firestore]);
 
   const fetchUserReviews = async () => {
     if (!auth.currentUser || !salon?.id) {
@@ -504,149 +470,6 @@ export default function SalonProfilePage() {
         title: "Резервацията е потвърдена!",
         description: "Успешно резервирахте " + bookingServiceName + " за " + format(bookingDate, 'PPP', { locale: bg }) + " в " + bookingTime + ".",
       });
-
- // --- Start: Send Email Notifications ---
-      try {
- // Fetch owner email for salon owner notification
- const ownerProfile = await getUserProfile(salon.ownerId);
- const ownerEmail = ownerProfile?.email;
-
- // Email to Client
- const clientEmailResponse = await fetch('/api/send-email/booking-created-client', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
-          to: clientEmail,
-          clientName: clientName,
-          salonName: bookingSalonName,
-          serviceName: bookingServiceName,
-          bookingDate: format(bookingDate, 'PPP', { locale: bg }),
-          bookingTime: bookingTime,
-          bookingDuration: bookingDuration,
-          bookingPrice: bookingPrice,
-          salonAddress: salon.address,
-          salonPhoneNumber: salon.phoneNumber,
- }),
- });
-        if (!clientEmailResponse.ok) {
- console.error(`[SalonProfilePage] Failed to send booking confirmation email to client: ${clientEmailResponse.status} ${clientEmailResponse.statusText}`);
- }
-
- // Email to Salon Owner (if email exists)
- if (ownerEmail) {
- const salonOwnerEmailResponse = await fetch('/api/send-email/booking-created-salon', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
-            to: ownerEmail,
-            salonName: bookingSalonName,
-            serviceName: bookingServiceName,
-            bookingDate: format(bookingDate, 'PPP', { locale: bg }),
-            bookingTime: bookingTime,
- clientName: clientName,
- clientEmail: clientEmail,
- clientPhoneNumber: clientPhoneNumber,
- }),
- });
-          if (!salonOwnerEmailResponse.ok) {
- console.error(`[SalonProfilePage] Failed to send new booking email to salon owner: ${salonOwnerEmailResponse.status} ${salonOwnerEmailResponse.statusText}`);
- }
- }
-      } catch (emailError) {
- console.error("[SalonProfilePage] Error sending booking emails:", emailError);
- }
- // --- End: Send Email Notifications ---
-
-      const [hours, minutes] = bookingTime.split(':').map(Number);
-      const bookingDateTime = new Date(bookingDate);
-      bookingDateTime.setHours(hours, minutes, 0, 0);
-
-      const reminderDateTime = new Date(bookingDateTime.getTime() + 60 * 60 * 1000); 
-      const now = new Date();
-      const delay = reminderDateTime.getTime() - now.getTime();
-
-      if (delay > 0) {
-        if (reminderTimeoutId.current) {
-          clearTimeout(reminderTimeoutId.current);
-        }
-        reminderTimeoutId.current = setTimeout(async () => {
-          const userEmailForReminder = auth.currentUser?.email;
- if (!userEmailForReminder) {
- console.warn("[SalonProfilePage] User email not available for review reminder.");
- return;
- }
-
-          try {
-            const reminderResponse = await fetch('/api/send-email/review-reminder', { // Use a relative path
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
- serviceName: bookingServiceName || undefined,
- bookingDate: format(bookingDate, 'PPP', { locale: bg }),
- bookingTime: bookingTime,
- salonId: salon.id, // Include salonId
- userId: auth.currentUser?.uid, // Include userId
- }),
-            }); // Added closing parenthesis here
-
-            if(reminderResponse.ok) {
-                 toast({
-                    title: "Изпратена покана за отзив",
-                    description: `Покана да оставите отзив беше изпратена.`,
-                    variant: "default",
-                    duration: 7000,
-                });
-            } else {;
-              let errorMessage = `Неуспешно изпращане на покана за отзив на ${userEmailForReminder}.`;
-
-               if (!reminderResponse.ok) {
- if (reminderResponse.status === 429) {
-                  errorMessage = "Твърде много заявки за имейли. Моля, опитайте по-късно.";
- } else {
-                 const errorData = await reminderResponse.json();
-                 errorMessage += ` Грешка: ${errorData.error || reminderResponse.statusText}`;
- }
-
-                console.warn("Reminder email not sent:", errorMessage);
-                 toast({
- // Corrected the title and description
- title: "Грешка при изпращане на покана",
-                    description: errorMessage, // Use the dynamically generated error message
-                    variant: "default",
-                });
-            }
- }
- } catch (emailError) {
-            console.error("[SalonProfilePage] Error sending review reminder email:", emailError);
-            toast({
- // Corrected the title and description
- title: "Грешка при изпращане на покана",
-                description: "Възникна грешка при опита за изпращане на покана за отзив по имейл.",
-                variant: "destructive",
-            });
-          } // Missing closing curly brace for the try block
-
-        }, delay); // Schedule the reminder
-
-        // Store the timeout ID in useRef to clear it if needed (e.g., on component unmount)
-        // This part is already correctly implemented at the top with `reminderTimeoutId`.
-        // Ensuring it's handled here as well for clarity.
-        if (reminderTimeoutId.current) {
-          console.log("[SalonProfilePage] Cleared previous reminder timeout.");
-        }
-
-        toast({
-          title: "Напомняне за отзив е насрочено",
-          description: "Ще получите покана да оставите отзив 1 час след Вашата резервация в " + bookingSalonName + ".",
-          variant: "default",
-          duration: 6000,
-        });
-      } else {
-        console.log("[SalonProfilePage] Review reminder time for this booking is in the past. Not scheduling delayed reminder.");
-      }
-      setSelectedService(undefined);
-      setSelectedBookingDate(undefined);
-      setSelectedBookingTime(undefined);
     } catch (error) {
       console.error("[SalonProfilePage] Error creating booking:", error);
       toast({
@@ -725,37 +548,7 @@ export default function SalonProfilePage() {
         });
       }
 
- // --- Start: Send Email to Business Owner ---
-      if (salon.ownerId) {
- try {
- // Fetch the owner's email using their ID
- const ownerProfile = await getUserProfile(salon.ownerId);
- const ownerEmail = ownerProfile?.email;
-
- if (ownerEmail) {
- const emailResponse = await fetch('/api/send-email/new-review-business', {
- method: 'POST',
- headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
-              to: ownerEmail,
-              salonName: salon.name,
-              reviewerName: reviewerName,
-              rating: rating,
-              comment: comment,
- }),
- });
- if (!emailResponse.ok) {
- console.error(`[SalonProfilePage] Failed to send new review email: ${emailResponse.status} ${emailResponse.statusText}`);
- }
- }
- } catch (emailError) {
- console.error("[SalonProfilePage] Error sending new review email:", emailError);
- }
-      }
- // --- End: Send Email to Business Owner ---
-
       setShowReviewForm(false);
-      // Show success toast only on successful submission
       toast({ title: "Отзивът е добавен!", description: "Благодарим за Вашия отзив.", variant: "default" });
     } catch (error) {
       console.error("[SalonProfilePage] Error adding review:", error);
@@ -809,8 +602,6 @@ export default function SalonProfilePage() {
   const isPromotionActive = salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt));
 
   const dayOfWeekIndex = new Date().getDay();
-  // JS getDay() is 0 for Sunday, 1 for Monday, etc.
-  // Our daysOrder is Monday-first.
   const todayKey = daysOrder[dayOfWeekIndex === 0 ? 6 : dayOfWeekIndex - 1];
   
   return (
@@ -824,24 +615,21 @@ export default function SalonProfilePage() {
       />
     )}
 
-    <div className="relative w-full h-[400px] overflow-hidden mb-8"> {/* Reverted back to fixed height and removed top margin */}
-      <Image src={salon.heroImage || "/placeholder-image.jpg"} alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")} className="object-cover" fill sizes="100vw" priority data-ai-hint="Salon facade building" /> {/* Reverted image classes */}
-      {/* Overlay to darken image and make text readable */}
-      <div className="absolute inset-0 bg-black/50"></div> {/* Slightly increased opacity */}
-      {/* Hero Image Overlay with Salon Info */}
+    <div className="relative w-full h-[400px] overflow-hidden mb-8">
+      <Image src={salon.heroImage || "/placeholder-image.jpg"} alt={"Предна снимка на " + salon.name + (salon.city ? " в " + salon.city : "")} className="object-cover" fill sizes="100vw" priority data-ai-hint="Salon facade building" />
+      <div className="absolute inset-0 bg-black/50"></div>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white p-4">
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-shadow-lg">{salon.name}</h1> {/* Added text-shadow for readability */}
-        <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto text-shadow-md">{salon.description?.substring(0, 100)}...</p> {/* Added text-shadow */}
+        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-shadow-lg">{salon.name}</h1>
+        <p className="text-lg md:text-xl mt-2 max-w-2xl mx-auto text-shadow-md">{salon.description?.substring(0, 100)}...</p>
       </div>
     </div>
 
-    <div className="container mx-auto px-4 py-6"> {/* Main content container */}
-      <div className="flex flex-col lg:flex-row gap-8"> {/* Main content and sidebar container */}
-        <div className="lg:w-2/3"> {/* Main content area */}
+    <div className="container mx-auto px-4 py-6">
+      <div className="flex flex-col lg:flex-row gap-8">
+        <div className="lg:w-2/3">
           
-          {/* Salon Header Info - Moved above Tabs */}
           <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-4"> {/* Reverted flex direction */}
+            <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
                 <div className="flex items-center gap-4 mt-3 sm:mt-0">
                     {isPromotionActive && (
                     <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
@@ -891,7 +679,7 @@ export default function SalonProfilePage() {
                 <div className="space-y-4">
                   <div className="flex items-center text-sm text-muted-foreground">
                     <MapPin className="h-4 w-4 mr-2 text-primary flex-shrink-0"/>
-                    <span>{salon.address || 'Няма предоставен адрес'}, {salon.city || ''}</span>
+                    <span>{salon.address || 'Няма предоставен адрес'}, {salon.city || ''}, {salon.region ? `обл. ${salon.region}` : ''}</span>
                   </div>
                   <div className="flex items-center text-sm text-muted-foreground">
                     <Phone className="h-4 w-4 mr-2 text-primary flex-shrink-0"/>
@@ -936,7 +724,7 @@ export default function SalonProfilePage() {
                   <div className="mt-6">
                     <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
                       <div className="w-full rounded-lg overflow-hidden shadow-md border p-4 text-center">
-                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : ( // Check for address or coordinates
+                       {salon.address || (salon.location?.lat && salon.location?.lng) ? ( <p className="text-muted-foreground">Налична е информация за местоположението.</p> ) : (
                         <p className="text-muted-foreground">Няма достатъчно информация за местоположението, за да се покаже карта.</p>
 )}
                       </div>
@@ -950,7 +738,7 @@ export default function SalonProfilePage() {
                       key={service.id}
                       service={service}
                       isBookingEnabled={salon.workingMethod === 'appointment'}
-                      { ...(salon.workingMethod === 'appointment' && { onBook: handleBookService }) } // Conditionally add onBook
+                      { ...(salon.workingMethod === 'appointment' && { onBook: handleBookService }) }
                     />
                   )) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                 </div>
@@ -982,7 +770,6 @@ export default function SalonProfilePage() {
                   <p className="text-muted-foreground">Все още няма отзиви. Бъдете първият, който ще остави отзив!</p>
                 )}
 
-                {/* Load More Button */}
                 {hasMoreReviews && !isLoadingReviews && displayedReviews.length > 0 && (
                   <div className="mt-6 text-center">
                     <Button onClick={fetchMoreReviews}>
@@ -1026,11 +813,10 @@ export default function SalonProfilePage() {
                 <SalonGallery photos={salon.photos || []} salonName={salon.name || ''} salonCity={salon.city || ''} />
               </TabsContent>
               </Tabs>
-            </div> {/* End Main content area */}
-            {/* Conditionally render Booking Calendar and Your Reservation Card/Button based on workingMode */}
+            </div>
             {salon.workingMethod === 'appointment' && (
               <>
-                <div id="booking-calendar-section"> {/* Added ID for scrolling */}
+                <div id="booking-calendar-section">
                   <BookingCalendar
                     salonName={salon.name}
                     serviceName={selectedService?.name}
@@ -1039,7 +825,6 @@ export default function SalonProfilePage() {
                   />
                 </div>
 
-                {/* Your Reservation Card */}
                 {selectedService && selectedBookingDate && selectedBookingTime && (
                   <>
                     <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50">
@@ -1065,7 +850,7 @@ export default function SalonProfilePage() {
                       </CardContent>
                     </Card>
                      <Button
-                      onClick={handleConfirmBooking} // Keep booking handler
+                      onClick={handleConfirmBooking}
                       className="w-full py-6 text-lg font-semibold"
                       disabled={!auth.currentUser}
                     >
@@ -1075,8 +860,10 @@ export default function SalonProfilePage() {
                 )}
              </>
             )}
-          </div> {/* End of bg-background div */}
-        </div> {/* End of container mx-auto */}
+          </div>
+        </div>
  </>
   );
 }
+
+    

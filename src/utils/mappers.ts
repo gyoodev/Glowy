@@ -127,6 +127,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     name: raw.name || 'Неизвестен салон',
     description: raw.description || '',
     ownerId: raw.ownerId || '',
+    region: raw.region || '',
     address: raw.address || '',
     city: raw.city || '',
     priceRange: raw.priceRange || 'moderate',
@@ -181,3 +182,5 @@ export function mapNewsletterSubscriber(raw: any, id?: string): NewsletterSubscr
     subscribedAt: timestampToISOString(raw.subscribedAt),
   };
 }
+
+    

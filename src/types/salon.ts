@@ -14,6 +14,7 @@ export interface Salon {
   name: string;
   description: string;
   ownerId: string;
+  region?: string;
   address: string;
   city: string;
   phoneNumber?: string;
@@ -38,3 +39,6 @@ export interface Salon {
   status: 'pending_approval' | 'approved' | 'rejected';
 }
 
+
+
+    

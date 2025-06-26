@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useForm, type SubmitHandler, useFieldArray } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -16,7 +16,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timesta
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { allBulgarianCities, mockServices } from '@/lib/mock-data';
+import { bulgarianRegionsAndCities } from '@/lib/mock-data';
 import type { Service, NotificationType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -26,8 +26,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 const createBusinessSchema = z.object({
   name: z.string().min(3, 'Името на бизнеса трябва да е поне 3 символа.'),
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
+  region: z.string().min(1, 'Моля, изберете област.'),
+  city: z.string().min(1, 'Моля, изберете град.'),
   address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
-  city: z.string().min(2, 'Моля, изберете град.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
   workingMethod: z.enum(['appointment', 'walk_in'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
@@ -45,8 +46,12 @@ export default function CreateBusinessPage() {
   const [isBusinessUser, setIsBusinessUser] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const firestore = getFirestore();
-  const [currentStep, setCurrentStep] = useState(1); // Start at step 1
-  const totalSteps = 2; // Reduced from 3 to 2
+  const [currentStep, setCurrentStep] = useState(1);
+  const totalSteps = 2;
+  
+  const [selectedRegion, setSelectedRegion] = useState('');
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
+  
   const targetCustomerOptions = [
     { value: 'жени', label: 'Жени' },
     { value: 'мъже', label: 'Мъже' },
@@ -60,15 +65,26 @@ export default function CreateBusinessPage() {
     defaultValues: {
       name: '',
       description: '',
-      address: '',
+      region: '',
       city: '',
- workingMethod: 'appointment', // Corrected field name based on schema
+      address: '',
+      workingMethod: 'appointment',
       atmosphereForAi: '', 
       targetCustomerForAi: '',
-      uniqueSellingPointsForAi: '', // Keep for AI description generation in Step 2
+      uniqueSellingPointsForAi: '',
     },
-    mode: "onChange", // Keep for real-time validation feedback
+    mode: "onChange",
   });
+
+  useEffect(() => {
+    if (selectedRegion) {
+      const regionData = bulgarianRegionsAndCities.find(r => r.region === selectedRegion);
+      setAvailableCities(regionData ? regionData.cities : []);
+      form.setValue('city', ''); // Reset city when region changes
+    } else {
+      setAvailableCities([]);
+    }
+  }, [selectedRegion, form]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -99,7 +115,7 @@ export default function CreateBusinessPage() {
         const notificationData = {
           userId: adminDoc.id,
           message: `Нов салон "${salonName}" (ID: ${salonId}) очаква одобрение.`,
-          link: `/admin/business`, // Or `/admin/business/edit/${salonId}`
+          link: `/admin/business`,
           read: false,
           createdAt: Timestamp.fromDate(new Date()),
           type: 'new_salon_admin' as NotificationType,
@@ -125,40 +141,35 @@ export default function CreateBusinessPage() {
 
     const aiInputData: Parameters<typeof generateSalonDescription>[0] = {
       salonName: formValues.name || 'Моят Салон',
-      serviceDescription: 'различни услуги за красота', // Default description as services are not added here
- atmosphereDescription: formValues.atmosphereForAi,
- targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === formValues.targetCustomerForAi)?.label || formValues.targetCustomerForAi,
- uniqueSellingPoints: formValues.uniqueSellingPointsForAi, // Corrected field name
+      serviceDescription: 'различни услуги за красота',
+      atmosphereDescription: formValues.atmosphereForAi,
+      targetCustomerDescription: targetCustomerOptions.find(opt => opt.value === formValues.targetCustomerForAi)?.label || formValues.targetCustomerForAi,
+      uniqueSellingPoints: formValues.uniqueSellingPointsForAi,
     };
 
     if (!aiInputData.salonName || !aiInputData.serviceDescription || !aiInputData.atmosphereDescription || !aiInputData.targetCustomerDescription || !aiInputData.uniqueSellingPoints) {
- toast({
+      toast({
         title: 'Непълна информация за AI',
-        description: 'Моля, попълнете името на салона, поне една услуга с име, и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
+        description: 'Моля, попълнете името на салона и полетата за атмосфера, целеви клиенти и уникални предимства за AI генериране на описание.',
         variant: 'destructive',
       });
- form.trigger(['name', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
+      form.trigger(['name', 'atmosphereForAi', 'targetCustomerForAi', 'uniqueSellingPointsForAi']);
       return;
     }
     
     setIsAiGenerating(true);
     try {
-      const result = await generateSalonDescription(aiInputData); // Use the correct flow
+      const result = await generateSalonDescription(aiInputData);
       if (result.salonDescription) {
-        if (result.salonDescription) {
-            let generatedDescription = result.salonDescription;
-              const maxLength = 300;
-                if (generatedDescription.length > maxLength) {
-                    generatedDescription = generatedDescription.substring(0, maxLength) + '...';
-                      }
-                        form.setValue('description', generatedDescription, { shouldValidate: true });
-                          toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
-
-        } else {
- toast({ title: 'Грешка при генериране', description: result.error || 'AI не успя да генерира описание.', variant: 'destructive' });
+        let generatedDescription = result.salonDescription;
+        const maxLength = 300;
+        if (generatedDescription.length > maxLength) {
+            generatedDescription = generatedDescription.substring(0, maxLength) + '...';
         }
+        form.setValue('description', generatedDescription, { shouldValidate: true });
+        toast({ title: 'Описанието е генерирано успешно!', description: 'Прегледайте и редактирайте генерираното описание.' });
       } else {
- console.error('AI response did not contain salonDescription:', result);
+        console.error('AI response did not contain salonDescription:', result);
         toast({ title: 'Грешка при генериране', description: result.error || 'AI не успя да генерира описание.', variant: 'destructive' });
       }
     } catch (error) {
@@ -178,10 +189,11 @@ export default function CreateBusinessPage() {
     const salonDataToSave = {
         name: data.name,
         description: data.description,
-        address: data.address,
+        region: data.region,
         city: data.city,
- priceRange: data.priceRange, // Ensure this is included
- workingMethod: data.workingMethod, // Include workingMethod
+        address: data.address,
+        priceRange: data.priceRange,
+        workingMethod: data.workingMethod,
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
         uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
@@ -192,7 +204,7 @@ export default function CreateBusinessPage() {
         heroImage: 'https://placehold.co/1200x400.png?text=Hero+Image', 
         availability: {}, 
         createdAt: serverTimestamp(),
-        status: 'pending_approval' as 'pending_approval' | 'approved' | 'rejected', // Set initial status
+        status: 'pending_approval' as 'pending_approval' | 'approved' | 'rejected',
     };
 
     try {
@@ -203,25 +215,6 @@ export default function CreateBusinessPage() {
       });
       await notifyAdminsOfNewSalon(data.name, docRef.id);
       router.push('/business/manage');
-
-      // Send email notification to admins about the new business
-      try {
-        const emailResponse = await fetch('/api/send-email/new-business-admin', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            salonName: data.name,
-            salonId: docRef.id,
-          }),
-        });
-        if (!emailResponse.ok) {
-          console.error('Error sending new business email to admins:', emailResponse.statusText);
-        }
-      } catch (emailError) {
-        console.error('Error sending new business email to admins:', emailError);
-      }
     } catch (error: any) {
       console.error('Error creating business:', error);
       toast({
@@ -235,8 +228,8 @@ export default function CreateBusinessPage() {
   const nextStep = async () => {
     let isValid = false;
     if (currentStep === 1) {
-      isValid = await form.trigger(["name", "address", "city", "priceRange", "workingMethod"]); // Validation for step 1 fields
-    } else if (currentStep === 2) { // Step 2 is now Description and AI Details
+      isValid = await form.trigger(["name", "region", "city", "address", "priceRange", "workingMethod"]);
+    } else if (currentStep === 2) {
       isValid = await form.trigger(["description", "atmosphereForAi", "targetCustomerForAi", "uniqueSellingPointsForAi"]);
     }  else {
       isValid = true;
@@ -299,15 +292,24 @@ export default function CreateBusinessPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
+                   <FormField
                     control={form.control}
-                    name="address"
+                    name="region"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Адрес</FormLabel>
-                        <FormControl>
-                          <Input placeholder="напр. ул. Цар Освободител 15" {...field} />
-                        </FormControl>
+                        <FormLabel>Област</FormLabel>
+                        <Select onValueChange={(value) => { field.onChange(value); setSelectedRegion(value); }} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Изберете област" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {bulgarianRegionsAndCities.map(regionData => (
+                              <SelectItem key={regionData.region} value={regionData.region}>{regionData.region}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -318,18 +320,31 @@ export default function CreateBusinessPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Град</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Изберете град" />
+                              <SelectValue placeholder={selectedRegion ? "Изберете град" : "Първо изберете област"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {allBulgarianCities.map(city => (
+                            {availableCities.map(city => (
                               <SelectItem key={city} value={city}>{city}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="address"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Адрес</FormLabel>
+                        <FormControl>
+                          <Input placeholder="напр. ул. Цар Освободител 15" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -356,27 +371,27 @@ export default function CreateBusinessPage() {
                       </FormItem>
                     )}
                   />
- <FormField
- control={form.control}
- name="workingMethod"
- render={({ field }) => ( // Using workingMethod based on schema
- <FormItem>
- <FormLabel>Начин на работа</FormLabel>
- <Select onValueChange={field.onChange} defaultValue={field.value}>
- <FormControl>
- <SelectTrigger>
- <SelectValue placeholder="Изберете начин на работа" />
- </SelectTrigger>
- </FormControl>
- <SelectContent>
- <SelectItem value="appointment">Със записване на час</SelectItem>
- <SelectItem value="walk_in">Без записване на час</SelectItem>
- </SelectContent>
- </Select>
- <FormMessage />
- </FormItem>
- )}
- />
+                  <FormField
+                    control={form.control}
+                    name="workingMethod"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Начин на работа</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Изберете начин на работа" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="appointment">Със записване на час</SelectItem>
+                            <SelectItem value="walk_in">Без записване на час</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 </motion.div>
               )}
 
@@ -482,3 +497,5 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
+
+    

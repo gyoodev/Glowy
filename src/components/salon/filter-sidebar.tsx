@@ -2,55 +2,63 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import type { Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { ListFilter, X, Check, ChevronsUpDown } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ListFilter, X } from 'lucide-react';
 
-// Define the structure for categorized services, which is now passed directly
 export interface CategorizedService {
   category: string;
-  services: { id: string; name: string }[]; // Simplified service for display
+  services: { id: string; name: string }[];
 }
 
 interface FilterSidebarProps {
   onFilterChange: (filters: Record<string, any>) => void;
-  cities: string[];
-  categorizedServices: CategorizedService[]; // Expecting categorized services
+  regionsAndCities: { region: string; cities: string[] }[];
+  categorizedServices: CategorizedService[];
 }
 
+const ALL_REGIONS_VALUE = "--all-regions--";
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 const DEFAULT_MIN_PRICE = 0;
 const DEFAULT_MAX_PRICE = 500;
 
-export function FilterSidebar({ onFilterChange, cities, categorizedServices }: FilterSidebarProps) {
-  const [location, setLocation] = useState(ALL_CITIES_VALUE);
+export function FilterSidebar({ onFilterChange, regionsAndCities, categorizedServices }: FilterSidebarProps) {
+  const [region, setRegion] = useState(ALL_REGIONS_VALUE);
+  const [city, setCity] = useState(ALL_CITIES_VALUE);
+  const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES_VALUE);
   const [selectedServiceId, setSelectedServiceId] = useState(ALL_SERVICES_IN_CATEGORY_VALUE);
   const [rating, setRating] = useState([0]);
   const [maxPriceValue, setMaxPriceValue] = useState<[number]>([DEFAULT_MIN_PRICE]);
-  const [cityPopoverOpen, setCityPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    if (region !== ALL_REGIONS_VALUE) {
+      const regionData = regionsAndCities.find(r => r.region === region);
+      setAvailableCities(regionData ? regionData.cities.sort((a,b) => a.localeCompare(b, 'bg')) : []);
+      setCity(ALL_CITIES_VALUE); // Reset city when region changes
+    } else {
+      setAvailableCities([]);
+      setCity(ALL_CITIES_VALUE);
+    }
+  }, [region, regionsAndCities]);
+
+  useEffect(() => {
+    setSelectedServiceId(ALL_SERVICES_IN_CATEGORY_VALUE);
+  }, [selectedCategory]);
 
   const servicesForSelectedCategory = selectedCategory === ALL_CATEGORIES_VALUE
     ? []
     : categorizedServices.find(cs => cs.category === selectedCategory)?.services || [];
 
-  // Reset selected service when category changes
-  useEffect(() => {
-    setSelectedServiceId(ALL_SERVICES_IN_CATEGORY_VALUE);
-  }, [selectedCategory]);
-
   const handleApplyFilters = () => {
     onFilterChange({
-      location,
+      region: region === ALL_REGIONS_VALUE ? undefined : region,
+      location: city === ALL_CITIES_VALUE ? undefined : city,
       category: selectedCategory === ALL_CATEGORIES_VALUE ? undefined : selectedCategory,
       serviceId: selectedServiceId === ALL_SERVICES_IN_CATEGORY_VALUE ? undefined : selectedServiceId,
       minRating: rating[0],
@@ -59,24 +67,21 @@ export function FilterSidebar({ onFilterChange, cities, categorizedServices }: F
   };
 
   const handleClearFilters = () => {
-    setLocation(ALL_CITIES_VALUE);
+    setRegion(ALL_REGIONS_VALUE);
+    setCity(ALL_CITIES_VALUE);
     setSelectedCategory(ALL_CATEGORIES_VALUE);
     setSelectedServiceId(ALL_SERVICES_IN_CATEGORY_VALUE);
     setRating([0]);
     setMaxPriceValue([DEFAULT_MIN_PRICE]);
     onFilterChange({
-      location: ALL_CITIES_VALUE,
+      region: undefined,
+      location: undefined,
       category: undefined,
       serviceId: undefined,
       minRating: 0,
       maxPrice: DEFAULT_MAX_PRICE,
     });
   };
-  
-  const getCityLabel = (value: string) => {
-    if (value === ALL_CITIES_VALUE) return "Всички градове";
-    return cities.find(city => city === value) || "Изберете град";
-  }
 
   const priceLabel = maxPriceValue[0] === DEFAULT_MIN_PRICE 
     ? "Всякаква цена" 
@@ -95,64 +100,33 @@ export function FilterSidebar({ onFilterChange, cities, categorizedServices }: F
       </CardHeader>
       <CardContent className="space-y-6 p-4">
         <div>
-          <Label htmlFor="location-filter" className="text-sm font-medium">Местоположение (Град)</Label>
-          <Popover open={cityPopoverOpen} onOpenChange={setCityPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                id="location-filter"
-                variant="outline"
-                role="combobox"
-                aria-expanded={cityPopoverOpen}
-                className="w-full justify-between"
-              >
-                {getCityLabel(location)}
-                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-              <Command>
-                <CommandInput placeholder="Търсете град..." />
-                <CommandList>
-                  <CommandEmpty>Няма намерен град.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value={ALL_CITIES_VALUE}
-                      onSelect={() => {
-                        setLocation(ALL_CITIES_VALUE);
-                        setCityPopoverOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          location === ALL_CITIES_VALUE ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Всички градове
-                    </CommandItem>
-                    {cities.map((city) => (
-                      <CommandItem
-                        key={city}
-                        value={city}
-                        onSelect={(currentValue) => {
-                          setLocation(currentValue === location ? ALL_CITIES_VALUE : currentValue);
-                          setCityPopoverOpen(false);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            location === city ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {city}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
+          <Label htmlFor="region-filter" className="text-sm font-medium">Област</Label>
+          <Select value={region} onValueChange={setRegion}>
+            <SelectTrigger id="region-filter">
+              <SelectValue placeholder="Всички области" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_REGIONS_VALUE}>Всички области</SelectItem>
+              {regionsAndCities.map(r => (
+                <SelectItem key={r.region} value={r.region}>{r.region}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div>
+          <Label htmlFor="location-filter" className="text-sm font-medium">Град</Label>
+          <Select value={city} onValueChange={setCity} disabled={region === ALL_REGIONS_VALUE}>
+            <SelectTrigger id="location-filter">
+              <SelectValue placeholder={region === ALL_REGIONS_VALUE ? "Първо изберете област" : "Всички градове"} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_CITIES_VALUE}>Всички градове</SelectItem>
+              {availableCities.map(c => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
@@ -222,3 +196,5 @@ export function FilterSidebar({ onFilterChange, cities, categorizedServices }: F
     </Card>
   );
 }
+
+    
