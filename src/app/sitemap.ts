@@ -1,50 +1,47 @@
 import { MetadataRoute } from 'next';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase';
+import type { Salon } from '@/types';
 
-// Define the base URL of your application; this should match your production domain
 const baseUrl = 'https://glowy.bg'; // Replace with your actual domain
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Define static pages
+  const staticRoutes = [
+    '',
+    '/salons',
+    '/contact',
+    '/about-glowy',
+    '/faq',
+    '/terms',
+    '/privacy',
+    '/recommendations',
+    '/login',
+    '/register'
+  ].map((route) => ({
+    url: `${baseUrl}${route}`,
+    lastModified: new Date().toISOString(),
+    changeFrequency: 'monthly' as 'monthly',
+    priority: route === '' ? 1 : 0.8,
+  }));
+
+
   // Fetch salon data from Firestore
   const salonsCollectionRef = collection(db, 'salons');
-  const querySnapshot = await getDocs(salonsCollectionRef);
+  const q = query(salonsCollectionRef, where('status', '==', 'approved'));
+  const querySnapshot = await getDocs(q);
 
-  const salonUrls = querySnapshot.docs.map((doc: any) => { // Added any type for simplicity here
-    const salonData = doc.data();
-    const salonName = salonData.name as string;
-    const slug = salonName.replace(/\s+/g, '_'); // Replace spaces with underscores
+  const salonUrls = querySnapshot.docs.map((doc) => {
+    const salonData = doc.data() as Salon;
+    const salonName = salonData.name;
+    const slug = salonName.replace(/\s+/g, '_');
     return {
       url: `${baseUrl}/salons/${slug}`,
-      lastModified: new Date(), // You might want to use a salon's update timestamp if available
+      lastModified: salonData.lastUpdatedAt || salonData.createdAt || new Date(),
       changeFrequency: 'weekly' as 'weekly',
-      priority: 0.8, // Higher priority for salon pages
+      priority: 0.9,
     };
   });
 
-  // Define static pages
-  const staticUrls = [
-    {
-      url: baseUrl,
-      lastModified: new Date(),
-      changeFrequency: 'daily' as 'daily',
-      priority: 1, // Highest priority for the home page
-    },
-    // Add other static pages here, e.g.:
-    // {
-    //   url: `${baseUrl}/about`,
-    //   lastModified: new Date(),
-    //   changeFrequency: 'monthly' as 'monthly',
-    //   priority: 0.5,
-    // },
-    // {
-    //   url: `${baseUrl}/contact`,
-    //   lastModified: new Date(),
-    //   changeFrequency: 'monthly' as 'monthly',
-    //   priority: 0.5,
-    // },
-  ];
-
-  // Combine static and dynamic URLs
   return [...staticUrls, ...salonUrls];
 }

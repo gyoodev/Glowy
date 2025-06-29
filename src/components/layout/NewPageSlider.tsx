@@ -122,8 +122,8 @@ const NewPageSlider = () => {
                 variants={textVariants}
                 className="absolute left-4 right-4 md:left-12 lg:left-20 md:right-auto top-1/2 transform -translate-y-1/2 text-white text-center md:text-left max-w-full md:max-w-lg lg:max-w-xl z-10 p-2"
               >
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 drop-shadow-md">{currentSlide.title}</h2>
-                <p className="text-base sm:text-lg md:text-xl font-light mb-4 md:mb-6 drop-shadow-sm leading-relaxed">{currentSlide.description}</p>
+                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-3 md:mb-4 drop-shadow-lg">{currentSlide.title}</h2>
+                <p className="text-base sm:text-lg md:text-xl font-light mb-4 md:mb-6 drop-shadow-md leading-relaxed">{currentSlide.description}</p>
                 <Button asChild size="lg" className="bg-white text-primary hover:bg-primary/10 hover:text-primary-foreground rounded-full shadow-lg px-6 py-3 md:px-8 md:py-3.5 text-sm sm:text-base md:text-lg">
                   <Link href={currentSlide.buttonLink}>
                     {currentSlide.buttonText}

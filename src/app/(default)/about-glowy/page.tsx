@@ -5,6 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Info, Link as LinkIconLucide, MessageSquare, Users, Search, CalendarCheck, Bot } from 'lucide-react'; // Renamed Link to LinkIconLucide, added more icons
 import Link from 'next/link';
+import type { Metadata } from 'next';
+
+// Metadata is now in a separate file: src/app/(default)/about-glowy/metadata.ts
 
 export default function AboutGlowyPage() {
   return (
@@ -51,9 +54,9 @@ export default function AboutGlowyPage() {
 
             <Card className="shadow-xl rounded-lg">
               <CardHeader>
-                <CardTitle className="text-2xl font-semibold text-foreground">
+                <h2 className="text-2xl font-semibold text-foreground">
                   Ключови Функционалности
-                </CardTitle>
+                </h2>
               </CardHeader>
               <CardContent className="text-muted-foreground">
                 <ul className="space-y-4 text-base">
@@ -133,4 +136,3 @@ export default function AboutGlowyPage() {
     </div>
   );
 }
-

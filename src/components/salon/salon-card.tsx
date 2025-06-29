@@ -32,6 +32,8 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
     }
   };
 
+  const salonNameToSlug = (name?: string) => name ? name.replace(/\s+/g, '_') : 'unknown-salon';
+
   return (
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full relative">
       <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
@@ -49,11 +51,11 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
         )}
       </div>
       <CardHeader className="p-0">
-        <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`} aria-label={`Вижте детайли за ${salon.name}`}>
+        <Link href={`/salons/${salonNameToSlug(salon.name)}`} aria-label={`Вижте детайли за ${salon.name}`}>
           <div className="relative h-48 w-full">
             <Image
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
-              alt={`Екстериор или интериор на ${salon.name}`}
+              alt={`Снимка на салон ${salon.name} в град ${salon.city}`}
               fill={true}
               style={{ objectFit: 'cover' }}
               data-ai-hint="salon exterior modern"
@@ -62,7 +64,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
         </Link>
       </CardHeader>
       <CardContent className="p-4 flex-grow">
-        <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`} className="hover:underline">
+        <Link href={`/salons/${salonNameToSlug(salon.name)}`} className="hover:underline">
           <CardTitle className="mb-2 text-xl font-semibold">{salon.name}</CardTitle>
         </Link>
         <p className="mb-3 text-sm text-muted-foreground line-clamp-2">{salon.description}</p>
@@ -84,7 +86,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
           </Button>
         ) : (
           <Button asChild className="w-full">
-            <Link href={`/salons/${salon.name.replace(/\s+/g, '_')}`}>Виж Повече</Link>
+            <Link href={`/salons/${salonNameToSlug(salon.name)}`}>Виж Повече</Link>
           </Button>
         )}
       </CardFooter>

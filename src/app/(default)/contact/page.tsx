@@ -14,6 +14,7 @@ import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase'; // Import initialized Firestore instance
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Mail, User, MessageSquare, Send } from 'lucide-react';
+
 const contactFormSchema = z.object({
   name: z.string().min(2, { message: "Името трябва да е поне 2 символа." }),
   email: z.string().email({ message: "Моля, въведете валиден имейл адрес." }),
@@ -86,10 +87,10 @@ export default function ContactPage() {
     <div className="container mx-auto py-10 px-6 space-y-10">
       <Card className="max-w-2xl mx-auto shadow-xl">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold flex items-center justify-center">
+          <h1 className="text-3xl font-bold flex items-center justify-center">
             <Mail className="mr-3 h-8 w-8 text-primary" />
             Свържете се с нас
-          </CardTitle>
+          </h1>
           <CardDescription>
             Имате въпроси или предложения? Попълнете формата по-долу и ние ще се свържем с Вас.
           </CardDescription>
