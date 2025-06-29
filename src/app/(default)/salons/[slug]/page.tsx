@@ -18,13 +18,11 @@ import { format, formatDistanceToNow, isFuture, parseISO } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { bg } from 'date-fns/locale';
 import { ServiceListItem } from '@/components/salon/service-list-item';
-import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
-import { adminDb } from '@/lib/firebaseAdmin';
 
 
 const BookingCalendar = dynamic(() => import('@/components/booking/booking-calendar'), {
@@ -43,56 +41,6 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
   loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
   ssr: false
 });
-
-// This function runs on the server to generate metadata
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const salonNameFromSlug = params.slug ? params.slug.replace(/_/g, ' ') : '';
-  const defaultTitle = `${salonNameFromSlug || 'Салон'} | Glaura`;
-  const defaultDescription = `Намерете най-добрите услуги и резервирайте час в ${salonNameFromSlug}.`;
-
-  if (!adminDb || !salonNameFromSlug) {
-    return { title: defaultTitle, description: defaultDescription };
-  }
-  
-  try {
-    const salonsCollectionRef = collection(adminDb, 'salons');
-    const q = query(salonsCollectionRef, where('name', '==', salonNameFromSlug), limit(1));
-    const querySnapshot = await getDocs(q);
-
-    if (!querySnapshot.empty) {
-      const salonDoc = querySnapshot.docs[0];
-      const salon = mapSalon(salonDoc.data(), salonDoc.id);
-      
-      const description = salon.description 
-        ? (salon.description.length > 155 ? salon.description.substring(0, 155) + '...' : salon.description)
-        : defaultDescription;
-      
-      return {
-        title: `${salon.name} - ${salon.city} | Glaura`,
-        description: description,
-        keywords: [salon.name, salon.city, 'салон за красота', 'резервация', ...(salon.services?.map(s => s.name) || [])],
-        openGraph: {
-          title: `${salon.name} | Glaura`,
-          description: description,
-          images: [
-            {
-              url: salon.heroImage || 'https://placehold.co/1200x630.png',
-              width: 1200,
-              height: 630,
-              alt: `Снимка на ${salon.name}`,
-            },
-          ],
-          type: 'website',
-        },
-      };
-    }
-  } catch (error) {
-     console.error("Error fetching metadata for salon:", error);
-  }
-  
-  return { title: defaultTitle, description: defaultDescription };
-}
-
 
 const daysOrder: (keyof WorkingHoursStructure)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 const dayTranslations: Record<string, string> = {
