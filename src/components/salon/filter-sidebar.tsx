@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ListFilter, X } from 'lucide-react';
+import { IconFilter, IconX } from '@tabler/icons-react';
 
 export interface CategorizedService {
   category: string;
@@ -91,11 +91,11 @@ export function FilterSidebar({ onFilterChange, regionsAndCities, categorizedSer
     <Card className="sticky top-20 shadow-lg rounded-lg">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-lg font-semibold flex items-center">
-          <ListFilter className="mr-2 h-5 w-5 text-primary" />
+          <IconFilter className="mr-2 h-5 w-5 text-primary" />
           Филтри
         </CardTitle>
         <Button variant="ghost" size="sm" onClick={handleClearFilters} className="text-sm">
-          <X className="mr-1 h-4 w-4" /> Изчисти
+          <IconX className="mr-1 h-4 w-4" /> Изчисти
         </Button>
       </CardHeader>
       <CardContent className="space-y-6 p-4">
@@ -196,5 +196,3 @@ export function FilterSidebar({ onFilterChange, regionsAndCities, categorizedSer
     </Card>
   );
 }
-
-    
