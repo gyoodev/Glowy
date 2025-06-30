@@ -21,7 +21,7 @@ type NewsletterFormValues = z.infer<typeof newsletterFormSchema>;
 const socialLinks = [
   { 
     name: 'Facebook', 
-    href: '#', // Replace with your actual Facebook URL
+    href: 'https://www.facebook.com/Glaura-100000000000000',
     icon: (
       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
@@ -30,10 +30,19 @@ const socialLinks = [
   },
   { 
     name: 'Instagram', 
-    href: '#', // Replace with your actual Instagram URL
+    href: 'https://www.instagram.com/glaura.official/',
     icon: (
       <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
         <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.024.06 1.378.06 3.808s-.012 2.784-.06 3.808c-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.024.048-1.378.06-3.808.06s-2.784-.012-3.808-.06c-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.048-1.024-.06-1.378-.06-3.808s.012-2.784.06-3.808c.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 017.48 2.465c.636-.247 1.363-.416 2.427-.465C10.93 2.013 11.284 2 12.315 2zm-1.158 10.608a3.757 3.757 0 102.316 0 3.757 3.757 0 00-2.316 0zM14.022 8.25a1.238 1.238 0 100 2.475 1.238 1.238 0 000-2.475z" clipRule="evenodd" />
+      </svg>
+    )
+  },
+  {
+    name: 'TikTok',
+    href: 'https://www.tiktok.com/@glaura.official',
+    icon: (
+      <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-2.43.05-4.85-.98-6.49-2.91-1.43-1.7-2.11-3.88-1.95-6.19.16-2.26 1.1-4.49 2.51-6.26 1.47-1.84 3.4-3.13 5.48-3.56 1.83-.37 3.66-.29 5.49.26V0z" />
       </svg>
     )
   },
@@ -126,7 +135,7 @@ export function Footer() {
             </div>
             <div className="flex items-center space-x-4">
               {socialLinks.map((link) => (
-                <a key={link.name} href={link.href} className="text-muted-foreground hover:text-primary transition-colors">
+                <a key={link.name} href={link.href} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary transition-colors">
                   <span className="sr-only">{link.name}</span>
                   {link.icon}
                 </a>
