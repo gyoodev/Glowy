@@ -22,17 +22,17 @@ type NewsletterFormValues = z.infer<typeof newsletterFormSchema>;
 const socialLinks = [
   { 
     name: 'Facebook', 
-    href: 'https://www.facebook.com/Glaura-100000000000000',
+    href: 'https://www.facebook.com/share/16bVpETLsL/',
     icon: <IconBrandFacebook className="w-6 h-6" />
   },
   { 
     name: 'Instagram', 
-    href: 'https://www.instagram.com/glaura.official/',
+    href: 'https://www.instagram.com/glauraeu',
     icon: <IconBrandInstagram className="w-6 h-6" />
   },
   {
     name: 'TikTok',
-    href: 'https://www.tiktok.com/@glaura.official',
+    href: '#',
     icon: <IconBrandTiktok className="w-6 h-6" />
   },
 ];
