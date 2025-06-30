@@ -1,0 +1,21 @@
+{
+  "name": "Glaura",
+  "short_name": "Glaura",
+  "description": "Открийте най-добрите салони за красота и услуги във Вашия град. Запазете час лесно и бързо с Glaura.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#E6E6FA",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

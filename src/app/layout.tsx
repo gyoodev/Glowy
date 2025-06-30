@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'GKDEV', url: 'https://gkdev.org' }],
   creator: 'GKDEV',
   publisher: 'Glaura',
+  manifest: '/manifest.json',
 };
 
 
@@ -42,6 +43,7 @@ export default function RootLayout({
         {/* Favicon links are still recommended to be placed here for broad compatibility */}
         <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
+        <meta name="theme-color" content="#E6E6FA" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ClientLayoutContent>

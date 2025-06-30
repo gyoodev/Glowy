@@ -1,4 +1,12 @@
 import type {NextConfig} from 'next';
+import withPWAInit from "@ducanh2912/next-pwa";
+
+const pwa = withPWAInit({
+  dest: "public",
+  register: true,
+  skipWaiting: true,
+  disable: process.env.NODE_ENV === "development",
+});
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -47,4 +55,4 @@ const nextConfig: NextConfig = {
   // Externals will be handled by Turbopack's defaults or specific config if needed.
 };
 
-export default nextConfig;
+export default pwa(nextConfig);
