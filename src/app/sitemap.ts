@@ -1,3 +1,4 @@
+
 import { MetadataRoute } from 'next';
 import { getFirestore, collection, getDocs, query, where } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase';
@@ -43,5 +44,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     };
   });
 
-  return [...staticUrls, ...salonUrls];
+  return [...staticRoutes, ...salonUrls];
 }
