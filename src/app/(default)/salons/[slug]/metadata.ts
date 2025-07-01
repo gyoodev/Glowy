@@ -1,6 +1,5 @@
 
 import type { Metadata } from 'next';
-import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { mapSalon } from '@/utils/mappers';
 
@@ -15,9 +14,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
   
   try {
-    const salonsCollectionRef = collection(adminDb, 'salons');
-    const q = query(salonsCollectionRef, where('name', '==', salonNameFromSlug), limit(1));
-    const querySnapshot = await getDocs(q);
+    const salonsCollectionRef = adminDb.collection('salons');
+    const q = salonsCollectionRef.where('name', '==', salonNameFromSlug).limit(1);
+    const querySnapshot = await q.get();
 
     if (!querySnapshot.empty) {
       const salonDoc = querySnapshot.docs[0];
