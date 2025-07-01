@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
         hostname: 'photos.google.com',
         port: '',
         pathname: '/**',
-      },
+      }
     ],
   },
   // Webpack configuration removed as Turbopack is being used for development

@@ -1,11 +1,10 @@
-
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -13,26 +12,19 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
-import { ImagePlus, Trash2, Edit, Clock, ChevronsUpDown, Check, FileText, Loader2, MapPin } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
-import { format, parse } from 'date-fns';
-import { bg } from 'date-fns/locale';
+import { ImagePlus, Trash2, Edit, Clock, ChevronsUpDown, Check, FileText, Loader2, MapPin, UploadCloud } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { bulgarianRegionsAndCities } from '@/lib/mock-data';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod"
 import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
-import { type Locale } from 'date-fns';
 import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers'; 
 import { auth, getUserProfile } from '@/lib/firebase';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const generateFullDayTimeOptions = () => {
   const options = [];
@@ -99,8 +91,6 @@ const editBusinessSchema = z.object({
   })).optional(),
   heroImage: z.string().optional(),
   photos: z.array(z.string()).optional(),
-  newHeroImageUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
-  newGalleryPhotoUrl: z.string().url({ message: "Моля, въведете валиден URL." }).optional().or(z.literal('')),
   availability: z.record(z.string(), z.array(z.string())).optional(),
   services: z.array(z.any()).optional(),
 });
@@ -117,6 +107,9 @@ export default function EditBusinessPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [isUploadingHero, setIsUploadingHero] = useState(false);
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+
 
   const businessId = params?.businessId as string;
   
@@ -138,8 +131,6 @@ export default function EditBusinessPage() {
       workingHours: defaultWorkingHours,
       heroImage: '',
       photos: [],
-      newHeroImageUrl: '',
-      newGalleryPhotoUrl: '',
       availability: {},
       services: [],
     },
@@ -171,10 +162,9 @@ export default function EditBusinessPage() {
         const businessData = mapSalon(docSnap.data(), docSnap.id);
         const profile = await getUserProfile(userId);
         
-        // Authorization check: allow owner or admin
         if (businessData.ownerId !== userId && profile?.role !== 'admin') {
           toast({ title: 'Неоторизиран достъп', description: 'Нямате права да редактирате този бизнес.', variant: 'destructive' });
-          router.push('/business/manage'); // Redirect non-owner/non-admin users
+          router.push('/business/manage');
           return;
         }
 
@@ -210,8 +200,6 @@ export default function EditBusinessPage() {
             workingHours: initialWorkingHours,
             heroImage: businessData.heroImage || '',
             photos: businessData.photos || [],
-            newHeroImageUrl: businessData.heroImage || '',
-            newGalleryPhotoUrl: '',
             availability: businessData.availability || {},
             services: businessData.services || [],
         });
@@ -243,21 +231,44 @@ export default function EditBusinessPage() {
     return () => unsubscribe();
  }, [businessId, router, fetchBusinessData]);
 
-  const handleAddGalleryPhotoUrl = () => {
-    const newGalleryPhotoUrl = form.getValues('newGalleryPhotoUrl');
-    if (newGalleryPhotoUrl && newGalleryPhotoUrl.trim() !== '') {
-      const currentPhotos = form.getValues('photos') || [];
-      if (!currentPhotos.includes(newGalleryPhotoUrl.trim())) {
-        form.setValue('photos', [...currentPhotos, newGalleryPhotoUrl.trim()]);
-        form.setValue('newGalleryPhotoUrl', '');
-      } else {
-        toast({ title: 'Дублиран URL', description: 'Този URL вече е добавен в галерията.', variant: 'default' });
-        form.setValue('newGalleryPhotoUrl', '');
-      }
-    } else {
-      toast({ title: 'Грешка', description: 'Моля, въведете валиден URL на снимка.', variant: 'destructive' });
+  const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>, imageType: 'hero' | 'gallery') => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (imageType === 'hero') setIsUploadingHero(true);
+    if (imageType === 'gallery') setIsUploadingGallery(true);
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            const imageUrl = result.filePath;
+            if (imageType === 'hero') {
+                form.setValue('heroImage', imageUrl, { shouldValidate: true });
+            } else {
+                form.setValue('photos', [...(form.getValues('photos') || []), imageUrl], { shouldValidate: true });
+            }
+            toast({ title: "Успех", description: "Снимката е качена и конвертирана в WebP." });
+        } else {
+            throw new Error(result.error || "Неуспешно качване на снимка.");
+        }
+    } catch (error: any) {
+        console.error('Error uploading file:', error);
+        toast({ title: 'Грешка при качване', description: error.message, variant: 'destructive' });
+    } finally {
+        if (imageType === 'hero') setIsUploadingHero(false);
+        if (imageType === 'gallery') setIsUploadingGallery(false);
     }
   };
+
 
   const removeGalleryPhoto = (photoUrlToRemove: string) => {
     const currentPhotos = form.getValues('photos') || [];
@@ -281,7 +292,7 @@ export default function EditBusinessPage() {
         website: data.website,
         workingMethod: data.workingMethod,
         workingHours: data.workingHours,
-        heroImage: data.newHeroImageUrl?.trim() || data.heroImage || '',
+        heroImage: data.heroImage || '',
         photos: data.photos || [],
         services: data.services?.map(s => ({
           id: s.id || `custom_service_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -526,47 +537,38 @@ export default function EditBusinessPage() {
                     </div>
                   </section>
                   <section>
-                    <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка (URL)</h3>
-                    <div className="space-y-2">
-                      <Label htmlFor="newHeroImageUrl">URL на главна снимка</Label>
-                      <Controller
-                        name="newHeroImageUrl"
-                        control={form.control}
-                        render={({ field }) => <Input id="newHeroImageUrl" type="text" placeholder="https://example.com/hero-image.jpg" {...field} />}
-                      />
-                      {form.watch('newHeroImageUrl') && form.watch('newHeroImageUrl')?.trim() !== '' && (
-                        <div className="mt-2 relative w-full h-64 rounded-md overflow-hidden border group">
-                          <Image src={form.watch('newHeroImageUrl')!} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
-                          <Button
-                              type="button"
-                              variant="destructive"
-                              size="icon"
-                              className="absolute top-2 right-2 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                              onClick={() => form.setValue('newHeroImageUrl', '')}
-                              title="Изчисти URL на главната снимка"
-                            >
-                              <Trash2 size={16} />
-                            </Button>
+                    <h3 className="text-xl font-semibold mb-4 border-b pb-2">Главна Снимка</h3>
+                     <div className="space-y-2">
+                      <Label htmlFor="hero-image-upload">Качване на нова главна снимка</Label>
+                        <div className="flex items-center gap-4">
+                            <Input id="hero-image-upload" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'hero')} className="hidden" disabled={isUploadingHero} />
+                            <Label htmlFor="hero-image-upload" className={cn(buttonVariants({ variant: 'outline' }), 'cursor-pointer')}>
+                                <UploadCloud className="mr-2 h-4 w-4" />
+                                Избери файл
+                            </Label>
+                            {isUploadingHero && <Loader2 className="h-5 w-5 animate-spin" />}
+                        </div>
+                      {form.watch('heroImage') && (
+                        <div className="mt-4 relative w-full h-64 rounded-md overflow-hidden border group">
+                          <Image src={form.watch('heroImage')!} alt="Преглед на главна снимка" layout="fill" objectFit="cover" data-ai-hint="salon hero image" />
                         </div>
                       )}
                     </div>
                   </section>
                   <section>
-                    <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия (URL адреси)</h3>
+                    <h3 className="text-xl font-semibold mb-4 border-b pb-2">Фото Галерия</h3>
                     <div className="space-y-4">
-                      <div className="flex items-end gap-2">
-                          <div className="flex-grow space-y-1">
-                              <Label htmlFor="newGalleryPhotoUrl">URL на нова снимка за галерията</Label>
-                               <Controller
-                                  name="newGalleryPhotoUrl"
-                                  control={form.control}
-                                  render={({ field }) => <Input id="newGalleryPhotoUrl" type="text" placeholder="https://example.com/gallery-image.jpg" {...field} />}
-                                />
-                          </div>
-                          <Button type="button" variant="outline" onClick={handleAddGalleryPhotoUrl} className="whitespace-nowrap">
-                              <ImagePlus size={18} className="mr-2"/> Добави URL
-                          </Button>
-                      </div>
+                        <div className="space-y-2">
+                           <Label htmlFor="gallery-image-upload">Качване на снимка в галерията</Label>
+                            <div className="flex items-center gap-4">
+                                <Input id="gallery-image-upload" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, 'gallery')} className="hidden" disabled={isUploadingGallery} />
+                                <Label htmlFor="gallery-image-upload" className={cn(buttonVariants({ variant: 'outline' }), 'cursor-pointer')}>
+                                    <UploadCloud className="mr-2 h-4 w-4" />
+                                    Добави снимка
+                                </Label>
+                                {isUploadingGallery && <Loader2 className="h-5 w-5 animate-spin" />}
+                            </div>
+                        </div>
                       {(form.watch('photos') && form.watch('photos')!.length > 0) ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {form.watch('photos')!.map((photoUrl, index) => (
@@ -586,7 +588,7 @@ export default function EditBusinessPage() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-muted-foreground text-center py-4">Галерията е празна. Добавете URL адреси на снимки.</p>
+                        <p className="text-muted-foreground text-center py-4">Галерията е празна. Качете снимки, за да я попълните.</p>
                       )}
                     </div>
                   </section>
@@ -677,7 +679,7 @@ export default function EditBusinessPage() {
             </CardContent>
           </Tabs>
           <CardFooter className="border-t pt-6">
-            <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting}>
+            <Button type="submit" className="w-full md:w-auto text-lg py-3" disabled={saving || loading || form.formState.isSubmitting || isUploadingHero || isUploadingGallery}>
               {saving || form.formState.isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
               {saving || form.formState.isSubmitting ? 'Запазване...' : 'Запази Промените'}
             </Button>

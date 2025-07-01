@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 // Import the compatibility package styles and script
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import 'leaflet-defaulticon-compatibility';
-import L from 'leaflet';
+import * as L from 'leaflet';
 
 
 interface LeafletMapProps {
