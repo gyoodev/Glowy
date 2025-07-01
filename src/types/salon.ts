@@ -28,6 +28,7 @@ export interface Salon {
   rating?: number;
   reviewCount?: number; // Added optional reviewCount property
   createdAt: string; 
+  lastUpdatedAt?: string;
   priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
   availability?: Record<string, string[]>; 
   workingHours?: WorkingHoursStructure;
@@ -38,7 +39,3 @@ export interface Salon {
   uniqueSellingPointsForAi?: string;
   status: 'pending_approval' | 'approved' | 'rejected';
 }
-
-
-
-    

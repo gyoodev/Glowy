@@ -141,6 +141,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     rating: typeof raw.rating === 'number' ? raw.rating : 0,
     reviewCount: typeof raw.reviewCount === 'number' ? raw.reviewCount : 0,
     createdAt: timestampToISOString(raw.createdAt),
+    lastUpdatedAt: raw.lastUpdatedAt ? timestampToISOString(raw.lastUpdatedAt) : undefined,
     availability: raw.availability || {},
     workingHours: workingHours,
     promotion: raw.promotion ? {
@@ -182,5 +183,3 @@ export function mapNewsletterSubscriber(raw: any, id?: string): NewsletterSubscr
     subscribedAt: timestampToISOString(raw.subscribedAt),
   };
 }
-
-    

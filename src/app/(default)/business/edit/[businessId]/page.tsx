@@ -268,7 +268,7 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
 
-    const dataToUpdate: Partial<Salon> = {
+    const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string } = {
         name: data.name,
         description: data.description,
         region: data.region,
@@ -290,6 +290,7 @@ export default function EditBusinessPage() {
           price: Number(s.price),
           duration: Number(s.duration)
         })) || [],
+        lastUpdatedAt: new Date().toISOString(),
     };
 
     try {
