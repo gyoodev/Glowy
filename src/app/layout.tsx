@@ -7,6 +7,8 @@ import ClientLayoutContent from '@/components/layout/ClientLayoutContent';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
+import { isFirebaseConfigured } from '@/lib/firebase/config';
+import FirebaseConfigErrorPage from '@/components/layout/FirebaseConfigErrorPage';
 
 export const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -37,6 +39,18 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // If firebase is not configured, show a dedicated error page with instructions.
+  if (!isFirebaseConfigured) {
+    return (
+      <html lang="bg">
+        <body>
+          <FirebaseConfigErrorPage />
+        </body>
+      </html>
+    );
+  }
+
+  // Otherwise, render the normal application layout.
   return (
     <html lang="bg" suppressHydrationWarning>
       <head>
