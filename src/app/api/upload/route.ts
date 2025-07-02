@@ -1,5 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import sharp from 'sharp';
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.NEXT_PUBLIC_IMAGEBB_API_KEY;
@@ -18,16 +19,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
   }
 
-  // Convert the file to a base64 string for a more robust upload method.
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
-  const base64Image = buffer.toString('base64');
-
-  // Use FormData to send the base64-encoded image data.
-  const formData = new FormData();
-  formData.append('image', base64Image);
 
   try {
+    // Convert image to WebP format using sharp
+    const webpBuffer = await sharp(buffer)
+      .webp({ quality: 80 }) // You can adjust quality here, 80 is a good balance
+      .toBuffer();
+
+    // Convert the WebP buffer to a base64 string
+    const base64Image = webpBuffer.toString('base64');
+
+    // Use FormData to send the base64-encoded image data.
+    const formData = new FormData();
+    formData.append('image', base64Image);
+
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
       method: 'POST',
       body: formData,
@@ -47,8 +54,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, filePath: imageUrl });
 
   } catch (error) {
-    console.error('Error uploading file to ImageBB:', error);
-    let errorMessage = 'Failed to upload image.';
+    console.error('Error processing or uploading file:', error);
+    let errorMessage = 'Failed to process or upload image.';
     if (error instanceof Error) {
         errorMessage = error.message;
     }
