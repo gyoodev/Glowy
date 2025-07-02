@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
 
   if (!apiKey) {
     return NextResponse.json(
-      { success: false, error: 'ImageBB API key is not configured in .env file.' },
+      { success: false, error: 'ImageBB API key is not configured. Please check your .env.local file and restart the server.' },
       { status: 500 }
     );
   }
@@ -18,9 +18,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
   }
 
-  // FormData is used to send the file in a multipart/form-data request
+  // Convert the file to a base64 string for a more robust upload method.
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const base64Image = buffer.toString('base64');
+
+  // Use FormData to send the base64-encoded image data.
   const formData = new FormData();
-  formData.append('image', file);
+  formData.append('image', base64Image);
 
   try {
     const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
@@ -32,7 +37,8 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok || !result.success) {
       console.error('ImageBB API Error:', result.error);
-      throw new Error(result.error?.message || 'Failed to upload image to ImageBB.');
+      const errorMessage = result?.error?.message || 'Failed to upload image to ImageBB.';
+      throw new Error(errorMessage);
     }
     
     // The direct image URL is in result.data.url
