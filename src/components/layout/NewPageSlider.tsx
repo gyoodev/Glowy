@@ -108,6 +108,7 @@ const NewPageSlider = () => {
                 src={currentSlide.image}
                 alt={`Slide ${currentSlide.id}: ${currentSlide.title}`}
                 fill={true}
+                sizes="100vw"
                 style={{ objectFit: 'cover' }}
                 priority={page === 0} 
                 data-ai-hint={currentSlide.dataAiHint}

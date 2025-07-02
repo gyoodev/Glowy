@@ -57,6 +57,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
               src={salon.heroImage || 'https://placehold.co/400x200.png'}
               alt={`Снимка на салон ${salon.name} в град ${salon.city}`}
               fill={true}
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
               style={{ objectFit: 'cover' }}
               data-ai-hint="salon exterior modern"
             />
