@@ -1,3 +1,4 @@
+
 ✨ Glaura – Salon Management Platform
 
 Glaura is a comprehensive salon management platform that streamlines appointment bookings, service management, customer reviews, and leverages AI to generate compelling salon descriptions and personalized user recommendations. 
@@ -19,6 +20,7 @@ Glaura is a comprehensive salon management platform that streamlines appointment
 
 - **Next.js**: Framework for building the user interface.
 - **Firebase**: Backend services including authentication (Firebase Authentication) and database (Firestore).
+- **ImageBB**: Image hosting service.
 - **Tailwind CSS**: Utility-first CSS framework for styling.
 - **TypeScript**: Typed superset of JavaScript for improved developer experience.
 - **Netlify**: Deployment and hosting platform.
@@ -43,7 +45,9 @@ Glaura is a comprehensive salon management platform that streamlines appointment
 3.  **Configure Environment Variables:**
     -   In the project's root directory, find the file named `.env.local.example`.
     -   Make a copy of this file and rename it to `.env.local`. **This file is ignored by Git and should not be shared.**
-    -   Open `.env.local` and fill in the values with your actual credentials from Firebase, PayPal, etc. You can find your Firebase client-side keys in your Firebase project settings.
+    -   Open `.env.local` and fill in the values with your actual credentials from Firebase, PayPal, ImageBB, etc.
+    -   You can find your Firebase client-side keys in your Firebase project settings.
+    -   For ImageBB, go to [https://api.imgbb.com/](https://api.imgbb.com/) to get your free API key for the `IMAGEBB_API_KEY` variable.
 
 4.  **Run the development server:**
     ```bash
@@ -101,5 +105,3 @@ Check out the live application: [Glowy on Netlify](https://glowy.netlify.app/)
 ---
 
 Feel free to customize this README further to match your project's branding and specific details.
-
-    

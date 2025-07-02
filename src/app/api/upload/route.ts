@@ -1,13 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import sharp from 'sharp';
-import { v4 as uuidv4 } from 'uuid';
-import { app } from '@/lib/firebase'; // Import the initialized app
 
-// Initialize Firebase Storage
-const storage = getStorage(app);
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+  const apiKey = process.env.IMAGEBB_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json(
+      { success: false, error: 'ImageBB API key is not configured in .env file.' },
+      { status: 500 }
+    );
+  }
+
   const data = await request.formData();
   const file: File | null = data.get('image') as unknown as File;
 
@@ -15,35 +18,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'No file uploaded.' }, { status: 400 });
   }
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  
-  // Generate a unique filename and convert to .webp
-  const uniqueFilename = `${uuidv4()}.webp`;
+  // FormData is used to send the file in a multipart/form-data request
+  const formData = new FormData();
+  formData.append('image', file);
 
   try {
-    // Use sharp to convert to WebP and get the buffer
-    const webpBuffer = await sharp(buffer)
-      .webp({ quality: 80 }) // Adjust quality as needed
-      .toBuffer();
-
-    // Create a reference to the file in Firebase Storage
-    const storageRef = ref(storage, `uploads/${uniqueFilename}`);
-
-    // Upload the file's buffer
-    const uploadResult = await uploadBytes(storageRef, webpBuffer, {
-        contentType: 'image/webp'
+    const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
+      method: 'POST',
+      body: formData,
     });
 
-    // Get the public download URL
-    const downloadURL = await getDownloadURL(uploadResult.ref);
+    const result = await response.json();
 
-    console.log(`File uploaded to Firebase Storage and available at: ${downloadURL}`);
-    return NextResponse.json({ success: true, filePath: downloadURL });
+    if (!response.ok || !result.success) {
+      console.error('ImageBB API Error:', result.error);
+      throw new Error(result.error?.message || 'Failed to upload image to ImageBB.');
+    }
+    
+    // The direct image URL is in result.data.url
+    const imageUrl = result.data.url;
+
+    return NextResponse.json({ success: true, filePath: imageUrl });
 
   } catch (error) {
-    console.error('Error processing or uploading file to Firebase Storage:', error);
-    let errorMessage = 'Failed to process or upload image.';
+    console.error('Error uploading file to ImageBB:', error);
+    let errorMessage = 'Failed to upload image.';
     if (error instanceof Error) {
         errorMessage = error.message;
     }
