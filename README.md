@@ -47,7 +47,7 @@ Glaura is a comprehensive salon management platform that streamlines appointment
     -   Make a copy of this file and rename it to `.env.local`. **This file is ignored by Git and should not be shared.**
     -   Open `.env.local` and fill in the values with your actual credentials from Firebase, PayPal, ImageBB, etc.
     -   You can find your Firebase client-side keys in your Firebase project settings.
-    -   For ImageBB, go to [https://api.imgbb.com/](https://api.imgbb.com/) to get your free API key for the `IMAGEBB_API_KEY` variable.
+    -   For ImageBB, go to [https://api.imgbb.com/](https://api.imgbb.com/) to get your free API key for the `NEXT_PUBLIC_IMAGEBB_API_KEY` variable.
 
 4.  **Run the development server:**
     ```bash
