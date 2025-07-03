@@ -15,8 +15,11 @@ export interface Salon {
   description: string;
   ownerId: string;
   region?: string;
-  address: string;
+  address: string; // This will store the full concatenated address
   city: string;
+  neighborhood?: string;
+  street?: string;
+  streetNumber?: string;
   phoneNumber?: string;
   email?: string;
   website?: string;

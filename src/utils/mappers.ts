@@ -27,16 +27,17 @@ export function mapBooking(raw: any): Booking {
     userId: raw.userId,
     salonId: raw.salonId,
     serviceId: raw.serviceId,
+    // Ensure startTime and endTime are handled, they might be Timestamps or already strings
     startTime: timestampToISOString(raw.startTime),
     endTime: timestampToISOString(raw.endTime),
     salonName: raw.salonName || 'N/A',
     serviceName: raw.serviceName || 'N/A',
-    date: raw.date || new Date().toISOString().split('T')[0],
+    date: raw.date || new Date().toISOString().split('T')[0], // date is already typically a string 'YYYY-MM-DD'
     time: raw.time || 'N/A',
     status: raw.status as Booking['status'] || 'pending',
-    clientName: raw.clientName,
-    clientEmail: raw.clientEmail,
-    clientPhoneNumber: raw.clientPhoneNumber,
+    clientName: raw.clientName || 'N/A',
+    clientEmail: raw.clientEmail || 'N/A',
+    clientPhoneNumber: raw.clientPhoneNumber || 'N/A',
     createdAt: timestampToISOString(raw.createdAt),
     salonAddress: raw.salonAddress || 'N/A',
     salonPhoneNumber: raw.salonPhoneNumber || 'N/A',
@@ -64,8 +65,8 @@ export function mapReview(raw: any, id?: string): Review {
 // -------------------- UserProfile --------------------
 export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
   return {
-    id: idOverride || raw.id || raw.userId || '',
-    userId: raw.userId || idOverride || raw.id || '',
+    id: idOverride || raw.id || raw.userId || '', 
+    userId: raw.userId || idOverride || raw.id || '', 
     name: raw.name || raw.displayName || 'Потребител',
     displayName: raw.displayName || raw.name || 'Потребител',
     email: raw.email || '',
@@ -75,11 +76,11 @@ export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
       favoriteServices: [],
       priceRange: '',
       preferredLocations: [],
-      favoriteSalons: [],
+      favoriteSalons: [], // Added favoriteSalons here for consistency
     },
     createdAt: timestampToISOString(raw.createdAt),
     phoneNumber: raw.phoneNumber || '',
-    numericId: raw.numericId || undefined,
+    numericId: raw.numericId || undefined, 
     lastUpdatedAt: raw.lastUpdatedAt ? timestampToISOString(raw.lastUpdatedAt) : undefined,
   };
 }
@@ -107,13 +108,24 @@ export function mapSalon(raw: any, id?: string): Salon {
           isOff: raw.workingHours[dayKey].isOff ?? true, 
         };
       } else {
+        // Default to closed if day is explicitly missing from a provided workingHours object
         workingHours[dayKey] = { open: '', close: '', isOff: true };
       }
     });
   } else {
+    // Default working hours if raw.workingHours is not provided or not an object
     daysOrder.forEach(dayKey => {
-      workingHours[dayKey] = { open: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '09:00'), close: (dayKey === 'saturday' || dayKey === 'sunday' ? '' : '18:00'), isOff: (dayKey === 'saturday' || dayKey === 'sunday') };
-      if (dayKey === 'saturday') workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
+      if (dayKey === 'saturday' || dayKey === 'sunday') {
+        workingHours[dayKey] = { open: '', close: '', isOff: true };
+      } else if (dayKey === 'saturday') { // This condition was previously unreachable
+         workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
+      }
+      else {
+        workingHours[dayKey] = { open: '09:00', close: '18:00', isOff: false };
+      }
+       // Ensure Saturday has specific default if needed, and Sunday defaults to closed
+       if (dayKey === 'saturday' && !raw.workingHours?.[dayKey]) workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
+       if (dayKey === 'sunday' && !raw.workingHours?.[dayKey]) workingHours[dayKey] = { open: '', close: '', isOff: true };
     });
   }
 
@@ -127,9 +139,12 @@ export function mapSalon(raw: any, id?: string): Salon {
     name: raw.name || 'Неизвестен салон',
     description: raw.description || '',
     ownerId: raw.ownerId || '',
-    region: raw.region || '',
     address: raw.address || '',
     city: raw.city || '',
+    region: raw.region || '',
+    neighborhood: raw.neighborhood || '',
+    street: raw.street || '',
+    streetNumber: raw.streetNumber || '',
     priceRange: raw.priceRange || 'moderate',
     phoneNumber: raw.phoneNumber || raw.phone || '',
     email: raw.email || '',
@@ -156,8 +171,8 @@ export function mapSalon(raw: any, id?: string): Salon {
     atmosphereForAi: raw.atmosphereForAi || '',
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
-    status: raw.status || 'approved', // Default to 'approved' for existing salons
-    workingMethod: raw.workingMethod || 'walk_in', // Map the workingMethod
+    status: raw.status || 'approved', // Ensure status is included
+    workingMethod: raw.workingMethod || 'walk_in',
   };
 }
 

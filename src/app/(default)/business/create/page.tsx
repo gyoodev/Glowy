@@ -28,7 +28,9 @@ const createBusinessSchema = z.object({
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  address: z.string().min(5, 'Адресът трябва да е поне 5 символа.'),
+  neighborhood: z.string().min(3, 'Кварталът е задължително поле.').optional(),
+  street: z.string().min(3, 'Улицата е задължително поле.'),
+  streetNumber: z.string().min(1, 'Номерът е задължително поле.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
   workingMethod: z.enum(['appointment', 'walk_in'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
@@ -67,7 +69,9 @@ export default function CreateBusinessPage() {
       description: '',
       region: '',
       city: '',
-      address: '',
+      neighborhood: '',
+      street: '',
+      streetNumber: '',
       workingMethod: 'appointment',
       atmosphereForAi: '', 
       targetCustomerForAi: '',
@@ -186,10 +190,12 @@ export default function CreateBusinessPage() {
       return;
     }
 
+    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. "${data.street}" ${data.streetNumber}`.trim();
     let locationData;
-    if (data.address) {
+
+    if (fullAddress) {
         try {
-            const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(data.address)}`);
+            const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
             if (geocodeResponse.ok) {
                 const coords = await geocodeResponse.json();
                 locationData = { lat: coords.lat, lng: coords.lng };
@@ -207,7 +213,10 @@ export default function CreateBusinessPage() {
         description: data.description,
         region: data.region,
         city: data.city,
-        address: data.address,
+        address: fullAddress,
+        neighborhood: data.neighborhood,
+        street: data.street,
+        streetNumber: data.streetNumber,
         priceRange: data.priceRange,
         workingMethod: data.workingMethod,
         atmosphereForAi: data.atmosphereForAi,
@@ -221,7 +230,7 @@ export default function CreateBusinessPage() {
         availability: {}, 
         createdAt: serverTimestamp(),
         status: 'pending_approval' as 'pending_approval' | 'approved' | 'rejected',
-        location: locationData, // Add location data here
+        location: locationData,
     };
 
     try {
@@ -245,7 +254,7 @@ export default function CreateBusinessPage() {
   const nextStep = async () => {
     let isValid = false;
     if (currentStep === 1) {
-      isValid = await form.trigger(["name", "region", "city", "address", "priceRange", "workingMethod"]);
+      isValid = await form.trigger(["name", "region", "city", "neighborhood", "street", "streetNumber", "priceRange", "workingMethod"]);
     } else if (currentStep === 2) {
       isValid = await form.trigger(["description", "atmosphereForAi", "targetCustomerForAi", "uniqueSellingPointsForAi"]);
     }  else {
@@ -355,17 +364,49 @@ export default function CreateBusinessPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="address"
+                    name="neighborhood"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Адрес</FormLabel>
+                        <FormLabel>Квартал (по избор)</FormLabel>
                         <FormControl>
-                          <Input placeholder="напр. ул. Цар Освободител 15" {...field} />
+                          <Input placeholder="напр. Център" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2">
+                      <FormField
+                        control={form.control}
+                        name="street"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Улица</FormLabel>
+                            <FormControl>
+                              <Input placeholder="напр. Цар Освободител" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div>
+                      <FormField
+                        control={form.control}
+                        name="streetNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Номер</FormLabel>
+                            <FormControl>
+                              <Input placeholder="напр. 15" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </div>
                   <FormField
                     control={form.control}
                     name="priceRange"

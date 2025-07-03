@@ -65,7 +65,9 @@ const editBusinessSchema = z.object({
   description: z.string().min(1, 'Описанието е задължително.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  address: z.string().optional(),
+  neighborhood: z.string().optional(),
+  street: z.string().optional(),
+  streetNumber: z.string().optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
@@ -107,7 +109,9 @@ export default function EditBusinessPage() {
       description: '',
       region: '',
       city: '',
-      address: '',
+      neighborhood: '',
+      street: '',
+      streetNumber: '',
       priceRange: 'moderate',
       phone: '',
       email: '',
@@ -174,7 +178,9 @@ export default function EditBusinessPage() {
             description: businessData.description,
             region: businessData.region || '',
             city: businessData.city || '',
-            address: businessData.address || '',
+            neighborhood: businessData.neighborhood || '',
+            street: businessData.street || '',
+            streetNumber: businessData.streetNumber || '',
             priceRange: businessData.priceRange || 'moderate',
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
@@ -262,13 +268,18 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
   
-    // Create the base object with all fields that are always updated
+    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. "${data.street}" ${data.streetNumber}`.trim();
+    const originalFullAddress = `${business.city}, ${business.neighborhood ? `кв. ${business.neighborhood}, ` : ''}ул. "${business.street}" ${business.streetNumber}`.trim();
+
     const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string; location?: { lat: number, lng: number } | null } = {
         name: data.name,
         description: data.description,
         region: data.region,
         city: data.city,
-        address: data.address,
+        address: fullAddress,
+        neighborhood: data.neighborhood,
+        street: data.street,
+        streetNumber: data.streetNumber,
         priceRange: data.priceRange,
         phoneNumber: data.phone,
         email: data.email,
@@ -287,35 +298,30 @@ export default function EditBusinessPage() {
         lastUpdatedAt: new Date().toISOString(),
     };
   
-    // Explicitly handle location update logic
-    const fullAddress = `${data.address}, ${data.city}`;
-    if (data.address && data.address !== business.address) {
-      // Address has changed and is not empty, attempt to geocode.
+    if (fullAddress && fullAddress !== originalFullAddress) {
       try {
         const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
         if (geocodeResponse.ok) {
           const coords = await geocodeResponse.json();
           if (coords.error) {
             toast({ title: "Грешка при геокодиране", description: coords.error, variant: "destructive" });
-            dataToUpdate.location = null; // Set to null on error
+            dataToUpdate.location = null; 
           } else {
             dataToUpdate.location = { lat: coords.lat, lng: coords.lng };
-            toast({ title: "Адресът е геокодиран", description: `Намерени са координати за ${data.address}.` });
+            toast({ title: "Адресът е геокодиран", description: `Намерени са координати за новия адрес.` });
           }
         } else {
           toast({ title: "Грешка при геокодиране", description: "Не можаха да бъдат намерени координати за новия адрес.", variant: "destructive" });
-          dataToUpdate.location = null; // Set to null on error
+          dataToUpdate.location = null;
         }
       } catch (error) {
         console.error("Geocoding failed:", error);
         toast({ title: "Грешка при геокодиране", description: "Възникна мрежова грешка при опит за геокодиране.", variant: "destructive" });
-        dataToUpdate.location = null; // Set to null on error
+        dataToUpdate.location = null;
       }
-    } else if (!data.address) {
-      // Address was cleared, so set location to null.
+    } else if (!fullAddress) {
       dataToUpdate.location = null;
     }
-    // If address is unchanged, `dataToUpdate.location` remains unset, preserving the existing value.
   
     try {
       const businessRef = doc(firestore, 'salons', businessId);
@@ -442,12 +448,28 @@ export default function EditBusinessPage() {
                         />
                         {form.formState.errors.city && <p className="text-sm text-destructive">{form.formState.errors.city.message}</p>}
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="address">Адрес</Label>
+                       <div className="space-y-2">
+                        <Label htmlFor="neighborhood">Квартал</Label>
                         <Controller
-                          name="address"
+                          name="neighborhood"
                           control={form.control}
-                          render={({ field }) => <Input id="address" {...field} />}
+                          render={({ field }) => <Input id="neighborhood" {...field} placeholder="напр. Център" />}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="street">Улица</Label>
+                        <Controller
+                          name="street"
+                          control={form.control}
+                          render={({ field }) => <Input id="street" {...field} placeholder="напр. Цар Освободител" />}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="streetNumber">Номер</Label>
+                        <Controller
+                          name="streetNumber"
+                          control={form.control}
+                          render={({ field }) => <Input id="streetNumber" {...field} placeholder="напр. 15" />}
                         />
                       </div>
                       <div className="space-y-2">
