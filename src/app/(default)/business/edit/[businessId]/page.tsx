@@ -24,7 +24,7 @@ import type { Salon, WorkingHoursStructure, Service } from '@/types';
 import { z } from 'zod';
 import { type SubmitHandler } from 'react-hook-form';
 import { mapSalon } from '@/utils/mappers'; 
-import { auth, getUserProfile } from '@/lib/firebase';
+import { auth, getUserProfile, firestore } from '@/lib/firebase';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const generateFullDayTimeOptions = () => {
@@ -261,46 +261,16 @@ export default function EditBusinessPage() {
   const onSubmit: SubmitHandler<EditBusinessFormValues> = async (data) => {
     if (!businessId || !business) return;
     setSaving(true);
-
-    let locationData;
-
-    // Check if address has changed and is not empty
-    const fullAddress = `${data.address}, ${data.city}`;
-    if (data.address && data.address !== business.address) {
-        try {
-            const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
-            if (geocodeResponse.ok) {
-                const coords = await geocodeResponse.json();
-                if(coords.error) {
-                    toast({ title: "Грешка при геокодиране", description: coords.error, variant: "destructive" });
-                } else {
-                    locationData = { lat: coords.lat, lng: coords.lng };
-                    toast({ title: "Адресът е геокодиран", description: `Намерени са координати за ${data.address}.` });
-                }
-            } else {
-                toast({ title: "Грешка при геокодиране", description: "Не можаха да бъдат намерени координати за новия адрес. Моля, проверете го.", variant: "destructive" });
-            }
-        } catch (error) {
-            console.error("Geocoding failed:", error);
-            toast({ title: "Грешка при геокодиране", description: "Възникна мрежова грешка при опит за геокодиране.", variant: "destructive" });
-        }
-    } else if (!data.address) {
-        // If address is cleared, clear location too
-        locationData = undefined;
-    } else {
-        // Address is unchanged, keep existing location
-        locationData = business.location;
-    }
-
-    const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string } = {
+  
+    // Create the base object with all fields that are always updated
+    const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string; location?: { lat: number, lng: number } | null } = {
         name: data.name,
         description: data.description,
         region: data.region,
         city: data.city,
         address: data.address,
-        location: locationData,
         priceRange: data.priceRange,
-        phoneNumber: data.phone, 
+        phoneNumber: data.phone,
         email: data.email,
         website: data.website,
         workingMethod: data.workingMethod,
@@ -316,19 +286,49 @@ export default function EditBusinessPage() {
         })) || [],
         lastUpdatedAt: new Date().toISOString(),
     };
-
+  
+    // Explicitly handle location update logic
+    const fullAddress = `${data.address}, ${data.city}`;
+    if (data.address && data.address !== business.address) {
+      // Address has changed and is not empty, attempt to geocode.
+      try {
+        const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
+        if (geocodeResponse.ok) {
+          const coords = await geocodeResponse.json();
+          if (coords.error) {
+            toast({ title: "Грешка при геокодиране", description: coords.error, variant: "destructive" });
+            dataToUpdate.location = null; // Set to null on error
+          } else {
+            dataToUpdate.location = { lat: coords.lat, lng: coords.lng };
+            toast({ title: "Адресът е геокодиран", description: `Намерени са координати за ${data.address}.` });
+          }
+        } else {
+          toast({ title: "Грешка при геокодиране", description: "Не можаха да бъдат намерени координати за новия адрес.", variant: "destructive" });
+          dataToUpdate.location = null; // Set to null on error
+        }
+      } catch (error) {
+        console.error("Geocoding failed:", error);
+        toast({ title: "Грешка при геокодиране", description: "Възникна мрежова грешка при опит за геокодиране.", variant: "destructive" });
+        dataToUpdate.location = null; // Set to null on error
+      }
+    } else if (!data.address) {
+      // Address was cleared, so set location to null.
+      dataToUpdate.location = null;
+    }
+    // If address is unchanged, `dataToUpdate.location` remains unset, preserving the existing value.
+  
     try {
       const businessRef = doc(firestore, 'salons', businessId);
       await updateDoc(businessRef, dataToUpdate);
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
-      
+  
       const profile = await getUserProfile(auth.currentUser!.uid);
       if (profile?.role === 'admin') {
         router.push('/admin/business');
       } else {
         router.push('/business/manage');
       }
-
+  
     } catch (error: any) {
       console.error('Error updating business:', error);
       toast({ title: 'Грешка', description: error.message || 'Неуспешно актуализиране на данни за бизнеса.', variant: 'destructive' });
@@ -336,7 +336,7 @@ export default function EditBusinessPage() {
       setSaving(false);
     }
   };
-
+  
   if (loading) {
     return (
       <div className="container mx-auto py-10 px-6">
