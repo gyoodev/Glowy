@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
+import React, { useState, useEffect, useCallback, ChangeEvent, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -99,7 +99,7 @@ export default function EditBusinessPage() {
   const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-
+  const isInitialMount = useRef(true);
 
   const businessId = params?.businessId as string;
   
@@ -126,9 +126,29 @@ export default function EditBusinessPage() {
     },
   });
 
-  const watchedRegion = form.watch('region');
-  const watchedCity = form.watch('city');
+  const { watch, setValue } = form;
+  const watchedRegion = watch('region');
+  const watchedCity = watch('city');
 
+  useEffect(() => {
+    // This effect handles the cascading change from Region -> City
+    if (isInitialMount.current) return; // Don't run on initial load
+    
+    const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
+    setAvailableCities(regionData ? regionData.cities : []);
+    setValue('city', '');
+    
+    setAvailableNeighborhoods([]);
+    setValue('neighborhood', '');
+  }, [watchedRegion, setValue]);
+
+  useEffect(() => {
+    // This effect handles the cascading change from City -> Neighborhood
+    if (isInitialMount.current) return; // Don't run on initial load
+
+    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
+    setValue('neighborhood', '');
+  }, [watchedCity, setValue]);
 
   const fetchBusinessData = useCallback(async (userId: string) => { 
     if (!businessId) {
@@ -161,6 +181,7 @@ export default function EditBusinessPage() {
           }
         }
         
+        // Pre-populate available cities and neighborhoods for the initial render
         if (businessData.region) {
             const regionData = bulgarianRegionsAndCities.find(r => r.region === businessData.region);
             setAvailableCities(regionData ? regionData.cities : []);
@@ -213,6 +234,8 @@ export default function EditBusinessPage() {
         fetchBusinessData(user.uid);
       }
     });
+    // This effect runs only once after the first render to enable cascading effects
+    isInitialMount.current = false;
     return () => unsubscribe();
  }, [businessId, router, fetchBusinessData]);
 
@@ -406,14 +429,7 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select
                                     value={field.value}
-                                    onValueChange={(value) => {
-                                        field.onChange(value);
-                                        const regionData = bulgarianRegionsAndCities.find(r => r.region === value);
-                                        setAvailableCities(regionData ? regionData.cities : []);
-                                        setAvailableNeighborhoods([]);
-                                        form.setValue('city', '');
-                                        form.setValue('neighborhood', '');
-                                    }}
+                                    onValueChange={field.onChange}
                                 >
                                     <SelectTrigger id="region">
                                         <SelectValue placeholder="Изберете област" />
@@ -436,11 +452,7 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select 
                                   value={field.value} 
-                                  onValueChange={(value) => {
-                                      field.onChange(value);
-                                      setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[value] || []);
-                                      form.setValue('neighborhood', '');
-                                  }} 
+                                  onValueChange={field.onChange} 
                                   disabled={!watchedRegion}
                                 >
                                     <SelectTrigger id="city">
