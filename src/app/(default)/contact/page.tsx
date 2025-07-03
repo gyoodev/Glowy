@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -13,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase'; // Import initialized Firestore instance
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Mail, User, MessageSquare, Send } from 'lucide-react';
+import { Mail, User, MessageSquare, Send, Phone } from 'lucide-react';
 
 const contactFormSchema = z.object({
   name: z.string().min(2, { message: "Името трябва да е поне 2 символа." }),
@@ -169,17 +168,24 @@ export default function ContactPage() {
       </Card>
 
       {/* Static Business Information Section */}
-      <section className="max-w-2xl mx-auto text-center space-y-4">
-        <h2 className="text-2xl font-semibold">Намерете ни</h2>
-        <address className="not-italic text-muted-foreground">
-          <p>Вашият Адрес Тук</p>
-          <p>Вашият Град, Вашият Пощенски Код</p>
-          <p>Вашата Държава</p>
-        </address>
-        <p className="text-muted-foreground">Телефон: <a href="tel:+YOUR_PHONE_NUMBER">+ВАШИЯТ ТЕЛЕФОНЕН НОМЕР</a></p>
-        <p className="text-muted-foreground">Имейл: <a href="mailto:YOUR_EMAIL_ADDRESS">ВАШИЯТ ИМЕЙЛ АДРЕС</a></p>
-        {/* You can add a map embed here if you have one */}
-      </section>
+      <Card className="max-w-2xl mx-auto shadow-lg bg-secondary/50">
+          <CardHeader>
+            <CardTitle className="text-xl text-center font-semibold">Информация за връзка</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4 text-center">
+            <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Phone className="h-5 w-5 text-primary"/>
+                <a href="tel:+359123456789" className="hover:text-primary transition-colors">+359 123 456 789</a>
+            </div>
+             <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Mail className="h-5 w-5 text-primary"/>
+                <a href="mailto:contact@glaura.bg" className="hover:text-primary transition-colors">contact@glaura.bg</a>
+            </div>
+            <address className="not-italic text-sm text-muted-foreground pt-2">
+                гр. София, България
+            </address>
+        </CardContent>
+      </Card>
     </div>
   );
 }
