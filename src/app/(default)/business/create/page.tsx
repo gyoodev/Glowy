@@ -51,7 +51,6 @@ export default function CreateBusinessPage() {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 2;
   
-  const [selectedRegion, setSelectedRegion] = useState('');
   const [availableCities, setAvailableCities] = useState<string[]>([]);
   const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
   
@@ -81,26 +80,8 @@ export default function CreateBusinessPage() {
     mode: "onChange",
   });
 
-  const selectedCity = form.watch('city');
-
-  useEffect(() => {
-    if (selectedRegion) {
-      const regionData = bulgarianRegionsAndCities.find(r => r.region === selectedRegion);
-      setAvailableCities(regionData ? regionData.cities : []);
-      form.setValue('city', ''); // Reset city when region changes
-    } else {
-      setAvailableCities([]);
-    }
-  }, [selectedRegion, form]);
-
-  useEffect(() => {
-    if (selectedCity) {
-      setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[selectedCity] || []);
-      form.setValue('neighborhood', ''); // Reset neighborhood when city changes
-    } else {
-      setAvailableNeighborhoods([]);
-    }
-  }, [selectedCity, form]);
+  const watchedRegion = form.watch('region');
+  const watchedCity = form.watch('city');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -336,7 +317,14 @@ export default function CreateBusinessPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Област</FormLabel>
-                        <Select onValueChange={(value) => { field.onChange(value); setSelectedRegion(value); }} value={field.value}>
+                        <Select onValueChange={(value) => { 
+                            field.onChange(value);
+                            const regionData = bulgarianRegionsAndCities.find(r => r.region === value);
+                            setAvailableCities(regionData ? regionData.cities : []);
+                            setAvailableNeighborhoods([]);
+                            form.setValue('city', '');
+                            form.setValue('neighborhood', '');
+                         }} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Изберете област" />
@@ -358,10 +346,18 @@ export default function CreateBusinessPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Град</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedRegion}>
+                        <Select 
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[value] || []);
+                            form.setValue('neighborhood', '');
+                          }} 
+                          value={field.value} 
+                          disabled={!watchedRegion}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={selectedRegion ? "Изберете град" : "Първо изберете област"} />
+                              <SelectValue placeholder={!watchedRegion ? "Първо изберете област" : "Изберете град"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -380,10 +376,14 @@ export default function CreateBusinessPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Квартал</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCity || availableNeighborhoods.length === 0}>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          value={field.value} 
+                          disabled={!watchedCity || availableNeighborhoods.length === 0}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder={!selectedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
+                              <SelectValue placeholder={!watchedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
