@@ -99,8 +99,7 @@ export default function EditBusinessPage() {
   const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
-  const isInitialMount = useRef(true);
-
+  
   const businessId = params?.businessId as string;
   
   const form = useForm<EditBusinessFormValues>({
@@ -126,29 +125,9 @@ export default function EditBusinessPage() {
     },
   });
 
-  const { watch, setValue } = form;
+  const { watch, setValue, trigger } = form;
   const watchedRegion = watch('region');
   const watchedCity = watch('city');
-
-  useEffect(() => {
-    // This effect handles the cascading change from Region -> City
-    if (isInitialMount.current) return; // Don't run on initial load
-    
-    const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
-    setAvailableCities(regionData ? regionData.cities : []);
-    setValue('city', '');
-    
-    setAvailableNeighborhoods([]);
-    setValue('neighborhood', '');
-  }, [watchedRegion, setValue]);
-
-  useEffect(() => {
-    // This effect handles the cascading change from City -> Neighborhood
-    if (isInitialMount.current) return; // Don't run on initial load
-
-    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
-    setValue('neighborhood', '');
-  }, [watchedCity, setValue]);
 
   const fetchBusinessData = useCallback(async (userId: string) => { 
     if (!businessId) {
@@ -181,7 +160,6 @@ export default function EditBusinessPage() {
           }
         }
         
-        // Pre-populate available cities and neighborhoods for the initial render
         if (businessData.region) {
             const regionData = bulgarianRegionsAndCities.find(r => r.region === businessData.region);
             setAvailableCities(regionData ? regionData.cities : []);
@@ -234,10 +212,21 @@ export default function EditBusinessPage() {
         fetchBusinessData(user.uid);
       }
     });
-    // This effect runs only once after the first render to enable cascading effects
-    isInitialMount.current = false;
     return () => unsubscribe();
- }, [businessId, router, fetchBusinessData]);
+  }, [businessId, router, fetchBusinessData]);
+
+  useEffect(() => {
+    const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
+    setAvailableCities(regionData ? regionData.cities : []);
+    setValue('city', '');
+    setValue('neighborhood', '');
+  }, [watchedRegion, setValue]);
+
+  useEffect(() => {
+    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
+    setValue('neighborhood', '');
+  }, [watchedCity, setValue]);
+
 
   const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>, imageType: 'hero' | 'gallery') => {
     const file = event.target.files?.[0];
@@ -290,7 +279,7 @@ export default function EditBusinessPage() {
     const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. "${data.street}" ${data.streetNumber}`.trim();
     const originalFullAddress = `${business.city}, ${business.neighborhood ? `кв. ${business.neighborhood}, ` : ''}ул. "${business.street}" ${business.streetNumber}`.trim();
 
-    const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string; location?: { lat: number, lng: number } | null } = {
+    const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string } = {
         name: data.name,
         description: data.description,
         region: data.region,

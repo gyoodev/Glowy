@@ -27,7 +27,7 @@ export interface Salon {
   workingMethod?: 'appointment' | 'walk_in' | 'both'; // Renamed workingMode to workingMethod with updated types
   photos?: string[];
   heroImage?: string;
-  location?: { lat: number; lng: number };
+  location?: { lat: number; lng: number; } | null;
   rating?: number;
   reviewCount?: number; // Added optional reviewCount property
   createdAt: string; 
