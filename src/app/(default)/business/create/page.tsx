@@ -186,6 +186,22 @@ export default function CreateBusinessPage() {
       return;
     }
 
+    let locationData;
+    if (data.address) {
+        try {
+            const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(data.address)}`);
+            if (geocodeResponse.ok) {
+                const coords = await geocodeResponse.json();
+                locationData = { lat: coords.lat, lng: coords.lng };
+            } else {
+                toast({ title: "Внимание", description: "Не можаха да бъдат намерени координати за адреса. Салонът ще бъде създаден без карта.", variant: "default" });
+            }
+        } catch (error) {
+            console.error("Geocoding failed during creation:", error);
+            toast({ title: "Грешка при геокодиране", description: "Възникна мрежова грешка при опит за геокодиране.", variant: "destructive" });
+        }
+    }
+
     const salonDataToSave = {
         name: data.name,
         description: data.description,
@@ -205,6 +221,7 @@ export default function CreateBusinessPage() {
         availability: {}, 
         createdAt: serverTimestamp(),
         status: 'pending_approval' as 'pending_approval' | 'approved' | 'rejected',
+        location: locationData, // Add location data here
     };
 
     try {
@@ -497,5 +514,3 @@ export default function CreateBusinessPage() {
     </div>
   );
 }
-
-    

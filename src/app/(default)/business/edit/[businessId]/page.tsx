@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback, ChangeEvent } from 'react';
@@ -65,20 +66,6 @@ const editBusinessSchema = z.object({
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
   address: z.string().optional(),
-  lat: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.coerce.number({ invalid_type_error: "Географската ширина трябва да е число." })
-      .min(-90, 'Невалидна географска ширина')
-      .max(90, 'Невалидна географска ширина')
-      .optional()
-  ),
-  lng: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z.coerce.number({ invalid_type_error: "Географската дължина трябва да е число." })
-      .min(-180, 'Невалидна географска дължина')
-      .max(180, 'Невалидна географска дължина')
-      .optional()
-  ),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
   phone: z.string().optional(),
   email: z.string().email({ message: "Невалиден имейл адрес." }).optional().or(z.literal('')),
@@ -121,8 +108,6 @@ export default function EditBusinessPage() {
       region: '',
       city: '',
       address: '',
-      lat: undefined,
-      lng: undefined,
       priceRange: 'moderate',
       phone: '',
       email: '',
@@ -190,8 +175,6 @@ export default function EditBusinessPage() {
             region: businessData.region || '',
             city: businessData.city || '',
             address: businessData.address || '',
-            lat: businessData.location?.lat,
-            lng: businessData.location?.lng,
             priceRange: businessData.priceRange || 'moderate',
             phone: businessData.phoneNumber || '',
             email: businessData.email || '',
@@ -279,13 +262,43 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
 
+    let locationData;
+
+    // Check if address has changed and is not empty
+    const fullAddress = `${data.address}, ${data.city}`;
+    if (data.address && data.address !== business.address) {
+        try {
+            const geocodeResponse = await fetch(`/api/geocode?q=${encodeURIComponent(fullAddress)}`);
+            if (geocodeResponse.ok) {
+                const coords = await geocodeResponse.json();
+                if(coords.error) {
+                    toast({ title: "Грешка при геокодиране", description: coords.error, variant: "destructive" });
+                } else {
+                    locationData = { lat: coords.lat, lng: coords.lng };
+                    toast({ title: "Адресът е геокодиран", description: `Намерени са координати за ${data.address}.` });
+                }
+            } else {
+                toast({ title: "Грешка при геокодиране", description: "Не можаха да бъдат намерени координати за новия адрес. Моля, проверете го.", variant: "destructive" });
+            }
+        } catch (error) {
+            console.error("Geocoding failed:", error);
+            toast({ title: "Грешка при геокодиране", description: "Възникна мрежова грешка при опит за геокодиране.", variant: "destructive" });
+        }
+    } else if (!data.address) {
+        // If address is cleared, clear location too
+        locationData = undefined;
+    } else {
+        // Address is unchanged, keep existing location
+        locationData = business.location;
+    }
+
     const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string } = {
         name: data.name,
         description: data.description,
         region: data.region,
         city: data.city,
         address: data.address,
-        location: (typeof data.lat === 'number' && typeof data.lng === 'number') ? { lat: data.lat, lng: data.lng } : undefined,
+        location: locationData,
         priceRange: data.priceRange,
         phoneNumber: data.phone, 
         email: data.email,
@@ -436,24 +449,6 @@ export default function EditBusinessPage() {
                           control={form.control}
                           render={({ field }) => <Input id="address" {...field} />}
                         />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="lat" className="flex items-center"><MapPin className="mr-2 h-4 w-4"/>Географска ширина (Latitude)</Label>
-                        <Controller
-                          name="lat"
-                          control={form.control}
-                          render={({ field }) => <Input id="lat" type="number" step="any" placeholder="напр. 43.8488" {...field} />}
-                        />
-                        {form.formState.errors.lat && <p className="text-sm text-destructive">{form.formState.errors.lat.message}</p>}
-                      </div>
-                       <div className="space-y-2">
-                        <Label htmlFor="lng" className="flex items-center"><MapPin className="mr-2 h-4 w-4"/>Географска дължина (Longitude)</Label>
-                        <Controller
-                          name="lng"
-                          control={form.control}
-                          render={({ field }) => <Input id="lng" type="number" step="any" placeholder="напр. 25.9554" {...field} />}
-                        />
-                        {form.formState.errors.lng && <p className="text-sm text-destructive">{form.formState.errors.lng.message}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="phone">Телефон</Label>
