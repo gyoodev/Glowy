@@ -16,7 +16,7 @@ import Image from 'next/image';
 import { ImagePlus, Trash2, Edit, Clock, ChevronsUpDown, Check, FileText, Loader2, MapPin, UploadCloud } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { bulgarianRegionsAndCities } from '@/lib/mock-data';
+import { bulgarianRegionsAndCities, bulgarianCitiesWithNeighborhoods } from '@/lib/mock-data';
 import { useForm, Controller } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -65,7 +65,7 @@ const editBusinessSchema = z.object({
   description: z.string().min(1, 'Описанието е задължително.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  neighborhood: z.string().optional(),
+  neighborhood: z.string().min(1, 'Моля, изберете квартал.'),
   street: z.string().optional(),
   streetNumber: z.string().optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
@@ -96,6 +96,7 @@ export default function EditBusinessPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
   const [isUploadingHero, setIsUploadingHero] = useState(false);
   const [isUploadingGallery, setIsUploadingGallery] = useState(false);
 
@@ -126,6 +127,7 @@ export default function EditBusinessPage() {
   });
 
   const selectedRegion = form.watch('region');
+  const selectedCity = form.watch('city');
 
   useEffect(() => {
     if (selectedRegion) {
@@ -135,6 +137,14 @@ export default function EditBusinessPage() {
         setAvailableCities([]);
     }
   }, [selectedRegion]);
+
+  useEffect(() => {
+    if (selectedCity) {
+        setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[selectedCity] || []);
+    } else {
+        setAvailableNeighborhoods([]);
+    }
+  }, [selectedCity]);
 
 
   const fetchBusinessData = useCallback(async (userId: string) => { 
@@ -453,8 +463,24 @@ export default function EditBusinessPage() {
                         <Controller
                           name="neighborhood"
                           control={form.control}
-                          render={({ field }) => <Input id="neighborhood" {...field} placeholder="напр. Център" />}
+                          render={({ field }) => (
+                             <Select 
+                              value={field.value} 
+                              onValueChange={field.onChange} 
+                              disabled={!selectedCity || availableNeighborhoods.length === 0}
+                            >
+                                <SelectTrigger id="neighborhood">
+                                    <SelectValue placeholder={!selectedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {availableNeighborhoods.map(neighborhood => (
+                                        <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                          )}
                         />
+                        {form.formState.errors.neighborhood && <p className="text-sm text-destructive">{form.formState.errors.neighborhood.message}</p>}
                       </div>
                       <div className="space-y-2">
                         <Label htmlFor="street">Улица</Label>

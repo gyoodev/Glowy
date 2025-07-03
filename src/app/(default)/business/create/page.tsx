@@ -16,7 +16,7 @@ import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timesta
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { bulgarianRegionsAndCities } from '@/lib/mock-data';
+import { bulgarianRegionsAndCities, bulgarianCitiesWithNeighborhoods } from '@/lib/mock-data';
 import type { Service, NotificationType } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -28,7 +28,7 @@ const createBusinessSchema = z.object({
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  neighborhood: z.string().min(3, 'Кварталът е задължително поле.').optional(),
+  neighborhood: z.string().min(1, 'Моля, изберете квартал.'),
   street: z.string().min(3, 'Улицата е задължително поле.'),
   streetNumber: z.string().min(1, 'Номерът е задължително поле.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
@@ -53,6 +53,7 @@ export default function CreateBusinessPage() {
   
   const [selectedRegion, setSelectedRegion] = useState('');
   const [availableCities, setAvailableCities] = useState<string[]>([]);
+  const [availableNeighborhoods, setAvailableNeighborhoods] = useState<string[]>([]);
   
   const targetCustomerOptions = [
     { value: 'жени', label: 'Жени' },
@@ -80,6 +81,8 @@ export default function CreateBusinessPage() {
     mode: "onChange",
   });
 
+  const selectedCity = form.watch('city');
+
   useEffect(() => {
     if (selectedRegion) {
       const regionData = bulgarianRegionsAndCities.find(r => r.region === selectedRegion);
@@ -89,6 +92,15 @@ export default function CreateBusinessPage() {
       setAvailableCities([]);
     }
   }, [selectedRegion, form]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[selectedCity] || []);
+      form.setValue('neighborhood', ''); // Reset neighborhood when city changes
+    } else {
+      setAvailableNeighborhoods([]);
+    }
+  }, [selectedCity, form]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -367,10 +379,19 @@ export default function CreateBusinessPage() {
                     name="neighborhood"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Квартал (по избор)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="напр. Център" {...field} />
-                        </FormControl>
+                        <FormLabel>Квартал</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value} disabled={!selectedCity || availableNeighborhoods.length === 0}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={!selectedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {availableNeighborhoods.map(neighborhood => (
+                              <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
