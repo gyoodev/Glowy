@@ -175,11 +175,11 @@ export default function ContactPage() {
           <CardContent className="space-y-4 text-center">
             <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Phone className="h-5 w-5 text-primary"/>
-                <a href="tel:+359893834036" className="hover:text-primary transition-colors">+359 123 456 789</a>
+                <a href="tel:+359893834036" className="hover:text-primary transition-colors">+359 893834036</a>
             </div>
              <div className="flex items-center justify-center gap-2 text-muted-foreground">
                 <Mail className="h-5 w-5 text-primary"/>
-                <a href="mailto:glaura@gkdev.org" className="hover:text-primary transition-colors">contact@glaura.bg</a>
+                <a href="mailto:glaura@gkdev.org" className="hover:text-primary transition-colors">glaura@gkdev.org</a>
             </div>
         </CardContent>
       </Card>
