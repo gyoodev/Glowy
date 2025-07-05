@@ -468,11 +468,11 @@ export default function SalonProfilePage() {
                     })}
                   </ul>
                 </div>
-                 {salon.location && (
+                 {(salon.location || salon.address) && (
                     <div className="mt-6">
                         <h3 className="text-xl font-semibold mb-4 text-foreground">Местоположение на Картата</h3>
                         <div className="w-full h-[400px] rounded-lg overflow-hidden shadow-md border">
-                            <LeafletMap key={salon.id} center={[salon.location.lat, salon.location.lng]} markerText={salon.name} />
+                            <LeafletMap key={salon.id} center={salon.location ?? undefined} address={salon.address} markerText={salon.name} />
                         </div>
                     </div>
                 )}
