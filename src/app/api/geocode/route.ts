@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
 
   if (!apiKey) {
     console.error('Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file.');
-    return NextResponse.json({ error: 'Google Maps API key is not configured on the server.' }, { status: 500 });
+    return NextResponse.json({ error: 'Google Maps API key is not configured on the server. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your .env.local file. Refer to the README for instructions.' }, { status: 500 });
   }
   
   if (!address) {
