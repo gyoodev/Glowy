@@ -30,24 +30,34 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
       setIsLoading(false);
       setError(null);
     } else if (address) {
-      setIsLoading(true);
-      setError(null);
       const geocode = async () => {
+        setIsLoading(true);
+        setError(null);
         try {
           const response = await fetch(`/api/geocode?q=${encodeURIComponent(address)}`);
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to geocode address');
-          }
           const data = await response.json();
-          if (data.lat && data.lng) {
+          
+          if (!response.ok) {
+            // Handle non-2xx responses from our API gracefully
+            let userFriendlyMessage = 'Възникна грешка при зареждане на картата.';
+            if (response.status === 404) {
+              userFriendlyMessage = 'Адресът не може да бъде намерен на картата.';
+            } else if (data.error) {
+              userFriendlyMessage = data.error;
+            }
+            setError(userFriendlyMessage);
+            setMapCenter(null);
+          } else if (data.lat && data.lng) {
             setMapCenter([data.lat, data.lng]);
           } else {
-             throw new Error('Coordinates not found for the address.');
+             setError('Получени са невалидни координати от сървъра.');
+             setMapCenter(null);
           }
         } catch (e: any) {
-          console.error('Geocoding error in LeafletMap:', e);
-          setError(e.message || 'Could not find location.');
+          // This will now only catch network errors, not 404s
+          console.error('Network or parsing error in LeafletMap geocoding:', e);
+          setError('Възникна мрежова грешка при зареждане на картата.');
+          setMapCenter(null);
         } finally {
           setIsLoading(false);
         }
@@ -92,9 +102,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
   }
 
   if (error) {
-    return <div className="h-full w-full flex flex-col items-center justify-center bg-muted/50 rounded-lg">
+    return <div className="h-full w-full flex flex-col items-center justify-center bg-muted/50 rounded-lg p-4 text-center">
         <AlertTriangle className="h-8 w-8 text-destructive mb-2" />
-        <p className="font-semibold text-destructive">Грешка при зареждане на картата</p>
+        <p className="font-semibold text-destructive">Проблем с картата</p>
         <p className="text-sm text-muted-foreground">{error}</p>
     </div>;
   }
