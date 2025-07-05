@@ -65,7 +65,7 @@ const editBusinessSchema = z.object({
   description: z.string().min(1, 'Описанието е задължително.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  neighborhood: z.string().min(1, 'Моля, изберете квартал.'),
+  neighborhood: z.string().optional(),
   street: z.string().optional(),
   streetNumber: z.string().optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', '']).optional(),
@@ -125,7 +125,7 @@ export default function EditBusinessPage() {
     },
   });
 
-  const { watch, setValue, trigger } = form;
+  const { watch, setValue } = form;
   const watchedRegion = watch('region');
   const watchedCity = watch('city');
 
@@ -160,9 +160,9 @@ export default function EditBusinessPage() {
           }
         }
         
+        // Populate available options before resetting the form
         if (businessData.region) {
-            const regionData = bulgarianRegionsAndCities.find(r => r.region === businessData.region);
-            setAvailableCities(regionData ? regionData.cities : []);
+            setAvailableCities(bulgarianRegionsAndCities.find(r => r.region === businessData.region)?.cities || []);
         }
         if (businessData.city) {
             setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[businessData.city] || []);
@@ -214,19 +214,6 @@ export default function EditBusinessPage() {
     });
     return () => unsubscribe();
   }, [businessId, router, fetchBusinessData]);
-
-  useEffect(() => {
-    const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
-    setAvailableCities(regionData ? regionData.cities : []);
-    setValue('city', '');
-    setValue('neighborhood', '');
-  }, [watchedRegion, setValue]);
-
-  useEffect(() => {
-    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
-    setValue('neighborhood', '');
-  }, [watchedCity, setValue]);
-
 
   const handleImageUpload = async (event: ChangeEvent<HTMLInputElement>, imageType: 'hero' | 'gallery') => {
     const file = event.target.files?.[0];
@@ -333,7 +320,7 @@ export default function EditBusinessPage() {
   
     try {
       const businessRef = doc(firestore, 'salons', businessId);
-      await updateDoc(businessRef, dataToUpdate);
+      await updateDoc(businessRef, dataToUpdate as any); // Use `as any` to bypass strict partial type check if needed
       toast({ title: 'Успех', description: 'Бизнесът е актуализиран успешно.' });
   
       const profile = await getUserProfile(auth.currentUser!.uid);
@@ -418,7 +405,13 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select
                                     value={field.value}
-                                    onValueChange={field.onChange}
+                                    onValueChange={(value) => {
+                                      field.onChange(value);
+                                      setAvailableCities(bulgarianRegionsAndCities.find(r => r.region === value)?.cities || []);
+                                      setAvailableNeighborhoods([]);
+                                      setValue('city', '');
+                                      setValue('neighborhood', '');
+                                    }}
                                 >
                                     <SelectTrigger id="region">
                                         <SelectValue placeholder="Изберете област" />
@@ -441,7 +434,11 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select 
                                   value={field.value} 
-                                  onValueChange={field.onChange} 
+                                  onValueChange={(value) => {
+                                    field.onChange(value);
+                                    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[value] || []);
+                                    setValue('neighborhood', '');
+                                  }}
                                   disabled={!watchedRegion}
                                 >
                                     <SelectTrigger id="city">
@@ -457,30 +454,38 @@ export default function EditBusinessPage() {
                         />
                         {form.formState.errors.city && <p className="text-sm text-destructive">{form.formState.errors.city.message}</p>}
                       </div>
-                       <div className="space-y-2">
-                        <Label htmlFor="neighborhood">Квартал</Label>
-                        <Controller
-                          name="neighborhood"
-                          control={form.control}
-                          render={({ field }) => (
-                             <Select 
-                              value={field.value} 
-                              onValueChange={field.onChange} 
-                              disabled={!watchedCity || availableNeighborhoods.length === 0}
-                            >
+                      {availableNeighborhoods.length > 0 && (
+                        <div className="space-y-2">
+                          <Label htmlFor="neighborhood">Квартал</Label>
+                          <Controller
+                            name="neighborhood"
+                            control={form.control}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value || ""}
+                                onValueChange={field.onChange}
+                                disabled={!watchedCity}
+                              >
                                 <SelectTrigger id="neighborhood">
-                                    <SelectValue placeholder={!watchedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
+                                  <SelectValue placeholder="Изберете квартал" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {availableNeighborhoods.map(neighborhood => (
-                                        <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
-                                    ))}
+                                  {availableNeighborhoods.map((neighborhood) => (
+                                    <SelectItem key={neighborhood} value={neighborhood}>
+                                      {neighborhood}
+                                    </SelectItem>
+                                  ))}
                                 </SelectContent>
-                            </Select>
+                              </Select>
+                            )}
+                          />
+                          {form.formState.errors.neighborhood && (
+                            <p className="text-sm text-destructive">
+                              {form.formState.errors.neighborhood.message}
+                            </p>
                           )}
-                        />
-                        {form.formState.errors.neighborhood && <p className="text-sm text-destructive">{form.formState.errors.neighborhood.message}</p>}
-                      </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label htmlFor="street">Улица</Label>
                         <Controller

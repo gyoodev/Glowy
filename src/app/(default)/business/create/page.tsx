@@ -28,7 +28,7 @@ const createBusinessSchema = z.object({
   description: z.string().min(5, 'Описанието трябва да е поне 5 символа.').max(500, 'Описанието не може да надвишава 500 символа.'),
   region: z.string().min(1, 'Моля, изберете област.'),
   city: z.string().min(1, 'Моля, изберете град.'),
-  neighborhood: z.string().min(1, 'Моля, изберете квартал.'),
+  neighborhood: z.string().optional(),
   street: z.string().min(3, 'Улицата е задължително поле.'),
   streetNumber: z.string().min(1, 'Номерът е задължително поле.'),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
@@ -247,7 +247,7 @@ export default function CreateBusinessPage() {
   const nextStep = async () => {
     let isValid = false;
     if (currentStep === 1) {
-      isValid = await form.trigger(["name", "region", "city", "neighborhood", "street", "streetNumber", "priceRange", "workingMethod"]);
+      isValid = await form.trigger(["name", "region", "city", "street", "streetNumber", "priceRange", "workingMethod"]);
     } else if (currentStep === 2) {
       isValid = await form.trigger(["description", "atmosphereForAi", "targetCustomerForAi", "uniqueSellingPointsForAi"]);
     }  else {
@@ -370,32 +370,34 @@ export default function CreateBusinessPage() {
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name="neighborhood"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Квартал</FormLabel>
-                        <Select 
-                          onValueChange={field.onChange} 
-                          value={field.value} 
-                          disabled={!watchedCity || availableNeighborhoods.length === 0}
-                        >
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder={!watchedCity ? "Първо изберете град" : availableNeighborhoods.length === 0 ? "Няма предефинирани квартали" : "Изберете квартал"} />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {availableNeighborhoods.map(neighborhood => (
-                              <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {availableNeighborhoods.length > 0 && (
+                    <FormField
+                        control={form.control}
+                        name="neighborhood"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Квартал</FormLabel>
+                            <Select 
+                            onValueChange={field.onChange} 
+                            value={field.value} 
+                            disabled={!watchedCity}
+                            >
+                            <FormControl>
+                                <SelectTrigger>
+                                <SelectValue placeholder="Изберете квартал" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                {availableNeighborhoods.map(neighborhood => (
+                                <SelectItem key={neighborhood} value={neighborhood}>{neighborhood}</SelectItem>
+                                ))}
+                            </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  )}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-2">
                       <FormField
