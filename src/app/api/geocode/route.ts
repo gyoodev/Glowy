@@ -4,31 +4,31 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get('q');
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
+  if (!apiKey) {
+    console.error('Google Maps API key is not configured. Please set NEXT_PUBLIC_GOOGLE_MAPS_API_KEY in your .env.local file.');
+    return NextResponse.json({ error: 'Google Maps API key is not configured on the server.' }, { status: 500 });
+  }
+  
   if (!address) {
     return NextResponse.json({ error: 'Address query parameter is required' }, { status: 400 });
   }
 
-  const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`;
+  const googleApiUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}&language=bg`;
 
   try {
-    const response = await fetch(nominatimUrl, {
-      headers: {
-        'User-Agent': 'GlowyApp/1.0 (https://glowy.bg)', // Nominatim requires a User-Agent
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Nominatim API responded with status ${response.status}`);
-    }
-
+    const response = await fetch(googleApiUrl);
     const data = await response.json();
 
-    if (data && data.length > 0) {
-      const { lat, lon } = data[0];
-      return NextResponse.json({ lat: parseFloat(lat), lng: parseFloat(lon) });
+    if (data.status === 'OK') {
+      const location = data.results[0].geometry.location;
+      return NextResponse.json({ lat: location.lat, lng: location.lng });
+    } else if (data.status === 'ZERO_RESULTS') {
+      return NextResponse.json({ error: 'Адресът не може да бъде намерен на картата.' }, { status: 404 });
     } else {
-      return NextResponse.json({ error: 'Address not found' }, { status: 404 });
+      console.error('Google Geocoding API Error:', data.status, data.error_message);
+      return NextResponse.json({ error: data.error_message || `Грешка от Google Maps API: ${data.status}` }, { status: 500 });
     }
   } catch (error) {
     console.error('Geocoding API error:', error);
