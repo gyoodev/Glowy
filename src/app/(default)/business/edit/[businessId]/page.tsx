@@ -129,6 +129,31 @@ export default function EditBusinessPage() {
   const watchedRegion = watch('region');
   const watchedCity = watch('city');
 
+  useEffect(() => {
+    if (watchedRegion) {
+        const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
+        setAvailableCities(regionData ? regionData.cities : []);
+        // Only reset city if it's not part of the newly available cities
+        if (regionData && !regionData.cities.includes(form.getValues('city'))) {
+            setValue('city', '');
+        }
+    } else {
+        setAvailableCities([]);
+    }
+  }, [watchedRegion, form, setValue]);
+
+  useEffect(() => {
+    if (watchedCity) {
+        setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
+         if (!(bulgarianCitiesWithNeighborhoods[watchedCity] || []).includes(form.getValues('neighborhood') ?? '')) {
+            setValue('neighborhood', '');
+        }
+    } else {
+        setAvailableNeighborhoods([]);
+    }
+  }, [watchedCity, form, setValue]);
+
+
   const fetchBusinessData = useCallback(async (userId: string) => { 
     if (!businessId) {
       setLoading(false);
@@ -263,8 +288,8 @@ export default function EditBusinessPage() {
     if (!businessId || !business) return;
     setSaving(true);
   
-    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. "${data.street}" ${data.streetNumber}`.trim();
-    const originalFullAddress = `${business.city}, ${business.neighborhood ? `кв. ${business.neighborhood}, ` : ''}ул. "${business.street}" ${business.streetNumber}`.trim();
+    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. ${data.street} ${data.streetNumber}`.trim();
+    const originalFullAddress = `${business.city}, ${business.neighborhood ? `кв. ${business.neighborhood}, ` : ''}ул. ${business.street} ${business.streetNumber}`.trim();
 
     const dataToUpdate: Partial<Salon> & { lastUpdatedAt: string } = {
         name: data.name,
@@ -405,13 +430,7 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select
                                     value={field.value}
-                                    onValueChange={(value) => {
-                                      field.onChange(value);
-                                      setAvailableCities(bulgarianRegionsAndCities.find(r => r.region === value)?.cities || []);
-                                      setAvailableNeighborhoods([]);
-                                      setValue('city', '');
-                                      setValue('neighborhood', '');
-                                    }}
+                                    onValueChange={field.onChange}
                                 >
                                     <SelectTrigger id="region">
                                         <SelectValue placeholder="Изберете област" />
@@ -434,11 +453,7 @@ export default function EditBusinessPage() {
                             render={({ field }) => (
                                 <Select 
                                   value={field.value} 
-                                  onValueChange={(value) => {
-                                    field.onChange(value);
-                                    setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[value] || []);
-                                    setValue('neighborhood', '');
-                                  }}
+                                  onValueChange={field.onChange}
                                   disabled={!watchedRegion}
                                 >
                                     <SelectTrigger id="city">

@@ -84,6 +84,27 @@ export default function CreateBusinessPage() {
   const watchedCity = form.watch('city');
 
   useEffect(() => {
+    if (watchedRegion) {
+        const regionData = bulgarianRegionsAndCities.find(r => r.region === watchedRegion);
+        setAvailableCities(regionData ? regionData.cities : []);
+        form.setValue('city', '');
+        setAvailableNeighborhoods([]);
+        form.setValue('neighborhood', '');
+    } else {
+        setAvailableCities([]);
+    }
+  }, [watchedRegion, form]);
+
+  useEffect(() => {
+    if (watchedCity) {
+        setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[watchedCity] || []);
+        form.setValue('neighborhood', '');
+    } else {
+        setAvailableNeighborhoods([]);
+    }
+  }, [watchedCity, form]);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
@@ -183,7 +204,7 @@ export default function CreateBusinessPage() {
       return;
     }
 
-    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. "${data.street}" ${data.streetNumber}`.trim();
+    const fullAddress = `${data.city}, ${data.neighborhood ? `кв. ${data.neighborhood}, ` : ''}ул. ${data.street} ${data.streetNumber}`.trim();
     let locationData;
 
     if (fullAddress) {
@@ -317,14 +338,7 @@ export default function CreateBusinessPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Област</FormLabel>
-                        <Select onValueChange={(value) => { 
-                            field.onChange(value);
-                            const regionData = bulgarianRegionsAndCities.find(r => r.region === value);
-                            setAvailableCities(regionData ? regionData.cities : []);
-                            setAvailableNeighborhoods([]);
-                            form.setValue('city', '');
-                            form.setValue('neighborhood', '');
-                         }} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Изберете област" />
@@ -347,11 +361,7 @@ export default function CreateBusinessPage() {
                       <FormItem>
                         <FormLabel>Град</FormLabel>
                         <Select 
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            setAvailableNeighborhoods(bulgarianCitiesWithNeighborhoods[value] || []);
-                            form.setValue('neighborhood', '');
-                          }} 
+                          onValueChange={field.onChange} 
                           value={field.value} 
                           disabled={!watchedRegion}
                         >
@@ -376,7 +386,7 @@ export default function CreateBusinessPage() {
                         name="neighborhood"
                         render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Квартал</FormLabel>
+                            <FormLabel>Квартал (по избор)</FormLabel>
                             <Select 
                             onValueChange={field.onChange} 
                             value={field.value} 
