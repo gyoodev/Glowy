@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -38,7 +39,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
           const data = await response.json();
           
           if (!response.ok) {
-            // Handle non-2xx responses from our API gracefully
             let userFriendlyMessage = 'Възникна грешка при зареждане на картата.';
             if (response.status === 404) {
               userFriendlyMessage = 'Адресът не може да бъде намерен на картата.';
@@ -54,7 +54,6 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
              setMapCenter(null);
           }
         } catch (e: any) {
-          // This will now only catch network errors, not 404s
           console.error('Network or parsing error in LeafletMap geocoding:', e);
           setError('Възникна мрежова грешка при зареждане на картата.');
           setMapCenter(null);
@@ -67,13 +66,20 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
   }, [center, address]);
 
   useEffect(() => {
-    // Initialize map only if we have a center and the container exists.
+    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    if (!mapboxToken) {
+      setError("Mapbox токенът не е конфигуриран от страна на клиента.");
+      return;
+    }
+
     if (mapContainerRef.current && mapCenter && !mapInstanceRef.current) {
       const map = L.map(mapContainerRef.current).setView(mapCenter, zoom);
       mapInstanceRef.current = map;
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+        attribution: '© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+        tileSize: 512,
+        zoomOffset: -1,
       }).addTo(map);
       
       const marker = L.marker(mapCenter).addTo(map);
@@ -81,11 +87,9 @@ const LeafletMap: React.FC<LeafletMapProps> = ({ center, address, zoom = 15, mar
         marker.bindPopup(markerText).openPopup();
       }
     } else if (mapInstanceRef.current && mapCenter) {
-      // If map already exists, just update its view
       mapInstanceRef.current.setView(mapCenter, zoom);
     }
 
-    // Cleanup function: This will be called when the component unmounts.
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();

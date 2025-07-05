@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
   const [firebaseMessagingSenderId, setFirebaseMessagingSenderId] = useState('');
   const [firebaseAppId, setFirebaseAppId] = useState('');
   const [firebaseMeasurementId, setFirebaseMeasurementId] = useState('');
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState('');
+  const [mapboxAccessToken, setMapboxAccessToken] = useState('');
   const [paypalClientId, setPaypalClientId] = useState('');
   const [stripePublishableKey, setStripePublishableKey] = useState('');
   const [loading, setLoading] = useState(true); // Loading state
@@ -70,7 +70,7 @@ export default function AdminSettingsPage() {
         setFirebaseMessagingSenderId(data.firebaseMessagingSenderId || '');
         setFirebaseAppId(data.firebaseAppId || '');
         setFirebaseMeasurementId(data.firebaseMeasurementId || '');
-        setGoogleMapsApiKey(data.googleMapsApiKey || '');
+        setMapboxAccessToken(data.mapboxAccessToken || '');
         setPaypalClientId(data.paypalClientId || '');
         setStripePublishableKey(data.stripePublishableKey || '');
       } else {
@@ -110,9 +110,9 @@ export default function AdminSettingsPage() {
       firebaseAppId,
       firebaseMeasurementId,
       adminEmail,
- googleMapsApiKey,
- paypalClientId,
- stripePublishableKey,
+      mapboxAccessToken,
+      paypalClientId,
+      stripePublishableKey,
     };
     // Add success/error feedback
 
@@ -362,6 +362,17 @@ export default function AdminSettingsPage() {
                 />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="mapboxAccessToken">
+                  Mapbox Access Token (NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN)
+                </Label>
+                <Input
+                  id="mapboxAccessToken"
+                  type="text"
+                  value={mapboxAccessToken}
+                  onChange={(e) => setMapboxAccessToken(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="paypalClientId">
                   PayPal Client ID (NEXT_PUBLIC_PAYPAL_CLIENT_ID)
                 </Label>
@@ -381,18 +392,6 @@ export default function AdminSettingsPage() {
                   type="text"
                   value={stripePublishableKey}
                   onChange={(e) => setStripePublishableKey(e.target.value)}
-                />
-              </div>
-              {/* Add Google Maps API Key field */}
-              <div className="space-y-2">
-                <Label htmlFor="googleMapsApiKey">
-                  Google Maps API Key (NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
-                </Label>
-                <Input
-                  id="googleMapsApiKey"
-                  type="text"
-                  value={googleMapsApiKey}
-                  onChange={(e) => setGoogleMapsApiKey(e.target.value)}
                 />
               </div>
               <Button type="submit" disabled={loading}>

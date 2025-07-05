@@ -21,6 +21,7 @@ Glaura is a comprehensive salon management platform that streamlines appointment
 - **Next.js**: Framework for building the user interface.
 - **Firebase**: Backend services including authentication (Firebase Authentication) and database (Firestore).
 - **ImageBB**: Image hosting service.
+- **Mapbox**: Service for interactive maps and address geocoding.
 - **Tailwind CSS**: Utility-first CSS framework for styling.
 - **TypeScript**: Typed superset of JavaScript for improved developer experience.
 - **Netlify**: Deployment and hosting platform.
@@ -50,16 +51,13 @@ Glaura is a comprehensive salon management platform that streamlines appointment
 4.  **Set up Firebase Credentials:**
     -   You can find your Firebase client-side keys in your Firebase project settings under "General". Fill in all `NEXT_PUBLIC_FIREBASE_*` variables.
 
-5.  **Set up Google Maps API Key:**
-    -   The application uses Google Maps to convert addresses into map coordinates.
-    -   Go to the [Google Cloud Console](https://console.cloud.google.com/).
-    -   Create a new project or select an existing one.
-    -   In the navigation menu, go to "APIs & Services" > "Library".
-    -   Search for and **enable** the **Geocoding API**.
-    -   Go to "APIs & Services" > "Credentials".
-    -   Click "Create credentials" and select "API key".
-    -   Copy the generated API key and paste it into `.env.local` for the `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` variable.
-    -   **Important**: For security, it's highly recommended to restrict your API key. You can restrict it to your website's domain and to only be used for the Geocoding API.
+5.  **Set up Mapbox Access Token:**
+    -   The application uses Mapbox for map display and to convert addresses into coordinates (geocoding).
+    -   Go to [https://www.mapbox.com/](https://www.mapbox.com/) and create a free account.
+    -   After logging in, go to your [Account page](https://account.mapbox.com/).
+    -   You will find your **Default public token** on this page. Copy this token.
+    -   Paste the token into your `.env.local` file for the `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` variable.
+    -   **Important**: For security, you can create a new token and restrict its scopes to `styles:read`, `fonts:read`, and `geocoding:read`. Also, restrict its usage to your website's domain.
 
 6.  **Set up ImageBB API Key:**
     -   For ImageBB, go to [https://api.imgbb.com/](https://api.imgbb.com/) to get your free API key for the `NEXT_PUBLIC_IMAGEBB_API_KEY` variable.
