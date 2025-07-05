@@ -37,7 +37,7 @@ const AddReviewForm = dynamic(() => import('@/components/salon/AddReviewForm'), 
    loading: () => <Skeleton className="w-full aspect-video rounded-lg" />,
  });
 
- const LeafletMap = dynamic(() => import('@/components/map/MapboxMap'), { 
+ const LeafletMap = dynamic(() => import('@/components/map/LeafletMap'), { 
   loading: () => <Skeleton className="h-[400px] w-full rounded-lg" />,
   ssr: false
 });
