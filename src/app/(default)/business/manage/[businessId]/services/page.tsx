@@ -117,13 +117,19 @@ export default function ServicesManagementPage() {
     if (!salon) return;
     setIsSubmitting(true);
     try {
+      // This is the fix: Remove the non-serializable `categoryIcon` before saving.
+      const servicesToSave = updatedServices.map(({ categoryIcon, ...rest }) => rest);
+
       const salonRef = doc(firestore, 'salons', salon.id);
-      await updateDoc(salonRef, { services: updatedServices });
+      await updateDoc(salonRef, { services: servicesToSave });
+      
+      // Update local state with the full service objects (including icons) for rendering
       setSalon(prev => prev ? { ...prev, services: updatedServices } : null);
+      
       toast({ title: 'Успех', description: 'Списъкът с услуги е актуализиран.' });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error updating services:", err);
-      toast({ title: 'Грешка', description: 'Неуспешна актуализация на услугите.', variant: 'destructive' });
+      toast({ title: 'Грешка', description: `Неуспешна актуализация на услугите: ${err.message}`, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
