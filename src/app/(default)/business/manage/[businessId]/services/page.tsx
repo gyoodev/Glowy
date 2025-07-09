@@ -26,6 +26,7 @@ import type { Service, Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
 import { AlertTriangle, ArrowLeft, Loader2, PlusCircle, Scissors, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { formatPrice } from '@/lib/utils';
 
 const manualServiceSchema = z.object({
   name: z.string().min(3, "Името на услугата трябва да е поне 3 символа."),
@@ -358,7 +359,7 @@ export default function ServicesManagementPage() {
                             {service.name}
                             {service.description && <p className="text-xs text-muted-foreground">{service.description}</p>}
                           </TableCell>
-                          <TableCell>{service.price.toFixed(2)} лв.</TableCell>
+                          <TableCell>{formatPrice(service.price)}</TableCell>
                           <TableCell>{service.duration} мин.</TableCell>
                           <TableCell>
                             <Button

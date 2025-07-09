@@ -2,6 +2,7 @@
 import type { Service } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Tag } from 'lucide-react'; // Using Tag as a default icon
+import { formatPrice } from '@/lib/utils'; // Import the new formatter
 
 interface ServiceListItemProps {
   service: Service;
@@ -24,7 +25,7 @@ export function ServiceListItem({ service, onBook, isBookingEnabled }: ServiceLi
           <p className="text-sm text-muted-foreground mb-1 sm:pl-7">{service.description}</p>
         )}
         <div className="flex items-center space-x-4 text-sm text-muted-foreground sm:pl-7">
-          <span>{service.price ? service.price.toFixed(2) : 'N/A'} лв.</span>
+          <span>{formatPrice(service.price)}</span>
           <span>{service.duration || 'N/A'} мин.</span>
         </div>
       </div>
