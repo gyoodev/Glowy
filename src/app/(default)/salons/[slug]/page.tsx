@@ -433,15 +433,34 @@ export default function SalonProfilePage() {
       <div className="flex flex-col lg:flex-row gap-8">
         <div className={cn("w-full", hasServices && salon.workingMethod === 'appointment' && "lg:w-2/3")}>
           <div className="mb-6 p-6 bg-card rounded-lg shadow-lg">
-            <div className="flex flex-col sm:flex-row items-center justify-between mb-4">
-                <div className="flex items-center gap-4 mt-3 sm:mt-0">
-                    {isPromotionActive && <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize"><Gift className="h-3 w-3 mr-1" /> Промотиран</Badge>}
-                    {salon.priceRange && <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">{priceRangeTranslations[salon.priceRange] || salon.priceRange}</Badge>}
-                    {auth.currentUser && salon?.id && <Button variant="outline" size="sm" onClick={handleToggleFavorite} className={`py-2 px-3 text-sm sm:text-base flex items-center ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`} aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}><Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />{isFavorite ? "Премахни от любими" : "Добави в любими"}</Button>}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    {isPromotionActive && (
+                        <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
+                            <Gift className="h-3 w-3 mr-1" /> Промотиран
+                        </Badge>
+                    )}
+                    {salon.priceRange && (
+                        <Badge variant={salon.priceRange === 'expensive' ? 'destructive' : salon.priceRange === 'moderate' ? 'secondary' : 'outline'} className="capitalize text-sm py-1 px-3">
+                            {priceRangeTranslations[salon.priceRange] || salon.priceRange}
+                        </Badge>
+                    )}
                 </div>
-              </div>
-              <p className="text-foreground leading-relaxed">{salon.description}</p>
+                {auth.currentUser && salon?.id && (
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        onClick={handleToggleFavorite} 
+                        className={`py-2 px-3 text-sm sm:text-base flex items-center shrink-0 ${isFavorite ? 'text-red-500 border-red-500 hover:bg-red-50 dark:hover:bg-red-900' : 'text-muted-foreground hover:text-primary'}`} 
+                        aria-label={isFavorite ? "Премахни от любими" : "Добави в любими"}
+                    >
+                        <Heart className={`mr-2 h-4 w-4 ${isFavorite ? 'fill-red-500' : ''}`} />
+                        {isFavorite ? "Премахнат" : "Добави в любими"}
+                    </Button>
+                )}
             </div>
+            <p className="text-foreground leading-relaxed">{salon.description}</p>
+          </div>
 
             <Tabs defaultValue="info" className="w-full">
               <TabsList className="inline-flex h-auto w-full flex-wrap items-center justify-center rounded-lg bg-muted p-1.5 text-muted-foreground mb-6 gap-1.5">
