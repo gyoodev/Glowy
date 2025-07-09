@@ -436,7 +436,7 @@ export default function SalonProfilePage() {
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     {isPromotionActive && (
-                        <Badge variant="default" className="bg-accent text-accent-foreground py-1 px-3 text-xs capitalize">
+                        <Badge variant="default" className="py-1 px-3 text-xs capitalize">
                             <Gift className="h-3 w-3 mr-1" /> Промотиран
                         </Badge>
                     )}
