@@ -38,7 +38,7 @@ export function SalonCard({ salon, isFavoriteMode = false, onToggleFavorite }: S
     <Card className="overflow-hidden transition-shadow duration-300 hover:shadow-xl flex flex-col h-full relative">
       <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1">
         {isPromoted && (
-          <Badge variant="default" className="py-1 px-2 text-xs shadow-md">
+          <Badge variant="default" className="py-1 px-2 text-xs shadow-lg shadow-primary/50 animate-pulse">
             <Gift className="h-3 w-3 mr-1" />
             Промотиран
           </Badge>
