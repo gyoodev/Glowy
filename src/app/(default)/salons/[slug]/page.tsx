@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -336,8 +337,6 @@ export default function SalonProfilePage() {
         const dateKey = format(selectedBookingDate, 'yyyy-MM-dd');
         const salonRef = doc(db, 'salons', salon.id);
         
-        // Use field dot notation to update a specific field in a map
-        // We remove the booked time from the array for the specific date
         const updatedAvailability = arrayRemove(selectedBookingTime);
         await updateDoc(salonRef, {
             [`availability.${dateKey}`]: updatedAvailability

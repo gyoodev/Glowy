@@ -55,13 +55,19 @@ export const createBooking = async (bookingDetails: {
   service: Service;
   date: string;
   time: string;
-  clientName: string;
-  clientEmail: string;
-  clientPhoneNumber: string;
+  clientName: string; // This will now be primarily sourced from the user's profile
+  clientEmail: string; // This will now be primarily sourced from the user's profile
+  clientPhoneNumber: string; // This will now be primarily sourced from the user's profile
   salonAddress?: string;
   salonPhoneNumber?: string;
 }) => {
   try {
+    const userProfile = await getUserProfile(bookingDetails.userId);
+    const clientName = userProfile?.name || bookingDetails.clientName;
+    const clientEmail = userProfile?.email || bookingDetails.clientEmail;
+    const clientPhoneNumber = userProfile?.phoneNumber || bookingDetails.clientPhoneNumber;
+
+
     // Destructure categoryIcon and keep the rest of the service properties
     const { categoryIcon, ...serviceToStore } = bookingDetails.service;
 
@@ -76,9 +82,9 @@ export const createBooking = async (bookingDetails: {
       time: bookingDetails.time,
       status: 'pending',
       createdAt: serverTimestamp(),
-      clientName: bookingDetails.clientName,
-      clientEmail: bookingDetails.clientEmail,
-      clientPhoneNumber: bookingDetails.clientPhoneNumber,
+      clientName: clientName,
+      clientEmail: clientEmail,
+      clientPhoneNumber: clientPhoneNumber,
       salonAddress: bookingDetails.salonAddress,
       salonPhoneNumber: bookingDetails.salonPhoneNumber,
       service: serviceToStore, // Use the sanitized service object
@@ -97,7 +103,7 @@ export const createBooking = async (bookingDetails: {
       const ownerProfile = await getUserProfile(bookingDetails.salonOwnerId);
       
       // In-app notification for business
-      const businessNotificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${formattedBookingDate} в ${bookingDetails.time}.`;
+      const businessNotificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${clientName || 'клиент'} на ${formattedBookingDate} в ${bookingDetails.time}.`;
       await addDoc(collection(firestoreInstance, 'notifications'), {
         userId: bookingDetails.salonOwnerId,
         message: businessNotificationMessage,
@@ -120,8 +126,8 @@ export const createBooking = async (bookingDetails: {
                       serviceName: bookingDetails.service.name,
                       bookingDate: formattedBookingDate,
                       bookingTime: bookingDetails.time,
-                      clientName: bookingDetails.clientName,
-                      clientPhoneNumber: bookingDetails.clientPhoneNumber
+                      clientName: clientName,
+                      clientPhoneNumber: clientPhoneNumber,
                   }),
               });
                if (!response.ok) {
@@ -140,14 +146,14 @@ export const createBooking = async (bookingDetails: {
     }
 
     // 2. Notify Client (Email Confirmation)
-    if (bookingDetails.clientEmail) {
+    if (clientEmail) {
         try {
             const response = await fetch(`${appUrl}/api/send-email/new-booking-client`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    clientEmail: bookingDetails.clientEmail,
-                    clientName: bookingDetails.clientName,
+                    clientEmail: clientEmail,
+                    clientName: clientName,
                     salonName: bookingDetails.salonName,
                     serviceName: bookingDetails.service.name,
                     bookingDate: formattedBookingDate,
