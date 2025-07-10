@@ -17,6 +17,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     clientPhoneNumber,
   } = req.body;
 
+  // --- Start of Fix: Add environment variable check ---
+  const requiredEnvVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM_EMAIL'];
+  const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+  if (missingEnvVars.length > 0) {
+    const errorMessage = `Server configuration error: The following SMTP environment variables are missing: ${missingEnvVars.join(', ')}. Please configure them in your .env.local file.`;
+    console.error(errorMessage);
+    // Return a specific server error indicating a configuration issue
+    return res.status(503).json({ message: 'Service Unavailable: Email service is not configured.' });
+  }
+  // --- End of Fix ---
+
   if (!ownerEmail || !salonName || !serviceName || !bookingDate || !bookingTime || !clientName) {
     return res.status(400).json({ message: 'Missing required fields for new booking notification.' });
   }
