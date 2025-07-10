@@ -106,7 +106,9 @@ export const createBooking = async (bookingDetails: {
       const ownerProfile = await getUserProfile(bookingDetails.salonOwnerId);
       if (ownerProfile?.email) {
           try {
-              const response = await fetch('/api/send-email/new-booking-business', {
+              const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+              const apiUrl = `${appUrl}/api/send-email/new-booking-business`;
+              const response = await fetch(apiUrl, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
