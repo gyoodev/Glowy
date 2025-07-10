@@ -309,30 +309,65 @@ export default function SalonProfilePage() {
 
   const handleConfirmBooking = async () => {
     if (!auth.currentUser || !selectedService || !selectedBookingDate || !selectedBookingTime || !salon) {
-      toast({ title: "Непълна информация", variant: "destructive" });
-      return;
+        toast({ title: "Непълна информация", description: "Моля, изберете услуга, дата и час, за да продължите.", variant: "destructive" });
+        return;
     }
-    
-    let clientProfile = await getUserProfile(auth.currentUser.uid);
+
+    const clientProfile = await getUserProfile(auth.currentUser.uid);
 
     try {
-      await createBooking({
-        salonId: salon.id,
-        salonName: salon.name,
-        salonOwnerId: salon.ownerId,
-        userId: auth.currentUser.uid,
-        service: selectedService,
-        date: selectedBookingDate.toISOString(),
-        time: selectedBookingTime,
-        clientName: clientProfile?.name || auth.currentUser.displayName || 'Клиент',
-        clientEmail: clientProfile?.email || auth.currentUser.email || '',
-        clientPhoneNumber: clientProfile?.phoneNumber || '',
-        salonAddress: salon.address,     
-        salonPhoneNumber: salon.phoneNumber,
-      });
-      toast({ title: "Резервацията е потвърдена!" });
-    } catch (error) {
-      toast({ title: "Възникна грешка", variant: "destructive" });
+        // Step 1: Create the booking document
+        await createBooking({
+            salonId: salon.id,
+            salonName: salon.name,
+            salonOwnerId: salon.ownerId,
+            userId: auth.currentUser.uid,
+            service: selectedService,
+            date: selectedBookingDate.toISOString(),
+            time: selectedBookingTime,
+            clientName: clientProfile?.name || auth.currentUser.displayName || 'Клиент',
+            clientEmail: clientProfile?.email || auth.currentUser.email || '',
+            clientPhoneNumber: clientProfile?.phoneNumber || '',
+            salonAddress: salon.address,
+            salonPhoneNumber: salon.phoneNumber,
+        });
+
+        // Step 2: Update the salon's availability
+        const dateKey = format(selectedBookingDate, 'yyyy-MM-dd');
+        const salonRef = doc(db, 'salons', salon.id);
+        
+        // Use field dot notation to update a specific field in a map
+        // We remove the booked time from the array for the specific date
+        const updatedAvailability = arrayRemove(selectedBookingTime);
+        await updateDoc(salonRef, {
+            [`availability.${dateKey}`]: updatedAvailability
+        });
+        
+        // Step 3: Update local state to reflect the change immediately
+        setSalon(prevSalon => {
+            if (!prevSalon) return null;
+            const newAvailability = { ...prevSalon.availability };
+            if (newAvailability[dateKey]) {
+                newAvailability[dateKey] = newAvailability[dateKey].filter(time => time !== selectedBookingTime);
+            }
+            return { ...prevSalon, availability: newAvailability };
+        });
+
+        // Reset selections
+        setSelectedBookingTime(undefined);
+
+        toast({
+            title: "Резервацията е успешна!",
+            description: `Вашият час за ${selectedService.name} в ${salon.name} е потвърден.`,
+        });
+
+    } catch (error: any) {
+        console.error("Error confirming booking:", error);
+        toast({
+            title: "Възникна грешка",
+            description: "Неуспешно създаване на резервация. Моля, опитайте отново.",
+            variant: "destructive"
+        });
     }
   };
 
@@ -533,3 +568,5 @@ export default function SalonProfilePage() {
  </>
   );
 }
+
+    
