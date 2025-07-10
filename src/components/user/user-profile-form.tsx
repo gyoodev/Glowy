@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2 } from 'lucide-react'; // Added MailCheck, Loader2
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2, Phone } from 'lucide-react'; // Added Phone icon
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -27,6 +27,7 @@ const ANY_PRICE_FORM_VALUE = "any";
 const profileSchema = z.object({
   name: z.string().min(2, 'Името трябва да е поне 2 символа.'),
   email: z.string().email('Невалиден имейл адрес.'),
+  phoneNumber: z.string().regex(/^\+359[0-9]{9}$/, 'Невалиден български телефонен номер. Трябва да е във формат +359xxxxxxxxx (9 цифри след +359).').optional().or(z.literal('')),
   favoriteServices: z.array(z.string()).optional(),
   priceRange: z.enum(['cheap', 'moderate', 'expensive', ANY_PRICE_FORM_VALUE]).optional(),
   preferredLocations: z.array(z.string()).optional(),
@@ -52,6 +53,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     defaultValues: {
       name: userProfile.displayName || userProfile.name || '',
       email: userProfile.email || '',
+      phoneNumber: userProfile.phoneNumber || '',
       favoriteServices: userProfile.preferences?.favoriteServices || [],
       priceRange: (userProfile.preferences?.priceRange === '' || userProfile.preferences?.priceRange === undefined) ? ANY_PRICE_FORM_VALUE : userProfile.preferences?.priceRange,
       preferredLocations: userProfile.preferences?.preferredLocations || [],
@@ -63,6 +65,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
       form.reset({
         name: userProfile.displayName || userProfile.name || '',
         email: userProfile.email || '',
+        phoneNumber: userProfile.phoneNumber || '',
         favoriteServices: userProfile.preferences?.favoriteServices || [],
         priceRange: (userProfile.preferences?.priceRange === '' || userProfile.preferences?.priceRange === undefined) ? ANY_PRICE_FORM_VALUE : userProfile.preferences?.priceRange,
         preferredLocations: userProfile.preferences?.preferredLocations || [],
@@ -84,6 +87,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
         name: data.name,
         displayName: data.name, // Keep displayName in sync with name
         email: data.email, // Email is read-only but include it
+        phoneNumber: data.phoneNumber || '',
         preferences: {
           favoriteServices: data.favoriteServices || [],
           priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
@@ -194,6 +198,35 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                         <FormMessage />
                         </FormItem>
                     )}
+                    />
+                     <FormField
+                      control={form.control}
+                      name="phoneNumber"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="tel"
+                              placeholder="+359..."
+                              {...field}
+                              onChange={(e) => {
+                                const prefix = '+359';
+                                let currentValue = e.target.value;
+                                if (!currentValue.startsWith(prefix)) {
+                                  const numbersTyped = currentValue.replace(/[^+0-9]/g, '').replace(/^\+359/, '');
+                                  currentValue = prefix + numbersTyped;
+                                }
+                                const numbersAfterPrefix = currentValue.substring(prefix.length).replace(/[^0-9]/g, '');
+                                const finalNumericPart = numbersAfterPrefix.substring(0, 9);
+                                field.onChange(prefix + finalNumericPart);
+                              }}
+                            />
+                          </FormControl>
+                           <FormDescription>Формат: +359xxxxxxxxx</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                      {/* Display Newsletter Subscription Status */}
                      <FormItem className="pt-2">
@@ -404,5 +437,3 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     </Card>
   );
 }
-
-    
