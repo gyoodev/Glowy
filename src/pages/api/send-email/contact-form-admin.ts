@@ -1,6 +1,9 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import nodemailer from 'nodemailer';
+import { config } from 'dotenv';
+
+config(); // Load environment variables from .env file
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
