@@ -27,7 +27,6 @@ import { bg } from 'date-fns/locale';
 
 // The critical check that throws an error has been removed from this file.
 // The check now happens in layout.tsx using the isFirebaseConfigured boolean from './firebase/config'.
-// This prevents the app from crashing at the module level before it can render an error UI.
 
 let app: FirebaseApp;
 if (!getApps().length) {
@@ -125,7 +124,8 @@ export const createBooking = async (bookingDetails: {
                       clientPhoneNumber: bookingDetails.clientPhoneNumber
                   }),
               });
-              if (!response.ok) {
+               if (!response.ok) {
+                  // The API should now return a JSON with a message
                   const errorData = await response.json();
                   console.warn('Failed to send new booking email to business:', errorData.message || response.statusText);
               } else {
@@ -134,6 +134,8 @@ export const createBooking = async (bookingDetails: {
           } catch (emailError) {
               console.warn('Error sending new booking email to business:', emailError);
           }
+      } else {
+        console.warn(`Could not send new booking email to business owner ${bookingDetails.salonOwnerId} because no email is associated with their profile.`);
       }
     }
 
@@ -369,3 +371,4 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
 
 // Export the initialized instances
 export { app, authInstance as auth, analytics, firestoreInstance as firestore,FieldValue };
+
