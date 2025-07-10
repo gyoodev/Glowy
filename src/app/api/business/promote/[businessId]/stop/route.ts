@@ -5,15 +5,9 @@ import { app } from '@/lib/firebase'; // Corrected import for auth
 
 const firestore = getFirestore(app);
 
-interface RouteContext {
-  params: {
-    businessId: string;
-  };
-}
-
 export async function POST(
   request: NextRequest,
-  { params }: RouteContext
+  { params }: { params: { businessId: string } }
 ) {
   const businessId = params.businessId;
 
