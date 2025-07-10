@@ -1,4 +1,5 @@
 
+
 // Import the functions you need from the SDKs you need
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
 import { getAnalytics, isSupported } from "firebase/analytics";
@@ -21,6 +22,8 @@ import {
 import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
 import { mapUserProfile, mapBooking, mapNotification, mapNewsletterSubscriber } from '@/utils/mappers'; // Path alias should now work
 import firebaseConfig from './firebase/config';
+import { format } from 'date-fns';
+import { bg } from 'date-fns/locale';
 
 // The critical check that throws an error has been removed from this file.
 // The check now happens in layout.tsx using the isFirebaseConfigured boolean from './firebase/config'.
@@ -82,6 +85,7 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestoreInstance, 'bookings'), bookingDataForFirestore);
     console.log('Booking created with ID:', docRef.id);
 
+    // Send notification to salon owner's account in the app
     if (bookingDetails.salonOwnerId) {
       const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
       await addDoc(collection(firestoreInstance, 'notifications'), {
@@ -93,7 +97,37 @@ export const createBooking = async (bookingDetails: {
         type: 'new_booking_business' as NotificationType,
         relatedEntityId: docRef.id,
       });
-      console.log('Notification created for salon owner:', bookingDetails.salonOwnerId);
+      console.log('In-app notification created for salon owner:', bookingDetails.salonOwnerId);
+      
+      // Fetch owner's profile to get their email and send email notification
+      const ownerProfile = await getUserProfile(bookingDetails.salonOwnerId);
+      if (ownerProfile?.email) {
+          try {
+              const response = await fetch('/api/send-email/new-booking-business', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                      ownerEmail: ownerProfile.email,
+                      salonName: bookingDetails.salonName,
+                      serviceName: bookingDetails.service.name,
+                      bookingDate: format(new Date(bookingDetails.date), 'dd.MM.yyyy', { locale: bg }),
+                      bookingTime: bookingDetails.time,
+                      clientName: bookingDetails.clientName,
+                      clientPhoneNumber: bookingDetails.clientPhoneNumber
+                  }),
+              });
+              if (!response.ok) {
+                  console.error('Failed to send new booking email to business:', response.statusText);
+              } else {
+                  console.log('New booking email sent successfully to business owner.');
+              }
+          } catch (emailError) {
+              console.error('Error sending new booking email to business:', emailError);
+          }
+      } else {
+        console.warn('Could not find email for salon owner to send notification.');
+      }
+
     } else {
       console.warn('Salon owner ID not provided for booking, notification to owner not created.');
     }
