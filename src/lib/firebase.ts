@@ -122,12 +122,12 @@ export const createBooking = async (bookingDetails: {
               if (!response.ok) {
                   // The API should now return a JSON with a message
                   const errorData = await response.json();
-                  console.error('Failed to send new booking email to business:', errorData.message || response.statusText);
+                  console.warn('Failed to send new booking email to business:', errorData.message || response.statusText);
               } else {
                   console.log('New booking email sent successfully to business owner.');
               }
           } catch (emailError) {
-              console.error('Error sending new booking email to business:', emailError);
+              console.warn('Error sending new booking email to business:', emailError);
           }
       } else {
         console.warn('Could not find email for salon owner to send notification.');
