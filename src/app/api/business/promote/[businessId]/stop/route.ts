@@ -1,13 +1,19 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getFirestore, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { app, auth } from '@/lib/firebase'; // Corrected import for auth
+import { app } from '@/lib/firebase'; // Corrected import for auth
 
 const firestore = getFirestore(app);
 
+interface RouteContext {
+  params: {
+    businessId: string;
+  };
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { businessId: string } }
+  { params }: RouteContext
 ) {
   const businessId = params.businessId;
 
