@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; 
 import type { Booking, UserProfile } from '@/types'; 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -83,6 +83,19 @@ export default function AdminBookingManagementPage() {
     try {
       const bookingRef = doc(firestoreInstance, 'bookings', bookingId);
       await updateDoc(bookingRef, { status: newStatus });
+      
+      // If the new status is 'cancelled', add the time slot back to availability
+      if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+        const salonRef = doc(firestoreInstance, 'salons', booking.salonId);
+        const dateKey = format(new Date(booking.date), 'yyyy-MM-dd');
+        await updateDoc(salonRef, {
+            [`availability.${dateKey}`]: arrayUnion(booking.time)
+        });
+        toast({
+            title: 'Часът е освободен',
+            description: `Часът ${booking.time} на ${dateKey} е добавен обратно към наличните.`,
+        });
+      }
 
       setBookings(prevBookings =>
         prevBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
@@ -169,7 +182,7 @@ export default function AdminBookingManagementPage() {
   }
 
   if (error) {
-    return (
+     return (
       <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8 text-center">
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-destructive mb-2">Грешка при зареждане на резервации</h2>
@@ -264,4 +277,3 @@ export default function AdminBookingManagementPage() {
     </div>
   );
 }
-

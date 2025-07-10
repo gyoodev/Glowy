@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp, addDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc, orderBy, Timestamp, addDoc, arrayUnion } from 'firebase/firestore';
 import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import type { Booking, Salon, UserProfile } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -131,6 +131,20 @@ export default function SalonBookingsPage() {
     try {
       const bookingRef = doc(firestore, 'bookings', bookingId);
       await updateDoc(bookingRef, { status: newStatus });
+      
+      // If the new status is 'cancelled', add the time slot back to availability
+      if (newStatus === 'cancelled' && oldStatus !== 'cancelled') {
+        const salonRef = doc(firestore, 'salons', booking.salonId);
+        const dateKey = format(new Date(booking.date), 'yyyy-MM-dd');
+        await updateDoc(salonRef, {
+            [`availability.${dateKey}`]: arrayUnion(booking.time)
+        });
+        toast({
+            title: 'Часът е освободен',
+            description: `Часът ${booking.time} на ${dateKey} е добавен обратно към наличните.`,
+        });
+      }
+
 
       setBookings(prevBookings =>
         prevBookings.map(b => (b.id === bookingId ? { ...b, status: newStatus } : b))
@@ -344,4 +358,3 @@ export default function SalonBookingsPage() {
     </div>
   );
 }
-
