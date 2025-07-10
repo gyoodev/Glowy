@@ -88,41 +88,44 @@ export const createBooking = async (bookingDetails: {
     const docRef = await addDoc(collection(firestoreInstance, 'bookings'), bookingDataForFirestore as any); // Use 'as any' to bypass strict type check for serverTimestamp
     console.log('Booking created with ID:', docRef.id);
 
-    // Send notification to salon owner's account in the app
+    // --- NOTIFICATIONS ---
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+    const formattedBookingDate = format(new Date(bookingDetails.date), 'dd.MM.yyyy', { locale: bg });
+
+    // 1. Notify Business Owner (In-app & Email)
     if (bookingDetails.salonOwnerId) {
-      const notificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${new Date(bookingDetails.date).toLocaleDateString('bg-BG')} в ${bookingDetails.time}.`;
+      const ownerProfile = await getUserProfile(bookingDetails.salonOwnerId);
+      
+      // In-app notification for business
+      const businessNotificationMessage = `Нова резервация за ${bookingDetails.service.name} в ${bookingDetails.salonName} от ${bookingDetails.clientName || 'клиент'} на ${formattedBookingDate} в ${bookingDetails.time}.`;
       await addDoc(collection(firestoreInstance, 'notifications'), {
         userId: bookingDetails.salonOwnerId,
-        message: notificationMessage,
+        message: businessNotificationMessage,
         link: `/business/salon-bookings/${bookingDetails.salonId}`,
         read: false,
         createdAt: serverTimestamp(),
         type: 'new_booking_business' as NotificationType,
         relatedEntityId: docRef.id,
       });
-      console.log('In-app notification created for salon owner:', bookingDetails.salonOwnerId);
-      
-      // Fetch owner's profile to get their email and send email notification
-      const ownerProfile = await getUserProfile(bookingDetails.salonOwnerId);
+
+      // Email notification for business
       if (ownerProfile?.email) {
           try {
-              const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-              const apiUrl = `${appUrl}/api/send-email/new-booking-business`;
-              const response = await fetch(apiUrl, {
+              const response = await fetch(`${appUrl}/api/send-email/new-booking-business`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                       ownerEmail: ownerProfile.email,
                       salonName: bookingDetails.salonName,
                       serviceName: bookingDetails.service.name,
-                      bookingDate: format(new Date(bookingDetails.date), 'dd.MM.yyyy', { locale: bg }),
+                      bookingDate: formattedBookingDate,
                       bookingTime: bookingDetails.time,
                       clientName: bookingDetails.clientName,
                       clientPhoneNumber: bookingDetails.clientPhoneNumber
                   }),
               });
               if (!response.ok) {
-                  // The API should now return a JSON with a message
                   const errorData = await response.json();
                   console.warn('Failed to send new booking email to business:', errorData.message || response.statusText);
               } else {
@@ -131,12 +134,35 @@ export const createBooking = async (bookingDetails: {
           } catch (emailError) {
               console.warn('Error sending new booking email to business:', emailError);
           }
-      } else {
-        console.warn('Could not find email for salon owner to send notification.');
       }
+    }
 
-    } else {
-      console.warn('Salon owner ID not provided for booking, notification to owner not created.');
+    // 2. Notify Client (Email Confirmation)
+    if (bookingDetails.clientEmail) {
+        try {
+            const response = await fetch(`${appUrl}/api/send-email/new-booking-client`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    clientEmail: bookingDetails.clientEmail,
+                    clientName: bookingDetails.clientName,
+                    salonName: bookingDetails.salonName,
+                    serviceName: bookingDetails.service.name,
+                    bookingDate: formattedBookingDate,
+                    bookingTime: bookingDetails.time,
+                    salonAddress: bookingDetails.salonAddress,
+                    salonPhoneNumber: bookingDetails.salonPhoneNumber,
+                }),
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.warn('Failed to send booking confirmation email to client:', errorData.message || response.statusText);
+            } else {
+                console.log('Booking confirmation email sent successfully to client.');
+            }
+        } catch (emailError) {
+            console.warn('Error sending booking confirmation email to client:', emailError);
+        }
     }
 
     return docRef.id;
