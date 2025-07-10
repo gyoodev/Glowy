@@ -8,14 +8,19 @@ import type { Salon } from '@/types';
 // Force dynamic execution
 export const dynamic = 'force-dynamic';
 
+interface RouteContext {
+  params: {
+    id: string;
+  };
+}
+
 /**
  * GET /api/salons/[id]
  * Fetches details for a single salon by its ID.
  * @param {NextRequest} request - The incoming request object.
- * @param {object} context - The context object containing route parameters.
- * @param {string} context.params.id - The ID of the salon to fetch.
+ * @param {RouteContext} context - The context object containing route parameters.
  */
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: RouteContext) {
   if (!adminDb) {
     return NextResponse.json(
       { error: 'Firebase Admin SDK not initialized.' },
