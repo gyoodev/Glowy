@@ -120,7 +120,9 @@ export const createBooking = async (bookingDetails: {
                   }),
               });
               if (!response.ok) {
-                  console.error('Failed to send new booking email to business:', response.statusText);
+                  // The API should now return a JSON with a message
+                  const errorData = await response.json();
+                  console.error('Failed to send new booking email to business:', errorData.message || response.statusText);
               } else {
                   console.log('New booking email sent successfully to business owner.');
               }
