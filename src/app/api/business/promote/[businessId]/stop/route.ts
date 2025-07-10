@@ -7,9 +7,9 @@ const firestore = getFirestore(app);
 
 export async function POST(
   request: NextRequest,
-  context: any // Changed to any for diagnostic purposes
+  { params }: { params: { businessId: string } }
 ) {
-  const businessId = context.params.businessId;
+  const businessId = params.businessId;
 
   // Firebase Auth is client-side, this check won't work as expected in a server-side API route
   // For server-side auth, you'd typically verify an ID token passed in the request headers.
