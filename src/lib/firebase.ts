@@ -63,7 +63,10 @@ export const createBooking = async (bookingDetails: {
   salonPhoneNumber?: string;
 }) => {
   try {
-    const bookingDataForFirestore: Omit<Booking, 'id' | 'startTime' | 'endTime' | 'createdAt' | 'serviceId' | 'serviceName' | 'service'> & { serviceId: string; serviceName: string; service?: Service; createdAt: FieldValue } = {
+    // Destructure categoryIcon and keep the rest of the service properties
+    const { categoryIcon, ...serviceToStore } = bookingDetails.service;
+
+    const bookingDataForFirestore: Omit<Booking, 'id' | 'startTime' | 'endTime' | 'createdAt' | 'serviceId' | 'serviceName' | 'service'> & { serviceId: string; serviceName: string; service?: Omit<Service, 'categoryIcon'>; createdAt: FieldValue } = {
       salonId: bookingDetails.salonId,
       salonName: bookingDetails.salonName,
       salonOwnerId: bookingDetails.salonOwnerId,
@@ -79,10 +82,10 @@ export const createBooking = async (bookingDetails: {
       clientPhoneNumber: bookingDetails.clientPhoneNumber,
       salonAddress: bookingDetails.salonAddress,
       salonPhoneNumber: bookingDetails.salonPhoneNumber,
-      service: bookingDetails.service, // Include the full service object
+      service: serviceToStore, // Use the sanitized service object
     };
 
-    const docRef = await addDoc(collection(firestoreInstance, 'bookings'), bookingDataForFirestore);
+    const docRef = await addDoc(collection(firestoreInstance, 'bookings'), bookingDataForFirestore as any); // Use 'as any' to bypass strict type check for serverTimestamp
     console.log('Booking created with ID:', docRef.id);
 
     // Send notification to salon owner's account in the app
