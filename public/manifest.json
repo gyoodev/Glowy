@@ -1,11 +1,12 @@
+
 {
-  "name": "Glowy",
-  "short_name": "Glowy",
-  "description": "Открийте най-добрите салони за красота и услуги във Вашия град. Запазете час лесно и бързо с Glowy.",
+  "name": "Glaura - Открий своя блясък",
+  "short_name": "Glaura",
+  "description": "Открийте най-добрите салони за красота и услуги във Вашия град. Запазете час лесно и бързо с Glaura.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#E6E6FA",
+  "background_color": "#ffffff",
+  "theme_color": "#A855F7",
   "icons": [
     {
       "src": "/favicon/android-chrome-192x192.png",

@@ -31,6 +31,10 @@ export const metadata: Metadata = {
   creator: 'GKDEV',
   publisher: 'Glaura',
   manifest: '/manifest.json',
+  icons: {
+    icon: '/favicon/favicon.ico',
+    apple: '/favicon/apple-touch-icon.png',
+  },
 };
 
 
@@ -55,9 +59,7 @@ export default function RootLayout({
     <html lang="bg" suppressHydrationWarning>
       <head>
         {/* Favicon links are still recommended to be placed here for broad compatibility */}
-        <link rel="icon" href="/favicon/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/favicon/apple-touch-icon.png" />
-        <meta name="theme-color" content="#E6E6FA" />
+        <meta name="theme-color" content="#A855F7" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ClientLayoutContent>
