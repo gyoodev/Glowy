@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { auth } from '@/lib/firebase';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
-import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight, Phone, Mail } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { bulgarianRegionsAndCities, bulgarianCitiesWithNeighborhoods } from '@/lib/mock-data';
 import type { Service, NotificationType } from '@/types';
@@ -31,6 +31,8 @@ const createBusinessSchema = z.object({
   neighborhood: z.string().optional(),
   street: z.string().min(3, 'Улицата е задължително поле.'),
   streetNumber: z.string().min(1, 'Номерът е задължително поле.'),
+  phone: z.string().regex(/^\+359[0-9]{9}$/, 'Невалиден български телефонен номер. Трябва да е във формат +359xxxxxxxxx.').optional().or(z.literal('')),
+  email: z.string().email('Невалиден имейл адрес.').optional().or(z.literal('')),
   priceRange: z.enum(['cheap', 'moderate', 'expensive'], { errorMap: () => ({ message: 'Моля, изберете ценови диапазон.' }) }),
   workingMethod: z.enum(['appointment', 'walk_in'], { errorMap: () => ({ message: 'Моля, изберете начин на работа.' }) }),
   atmosphereForAi: z.string().min(5, 'Моля, опишете атмосферата по-подробно за AI генерацията.'),
@@ -72,6 +74,8 @@ export default function CreateBusinessPage() {
       neighborhood: '',
       street: '',
       streetNumber: '',
+      phone: '+359',
+      email: '',
       workingMethod: 'appointment',
       atmosphereForAi: '', 
       targetCustomerForAi: '',
@@ -231,6 +235,8 @@ export default function CreateBusinessPage() {
         neighborhood: data.neighborhood,
         street: data.street,
         streetNumber: data.streetNumber,
+        phoneNumber: data.phone,
+        email: data.email,
         priceRange: data.priceRange,
         workingMethod: data.workingMethod,
         atmosphereForAi: data.atmosphereForAi,
@@ -268,7 +274,7 @@ export default function CreateBusinessPage() {
   const nextStep = async () => {
     let isValid = false;
     if (currentStep === 1) {
-      isValid = await form.trigger(["name", "region", "city", "street", "streetNumber", "priceRange", "workingMethod"]);
+      isValid = await form.trigger(["name", "region", "city", "street", "streetNumber", "priceRange", "workingMethod", "phone", "email"]);
     } else if (currentStep === 2) {
       isValid = await form.trigger(["description", "atmosphereForAi", "targetCustomerForAi", "uniqueSellingPointsForAi"]);
     }  else {
@@ -439,6 +445,49 @@ export default function CreateBusinessPage() {
                         )}
                       />
                     </div>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                     <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4 text-muted-foreground" />Телефонен номер</FormLabel>
+                            <FormControl>
+                               <Input
+                                type="tel"
+                                placeholder="+359..."
+                                {...field}
+                                onChange={(e) => {
+                                    const prefix = '+359';
+                                    let currentValue = e.target.value;
+                                    if (!currentValue.startsWith(prefix)) {
+                                    const numbersTyped = currentValue.replace(/[^+0-9]/g, '').replace(/^\+359/, '');
+                                    currentValue = prefix + numbersTyped;
+                                    }
+                                    const numbersAfterPrefix = currentValue.substring(prefix.length).replace(/[^0-9]/g, '');
+                                    const finalNumericPart = numbersAfterPrefix.substring(0, 9);
+                                    field.onChange(prefix + finalNumericPart);
+                                }}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center"><Mail className="mr-2 h-4 w-4 text-muted-foreground" />Имейл за контакт</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="contact@salon.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                   </div>
                   <FormField
                     control={form.control}
