@@ -11,11 +11,9 @@ interface PromotedSalonsProps {
 
 export function PromotedSalons({ salons }: PromotedSalonsProps) {
   if (salons.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>В момента няма промотирани салони. Потърсете, за да намерите най-добрия за вас!</p>
-      </div>
-    );
+    // This component now returns null if there are no promoted salons, 
+    // allowing the parent to decide what to render instead.
+    return null; 
   }
 
   return (
@@ -30,9 +28,6 @@ export function PromotedSalons({ salons }: PromotedSalonsProps) {
                     <SalonCard key={salon.id} salon={salon} />
                 ))}
             </div>
-        </div>
-        <div className="text-center py-8 text-muted-foreground">
-            <p>За повече резултати, използвайте филтрите и търсачката.</p>
         </div>
     </div>
   );

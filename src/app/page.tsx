@@ -2,7 +2,8 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { format, isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
 import type { Salon, BusinessStatus } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
@@ -10,9 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, ListOrdered, ShoppingBag } from 'lucide-react';
+import { Search, ListOrdered, ShoppingBag, Sparkles } from 'lucide-react';
 import { bulgarianRegionsAndCities, mockServices as allMockServices } from '@/lib/mock-data';
-import { format, isFuture, parseISO } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
 import { HeroSlider } from '@/components/layout/HeroSlider';
@@ -29,6 +29,7 @@ const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [promotedSalons, setPromotedSalons] = useState<Salon[]>([]);
+  const [recentlyAddedSalons, setRecentlyAddedSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -67,11 +68,21 @@ export default function SalonDirectoryPage() {
         const salonsSnapshot = await getDocs(q);
         const allSalons = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
-        const activePromoted = allSalons.filter(s => s.promotion?.isActive && s.promotion.expiresAt && isFuture(parseISO(s.promotion.expiresAt)));
+        const activePromoted = allSalons
+            .filter(s => s.promotion?.isActive && s.promotion.expiresAt && isFuture(parseISO(s.promotion.expiresAt)))
+            .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         
+        const nonPromotedSalons = allSalons.filter(s => !activePromoted.some(p => p.id === s.id));
+
+        const recent = nonPromotedSalons
+            .filter(s => s.createdAt && isWithinInterval(new Date(s.createdAt), { start: subDays(new Date(), 30), end: new Date() }))
+            .sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime())
+            .slice(0, 6);
+
         setSalons(allSalons);
         setPromotedSalons(activePromoted);
-        setFilteredSalons([]); // Initially, don't show the main list, only promoted
+        setRecentlyAddedSalons(recent);
+        setFilteredSalons([]);
       } catch (error) {
         console.error("Error fetching initial salons:", error);
       } finally {
@@ -84,7 +95,6 @@ export default function SalonDirectoryPage() {
   const applyFiltersAndSort = useCallback(() => {
     let tempSalons = [...salons];
 
-    // Start filtering only if there is a search term or active filters
     const hasActiveFilters = 
       searchTerm ||
       filters.location !== ALL_CITIES_VALUE ||
@@ -238,7 +248,33 @@ export default function SalonDirectoryPage() {
                 </div>
               )
           ) : (
-            <PromotedSalons salons={promotedSalons} />
+             <div className="space-y-12">
+                {promotedSalons.length > 0 && <PromotedSalons salons={promotedSalons} />}
+                
+                {recentlyAddedSalons.length > 0 && (
+                  <div>
+                    <h2 className="text-2xl font-bold flex items-center mb-4">
+                        <Sparkles className="mr-3 h-6 w-6 text-primary" />
+                        Нови и препоръчани
+                    </h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {recentlyAddedSalons.map((salon) => (
+                            <SalonCard key={salon.id} salon={salon} />
+                        ))}
+                    </div>
+                  </div>
+                )}
+                
+                {(promotedSalons.length === 0 && recentlyAddedSalons.length === 0) && (
+                   <div className="text-center py-12">
+                    <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold text-foreground">Добре дошли в Glaura!</h3>
+                    <p className="text-muted-foreground mt-2">
+                        Използвайте търсачката или филтрите, за да намерите перфектния салон за Вас.
+                    </p>
+                </div>
+                )}
+            </div>
           )}
         </main>
       </div>
