@@ -162,7 +162,7 @@ export function FilterSidebar({ onFilterChange, regionsAndCities, categorizedSer
         )}
 
         <div>
-          <Label htmlFor="rating" className="text-sm font-medium">Рейтинг: {rating[0] === 0 ? 'Всякакъв' : `${rating[0]}+ Звезди`}</Label>
+          <Label htmlFor="rating" className="text-sm font-medium">Рейтинг: {rating[0] === 0 ? 'Всички' : `${rating[0]}+ Звезди`}</Label>
           <Slider
             id="rating"
             min={0}
