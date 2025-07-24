@@ -1,7 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { sendEmail } from '@/lib/email-service';
-// import 'dotenv/config'; // Removed this line as Next.js handles .env files automatically.
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
