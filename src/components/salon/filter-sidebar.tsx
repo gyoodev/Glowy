@@ -84,7 +84,7 @@ export function FilterSidebar({ onFilterChange, regionsAndCities, categorizedSer
   };
 
   const priceLabel = maxPriceValue[0] === DEFAULT_MIN_PRICE 
-    ? "Всякаква цена" 
+    ? "Всички" 
     : `До ${maxPriceValue[0]} лв.`;
 
   return (
