@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -97,8 +96,8 @@ export default function AdminUsersPage() {
 
     try {
       const idToken = await auth.currentUser.getIdToken();
-
-      const response = await fetch('/api/admin/delete-user', {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+      const response = await fetch(`${appUrl}/api/admin/delete-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -140,7 +139,8 @@ export default function AdminUsersPage() {
 
     try {
       const idToken = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/admin/update-user-role', {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+      const response = await fetch(`${appUrl}/api/admin/update-user-role`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,8 +181,8 @@ export default function AdminUsersPage() {
 
     try {
       const idToken = await auth.currentUser.getIdToken();
-      
-      const response = await fetch('/api/admin/create-user', {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+      const response = await fetch(`${appUrl}/api/admin/create-user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

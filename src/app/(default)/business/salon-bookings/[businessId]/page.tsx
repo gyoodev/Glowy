@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -170,7 +169,8 @@ export default function SalonBookingsPage() {
       // Send email notification to client
       if (booking.clientEmail && newStatus !== oldStatus) {
         try {
-          const response = await fetch('/api/send-email/booking-status-change-client', {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+          const response = await fetch(`${appUrl}/api/send-email/booking-status-change-client`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
