@@ -35,5 +35,6 @@ if (!admin.apps.length) {
 // If not, we export `null`. This prevents a crash during the build process.
 // The API routes that use this will need to handle the null case.
 const adminDb = admin.apps.length > 0 ? admin.firestore() : null;
+const adminAuth = admin.apps.length > 0 ? admin.auth() : null;
 
-export { adminDb };
+export { adminDb, adminAuth };
