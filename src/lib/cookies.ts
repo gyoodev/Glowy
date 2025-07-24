@@ -1,3 +1,4 @@
+
 // src/lib/cookies.ts
 'use client'; // Cookies are a client-side concept for direct manipulation
 

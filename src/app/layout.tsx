@@ -9,6 +9,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import FirebaseConfigErrorPage from '@/components/layout/FirebaseConfigErrorPage';
+import { PWAInstallBanner } from '@/components/layout/PWAInstallBanner';
 
 export const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -59,7 +60,7 @@ export default function RootLayout({
     <html lang="bg" suppressHydrationWarning>
       <head>
         {/* Favicon links are still recommended to be placed here for broad compatibility */}
-        <meta name="theme-color" content="#A855F7" />
+        <meta name="theme-color" content="#E6E6FA" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
         <ClientLayoutContent>
@@ -70,6 +71,7 @@ export default function RootLayout({
         <Footer />
         <Toaster />
         <CookieConsentBanner />
+        <PWAInstallBanner />
       </body>
     </html>
   );
