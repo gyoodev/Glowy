@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { setCookie, getCookie, deleteCookie } from '@/lib/cookies';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 // DropdownMenu components are no longer needed here for profile
 
 const navItems = [
@@ -29,6 +30,7 @@ const navItems = [
 
 const THEME_COOKIE_KEY = 'glowy-theme';
 const APP_NAME = 'Glaura';
+
 export function Header() {
   const router = useRouter();
   const { toast } = useToast();
@@ -40,42 +42,57 @@ export function Header() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const [themeSetting, setThemeSetting] = useState<'light' | 'dark' | 'system'>('system');
-  const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>('light');
   const [isMobileView, setIsMobileView] = useState(false);
 
   useEffect(() => {
     // Theme initialization
     if (typeof window !== 'undefined') {
-      const savedTheme = getCookie(THEME_COOKIE_KEY);
-      if (savedTheme) {
-        setThemeSetting(savedTheme as 'light' | 'dark' | 'system');
-      } else {
-        // Default to system theme if no cookie is set
-        setThemeSetting('system');
-      }
+      const savedTheme = getCookie(THEME_COOKIE_KEY) || 'system';
+      setThemeSetting(savedTheme as 'light' | 'dark' | 'system');
 
-      // Set initial mobile view state
       const handleResize = () => {
         setIsMobileView(window.innerWidth < 768); // Using Tailwind's 'md' breakpoint
       };
-      handleResize(); // Set initial state
+      handleResize();
       window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
+  
+  const applyTheme = useCallback((theme: 'light' | 'dark') => {
+      document.documentElement.classList.remove('light', 'dark');
+      document.documentElement.classList.add(theme);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const applyTheme = (theme: 'light' | 'dark') => {
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const initialTheme = prefersDark ? 'dark' : 'light';
-        document.documentElement.classList.toggle('dark', initialTheme === 'dark');
-        // Optionally set the cookie here for the default theme
-        // setCookie(THEME_COOKIE_KEY, initialTheme, 365);
+      if (themeSetting === 'system') {
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        applyTheme(mediaQuery.matches ? 'dark' : 'light');
+        const handleChange = (e: MediaQueryListEvent) => applyTheme(e.matches ? 'dark' : 'light');
+        mediaQuery.addEventListener('change', handleChange);
+        return () => mediaQuery.removeEventListener('change', handleChange);
+      } else {
+        applyTheme(themeSetting);
       }
     }
+  }, [themeSetting, applyTheme]);
+  
 
-    // Auth initialization
+  const handleSetTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
+    setThemeSetting(theme);
+    setCookie(THEME_COOKIE_KEY, theme, 365);
+    if(theme !== 'system') {
+      toast({
+        title: 'Темата е променена',
+        description: `Темата е успешно сменена на ${theme === 'dark' ? 'тъмна' : 'светла'}.`,
+      });
+    }
+  }, [toast]);
+
+
+  // Auth initialization
+  useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
@@ -178,60 +195,26 @@ export function Header() {
     setIsMobileMenuOpen(false);
   };
 
-  const applyTheme = useCallback((theme: 'light' | 'dark') => {
-    document.documentElement.classList.remove('light', 'dark');
-    document.documentElement.classList.add(theme);
-    setResolvedTheme(theme);
-  }, []);
-
-  const handleSetTheme = useCallback((theme: 'light' | 'dark' | 'system') => {
-    setThemeSetting(theme);
-    setCookie(THEME_COOKIE_KEY, theme, 365);
-
-    if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      applyTheme(prefersDark ? 'dark' : 'light');
-    } else {
-      applyTheme(theme);
-      // Only show toast for explicit light/dark selection
-      toast({
-        title: 'Темата е променена',
-        description: `Темата е успешно сменена на ${theme === 'dark' ? 'тъмна' : 'светла'}.`,
-      });
-    }
-  }, [applyTheme, toast]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-      const handleChange = (e: MediaQueryListEvent) => {
-        if (themeSetting === 'system') {
-          applyTheme(e.matches ? 'dark' : 'light');
-        }
-      };
-
-      mediaQuery.addEventListener('change', handleChange);
-      // Apply initial theme based on setting
-      handleSetTheme(themeSetting);
-      return () => mediaQuery.removeEventListener('change', handleChange);
-    }
-  }, [themeSetting, applyTheme, handleSetTheme]);
 
   if (isLoading) {
     return (
-        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-16 items-center px-6">
-                 <div className="mr-6 flex items-center space-x-2">
-                    <AppIcon className="h-6 w-6 text-primary animate-pulse" />
-                    <span className="font-bold sm:inline-block text-lg">Glaura</span>
-                </div>
-                <div className="flex-1"></div>
-                <div className="flex items-center space-x-2">
-                    {/* Placeholder for buttons or remove if not needed */}
-                </div>
-            </div>
-        </header>
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center px-6">
+          <div className="mr-6 flex items-center space-x-2">
+            <Skeleton className="h-6 w-6 rounded-full" />
+            <Skeleton className="h-5 w-20" />
+          </div>
+          <div className="hidden md:flex flex-1 items-center space-x-1">
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-20" />
+            <Skeleton className="h-8 w-20" />
+          </div>
+          <div className="flex flex-1 items-center justify-end space-x-2 md:flex-initial">
+             <Skeleton className="h-8 w-8 rounded-full" />
+             <Skeleton className="h-8 w-8 rounded-full" />
+          </div>
+        </div>
+      </header>
     );
   }
 
