@@ -2,9 +2,9 @@
 export interface Service {
   id: string;
   name: string;
-  description?: string; // Made optional as per ServiceListItem
-  category?: string; // Added category field
+  description?: string;
+  category: string;
   duration: number;
   price: number;
-  categoryIcon?: React.ElementType; // Keep if used for icons elsewhere
+  categoryIcon?: React.ElementType;
 }

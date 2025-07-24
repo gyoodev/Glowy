@@ -13,11 +13,11 @@ import type {
 } from '@/types';
 
 function timestampToISOString(value: Timestamp | string | undefined | Date): string {
-  if (!value) return new Date().toISOString(); // Default to now if undefined/null
-  if (typeof value === 'string') return value; // Already a string
-  if (value instanceof Date) return value.toISOString(); // It's a JS Date
-  if (value instanceof Timestamp) return value.toDate().toISOString(); // It's a Firestore Timestamp
-  return new Date().toISOString(); // Fallback
+  if (!value) return new Date().toISOString(); 
+  if (typeof value === 'string') return value; 
+  if (value instanceof Date) return value.toISOString(); 
+  if (value instanceof Timestamp) return value.toDate().toISOString(); 
+  return new Date().toISOString();
 }
 
 // -------------------- Booking --------------------
@@ -27,12 +27,11 @@ export function mapBooking(raw: any): Booking {
     userId: raw.userId,
     salonId: raw.salonId,
     serviceId: raw.serviceId,
-    // Ensure startTime and endTime are handled, they might be Timestamps or already strings
     startTime: timestampToISOString(raw.startTime),
     endTime: timestampToISOString(raw.endTime),
     salonName: raw.salonName || 'N/A',
     serviceName: raw.serviceName || 'N/A',
-    date: raw.date || new Date().toISOString().split('T')[0], // date is already typically a string 'YYYY-MM-DD'
+    date: raw.date || new Date().toISOString().split('T')[0],
     time: raw.time || 'N/A',
     status: raw.status as Booking['status'] || 'pending',
     clientName: raw.clientName || 'N/A',
@@ -76,7 +75,7 @@ export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
       favoriteServices: [],
       priceRange: '',
       preferredLocations: [],
-      favoriteSalons: [], // Added favoriteSalons here for consistency
+      favoriteSalons: [],
     },
     createdAt: timestampToISOString(raw.createdAt),
     phoneNumber: raw.phoneNumber || '',
@@ -95,41 +94,22 @@ export function mapSalon(raw: any, id?: string): Salon {
     description: s.description || '',
     price: typeof s.price === 'number' ? s.price : 0,
     duration: typeof s.duration === 'number' ? s.duration : 0,
+    category: s.category || '',
     categoryIcon: s.categoryIcon,
   })) : [];
 
   let workingHours: WorkingHoursStructure = {};
   if (typeof raw.workingHours === 'object' && raw.workingHours !== null) {
     daysOrder.forEach(dayKey => {
-      if (raw.workingHours[dayKey]) {
-        workingHours[dayKey] = {
-          open: raw.workingHours[dayKey].open || '',
-          close: raw.workingHours[dayKey].close || '',
-          isOff: raw.workingHours[dayKey].isOff ?? true, 
-        };
-      } else {
-        // Default to closed if day is explicitly missing from a provided workingHours object
-        workingHours[dayKey] = { open: '', close: '', isOff: true };
-      }
-    });
-  } else {
-    // Default working hours if raw.workingHours is not provided or not an object
-    daysOrder.forEach(dayKey => {
-      if (dayKey === 'saturday' || dayKey === 'sunday') {
-        workingHours[dayKey] = { open: '', close: '', isOff: true };
-      } else if (dayKey === 'saturday') { // This condition was previously unreachable
-         workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
-      }
-      else {
-        workingHours[dayKey] = { open: '09:00', close: '18:00', isOff: false };
-      }
-       // Ensure Saturday has specific default if needed, and Sunday defaults to closed
-       if (dayKey === 'saturday' && !raw.workingHours?.[dayKey]) workingHours[dayKey] = { open: '10:00', close: '14:00', isOff: false };
-       if (dayKey === 'sunday' && !raw.workingHours?.[dayKey]) workingHours[dayKey] = { open: '', close: '', isOff: true };
+      workingHours[dayKey] = {
+        open: raw.workingHours[dayKey]?.open || '',
+        close: raw.workingHours[dayKey]?.close || '',
+        isOff: raw.workingHours[dayKey]?.isOff ?? true, 
+      };
     });
   }
 
-  let mappedLocation: { lat: number; lng: number } | undefined = undefined;
+  let mappedLocation: { lat: number; lng: number } | null = null;
   if (raw.location && typeof raw.location.lat === 'number' && typeof raw.location.lng === 'number') {
      mappedLocation = { lat: raw.location.lat, lng: raw.location.lng };
   }
@@ -155,7 +135,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     location: mappedLocation,
     rating: typeof raw.rating === 'number' ? raw.rating : 0,
     reviewCount: typeof raw.reviewCount === 'number' ? raw.reviewCount : 0,
-    createdAt: timestampToISOString(raw.createdAt),
+    createdAt: raw.createdAt ? timestampToISOString(raw.createdAt) : undefined,
     lastUpdatedAt: raw.lastUpdatedAt ? timestampToISOString(raw.lastUpdatedAt) : undefined,
     availability: raw.availability || {},
     workingHours: workingHours,
@@ -163,15 +143,15 @@ export function mapSalon(raw: any, id?: string): Salon {
         isActive: raw.promotion.isActive,
         packageId: raw.promotion.packageId,
         packageName: raw.promotion.packageName,
-        purchasedAt: timestampToISOString(raw.promotion.purchasedAt) || '',
-        expiresAt: timestampToISOString(raw.promotion.expiresAt) || '',
+        purchasedAt: timestampToISOString(raw.promotion.purchasedAt),
+        expiresAt: timestampToISOString(raw.promotion.expiresAt),
         paymentMethod: raw.promotion.paymentMethod,
         transactionId: raw.promotion.transactionId
     } : undefined,
     atmosphereForAi: raw.atmosphereForAi || '',
     targetCustomerForAi: raw.targetCustomerForAi || '',
     uniqueSellingPointsForAi: raw.uniqueSellingPointsForAi || '',
-    status: raw.status || 'approved', // Ensure status is included
+    status: raw.status || 'approved',
     workingMethod: raw.workingMethod || 'walk_in',
   };
 }

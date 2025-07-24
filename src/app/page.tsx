@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, query, where, orderBy } from 'firebase/firestore';
 import type { Salon, BusinessStatus } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
@@ -10,15 +10,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, ListOrdered, ShoppingBag } from 'lucide-react'; // Added ShoppingBag for no salons case
+import { Search, ListOrdered, ShoppingBag } from 'lucide-react';
 import { bulgarianRegionsAndCities, mockServices as allMockServices } from '@/lib/mock-data';
-import { format, isFuture, parseISO } from 'date-fns'; // Import parseISO
-import { where } from 'firebase/firestore';
+import { format, isFuture, parseISO } from 'date-fns';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
-import { HeroSlider } from '@/components/layout/HeroSlider'; // Import the main slider
-import { slidesData } from '@/lib/hero-slides-data'; // Import hero slides data
-import NewPageSlider from '@/components/layout/NewPageSlider'; // Import the new slider
+import { HeroSlider } from '@/components/layout/HeroSlider';
+import { slidesData } from '@/lib/hero-slides-data';
+import { PromotedSalons } from '@/components/salon/PromotedSalons';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -27,11 +26,12 @@ const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
-
 export default function SalonDirectoryPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
+  const [promotedSalons, setPromotedSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     location: ALL_CITIES_VALUE,
@@ -59,29 +59,47 @@ export default function SalonDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    const fetchSalons = async () => {
+    const fetchInitialData = async () => {
       setIsLoading(true);
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
-        const q = query(salonsCollectionRef, where('status', '==', 'approved' as BusinessStatus), orderBy('name'));
-        
+        const q = query(salonsCollectionRef, where('status', '==', 'approved' as BusinessStatus));
         const salonsSnapshot = await getDocs(q);
-        let salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
+        const allSalons = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
-        setSalons(salonsList);
+        const activePromoted = allSalons.filter(s => s.promotion?.isActive && s.promotion.expiresAt && isFuture(parseISO(s.promotion.expiresAt)));
+        
+        setSalons(allSalons);
+        setPromotedSalons(activePromoted);
+        setFilteredSalons([]); // Initially, don't show the main list, only promoted
       } catch (error) {
-        console.error("Error fetching salons:", error);
+        console.error("Error fetching initial salons:", error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchSalons();
+    fetchInitialData();
   }, []);
 
   const applyFiltersAndSort = useCallback(() => {
     let tempSalons = [...salons];
 
-    // Filtering logic
+    // Start filtering only if there is a search term or active filters
+    const hasActiveFilters = 
+      searchTerm ||
+      filters.location !== ALL_CITIES_VALUE ||
+      filters.category !== ALL_CATEGORIES_VALUE ||
+      filters.minRating > DEFAULT_MIN_RATING ||
+      filters.maxPrice > DEFAULT_MIN_PRICE;
+      
+    if (!hasActiveFilters) {
+        setFilteredSalons([]);
+        setIsSearching(false);
+        return;
+    }
+    
+    setIsSearching(true);
+
     if (searchTerm) {
       tempSalons = tempSalons.filter(salon =>
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -111,25 +129,18 @@ export default function SalonDirectoryPage() {
       );
     }
 
-    // Sorting logic
     if (sortOrder === 'rating_desc') {
       tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
-    } else if (sortOrder === 'rating_asc') { // Should be maxPrice_desc? Sorting logic seems inconsistent with comments
+    } else if (sortOrder === 'rating_asc') {
       tempSalons.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
     } else if (sortOrder === 'name_asc') {
       tempSalons.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortOrder === 'name_desc') {
       tempSalons.sort((a, b) => b.name.localeCompare(a.name));
     } else if (sortOrder === 'default') {
-      // Default sort: Promoted first, then by rating (desc), then by name (asc)
       tempSalons.sort((a, b) => {
         const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt ? isFuture(parseISO(a.promotion.expiresAt)) : false;
         const bIsPromoted = b.promotion?.isActive && b.promotion.expiresAt ? isFuture(parseISO(b.promotion.expiresAt)) : false;
-
-        // Check for valid dates before comparing
-        const aRating = a.rating ?? 0;
-        const bRating = b.rating ?? 0;
-
         if (aIsPromoted && !bIsPromoted) return -1;
         if (!aIsPromoted && bIsPromoted) return 1;
         if ((b.rating ?? 0) !== (a.rating ?? 0)) return (b.rating ?? 0) - (a.rating ?? 0);
@@ -142,17 +153,16 @@ export default function SalonDirectoryPage() {
 
   useEffect(() => {
     applyFiltersAndSort();
-  }, [salons, searchTerm, filters, sortOrder, applyFiltersAndSort]);
+  }, [searchTerm, filters, sortOrder, applyFiltersAndSort]);
 
   const handleFilterChange = (newFilters: Record<string, any>) => {
     setFilters(prevFilters => ({ ...prevFilters, ...newFilters }));
   };
   
-
   return (
     <div className="container mx-auto py-10 px-6">
       <header className="mb-10">
-        <HeroSlider slides={slidesData} /> {/* Use the new slider component */}
+        <HeroSlider slides={slidesData} />
       </header>
 
       <div className="flex flex-col md:flex-row gap-8">
@@ -164,9 +174,6 @@ export default function SalonDirectoryPage() {
           />
         </aside>
         <main className="w-full md:w-3/4 lg:w-4/5">
-          <h1 className="text-3xl font-bold mb-8 text-center md:text-left">
-            Директория със Салони за Красота
-          </h1>
           <div className="mb-8 flex flex-col sm:flex-row gap-4 items-center">
             <div className="relative flex-grow w-full sm:w-auto">
               <Input
@@ -196,48 +203,44 @@ export default function SalonDirectoryPage() {
             </div>
           </div>
 
-{isLoading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {[...Array(6)].map((_, i) => (
-                                            <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
-                                                              <Skeleton className="h-48 w-full" />
-                                                                                <div className="p-4">
-                                                                                                    <Skeleton className="h-6 w-3/4 mb-2" />
-                                                                                                                        <Skeleton className="h-4 w-full mb-1" />
-                                                                                                                                            <Skeleton className="h-4 w-5/6 mb-3" />
-                                                                                                                                                                <Skeleton className="h-4 w-1/2 mb-3" />
-                                                                                                                                                                                    <Skeleton className="h-4 w-1/3" />
-                                                                                                                                                                                                      </div>
-                                                                                                                                                                                                                        <div className="p-4 pt-0">
-                                                                                                                                                                                                                                            <Skeleton className="h-10 w-full" />
-                                                                                                                                                                                                                                                              </div>
-                                                                                                                                                                                                                                                                              </div>
-                                                                                                                                                                                                                                                                                            ))}
-                                                                                                                                                                                                                                                                                                        </div>
-                                                                                                                                                                                                                                                                                                                  ) : salons.length === 0 ? (
-                                                                                                                                                                                                                                                                                                                              <div className="text-center py-12">
-                                                                                                                                                                                                                                                                                                                                            <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-4" /> {/* Changed icon */}
-                                                                                                                                                                                                                                                                                                                                                          <h3 className="text-xl font-semibold text-foreground">В платформата все още няма създадени салони.</h3>
-                                                                                                                                                                                                                                                                                                                                                                        <p className="text-muted-foreground mt-2">
-                                                                                                                                                                                                                                                                                                                                                                                        Моля, проверете по-късно или ако сте собственик на салон, регистрирайте го.
-                                                                                                                                                                                                                                                                                                                                                                                                      </p>
-                                                                                                                                                                                                                                                                                                                                                                                                                  </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                            ) : filteredSalons.length === 0 ? ( // Added this condition
-                                                                                                                                                                                                                                                                                                                                                                                                                                        <div className="text-center py-12">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                      <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                    <h3 className="text-xl font-semibold text-foreground">Търсеният от Вас салон не е намерен в платформата.</h3>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <p className="text-muted-foreground mt-2">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  Моля, проверете критериите си за търсене.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </p>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      ) : ( // Added this condition
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                {filteredSalons.map((salon) => (
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <SalonCard key={salon.id} salon={salon} />
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              ))}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          </div>
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    )}
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            </main>
+          {isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden">
+                  <Skeleton className="h-48 w-full" />
+                  <div className="p-4">
+                    <Skeleton className="h-6 w-3/4 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" />
+                    <Skeleton className="h-4 w-5/6 mb-3" />
+                    <Skeleton className="h-4 w-1/2 mb-3" />
+                    <Skeleton className="h-4 w-1/3" />
+                  </div>
+                  <div className="p-4 pt-0">
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : isSearching ? (
+              filteredSalons.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {filteredSalons.map((salon) => (
+                        <SalonCard key={salon.id} salon={salon} />
+                    ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                    <Search className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold text-foreground">Няма намерени салони.</h3>
+                    <p className="text-muted-foreground mt-2">
+                        Моля, променете критериите си за търсене.
+                    </p>
+                </div>
+              )
+          ) : (
+            <PromotedSalons salons={promotedSalons} />
+          )}
+        </main>
       </div>
     </div>
   );

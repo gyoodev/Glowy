@@ -1,6 +1,6 @@
 
 import type { Service } from './service';
-import type { Promotion } from './promotion'; // Assuming promotion type is in its own file or index
+import type { Promotion } from './promotion'; 
 
 export interface DayWorkingHours {
   open: string;
@@ -15,7 +15,7 @@ export interface Salon {
   description: string;
   ownerId: string;
   region?: string;
-  address: string; // This will store the full concatenated address
+  address: string;
   city: string;
   neighborhood?: string;
   street?: string;
@@ -24,13 +24,13 @@ export interface Salon {
   email?: string;
   website?: string;
   services?: Service[];
-  workingMethod?: 'appointment' | 'walk_in' | 'both'; // Renamed workingMode to workingMethod with updated types
+  workingMethod?: 'appointment' | 'walk_in' | 'both';
   photos?: string[];
   heroImage?: string;
   location?: { lat: number; lng: number; } | null;
   rating?: number;
-  reviewCount?: number; // Added optional reviewCount property
-  createdAt: string; 
+  reviewCount?: number;
+  createdAt?: string; 
   lastUpdatedAt?: string;
   priceRange?: 'cheap' | 'moderate' | 'expensive' | '';
   availability?: Record<string, string[]>; 
