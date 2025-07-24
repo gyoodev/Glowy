@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -17,6 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Users,
   Briefcase,
@@ -45,12 +45,13 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { getFirestore, collection, query, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
-import type { UserProfile, Salon } from '@/types';
+import { getFirestore, collection, query, orderBy, limit, getDocs, Timestamp, where } from 'firebase/firestore';
+import type { UserProfile, Salon, Booking } from '@/types';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { auth } from '@/lib/firebase';
 import Link from 'next/link';
+import { mapUserProfile, mapSalon } from '@/utils/mappers';
 
 interface PromotionPayment {
   id: string;
@@ -64,7 +65,7 @@ interface PromotionPayment {
   createdAt: Timestamp;
 }
 
-const placeholderStats = [
+const initialStats = [
   { title: 'Общо Потребители', value: '0', icon: Users, color: 'text-blue-500', bgColor: 'bg-stat-blue-light dark:bg-stat-blue-light/30', trendInfo: '', dataKey: 'totalUsers', href: '/admin/users' },
   { title: 'Общо Салони', value: '0', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-stat-green-light dark:bg-stat-green-light/30', trendInfo: '', dataKey: 'totalSalons', href: '/admin/business' },
   { title: 'Активни Резервации', value: '0', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10 dark:bg-purple-500/30', trendInfo: '', dataKey: 'activeBookings', href: '/admin/bookings' }, 
@@ -87,7 +88,7 @@ const recentActivityDataPlaceholder = [
 
 
 export default function AdminIndexPage() {
-  const [stats, setStats] = useState(placeholderStats);
+  const [stats, setStats] = useState(initialStats);
   const [monthlyUserData, setMonthlyUserData] = useState(monthlyDataPlaceholder.map(d => ({ month: d.month, users: d.users })));
   const [monthlySalonData, setMonthlySalonData] = useState(monthlyDataPlaceholder.map(d => ({ month: d.month, salons: d.salons })));
   const [monthlyPaymentData, setMonthlyPaymentData] = useState(monthlyDataPlaceholder.map(d => ({ month: d.month, payments: d.payments })));
@@ -102,6 +103,8 @@ export default function AdminIndexPage() {
   const [loadingPayments, setLoadingPayments] = useState(true);
 
   const [loadingCharts, setLoadingCharts] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
+
 
   const firestore = getFirestore(auth.app);
 
@@ -111,20 +114,21 @@ export default function AdminIndexPage() {
       setLoadingSalons(true);
       setLoadingPayments(true);
       setLoadingCharts(true);
+      setLoadingStats(true);
 
       try {
         // Fetch Users
         const usersRef = collection(firestore, 'users');
         const usersSnapshot = await getDocs(usersRef);
-        const usersList = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        const usersList = usersSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt && (typeof user.createdAt === 'string' || (user.createdAt as any).toDate !== undefined));
-        setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
+        const validUsersWithDate = usersList.filter(user => user.createdAt); // Corrected filter
+        setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
         validUsersWithDate.forEach(user => {
           try {
-            const date = typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate();
+            const date = new Date(user.createdAt); 
             if (!isNaN(date.getTime())) { 
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlyUsers[monthKey] = (aggregatedMonthlyUsers[monthKey] || 0) + 1;
@@ -143,15 +147,15 @@ export default function AdminIndexPage() {
         // Fetch Salons
         const salonsRef = collection(firestore, 'salons');
         const salonsSnapshot = await getDocs(salonsRef);
-        const salonsList = salonsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Salon));
+        const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
-        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt && (typeof salon.createdAt === 'string' || (salon.createdAt as any).toDate !== undefined));
-        setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()).slice(0, 3));
+        const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); 
+        setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
          validSalonsWithDate.forEach(salon => {
           try {
-            const date = typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate();
+            const date = new Date(salon.createdAt); 
              if (!isNaN(date.getTime())) {
               const monthKey = format(date, 'LLL yy', { locale: bg });
               aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
@@ -172,8 +176,8 @@ export default function AdminIndexPage() {
         const paymentsQuery = query(paymentsRef, orderBy('createdAt', 'desc')); 
         const paymentsSnapshot = await getDocs(paymentsQuery);
         const paymentsList = paymentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PromotionPayment));
-        
-        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && p.createdAt.toDate);
+
+        const validPaymentsWithDate = paymentsList.filter(p => p.createdAt && p.createdAt.toDate); 
         setLatestPayments(validPaymentsWithDate.slice(0, 10));
 
         const aggregatedMonthlyPayments: { [key: string]: number } = {};
@@ -199,24 +203,32 @@ export default function AdminIndexPage() {
           .filter(p => p.status === 'completed')
           .reduce((sum, p) => sum + (p.amount || 0), 0);
 
+        // Fetch Active Bookings
+        const bookingsRef = collection(firestore, 'bookings');
+        const activeBookingsQuery = query(bookingsRef, where('status', 'in', ['pending', 'confirmed']));
+        const activeBookingsSnapshot = await getDocs(activeBookingsQuery);
+        const activeBookingsCount = activeBookingsSnapshot.size;
+
         setStats(prevStats => prevStats.map(stat => {
-          if (stat.dataKey === 'totalUsers') return { ...stat, value: usersList.length.toString() };
-          if (stat.dataKey === 'totalSalons') return { ...stat, value: salonsList.length.toString() };
+          if (stat.dataKey === 'totalUsers') return { ...stat, value: usersSnapshot.size.toString() };
+          if (stat.dataKey === 'totalSalons') return { ...stat, value: salonsSnapshot.size.toString() };
+          if (stat.dataKey === 'activeBookings') return { ...stat, value: activeBookingsCount.toString() };
           if (stat.dataKey === 'totalRevenue') return { ...stat, value: `${totalRevenue.toFixed(2)} лв.` };
-          // TODO: Add active bookings count fetching if needed for "Активни Резервации"
           return stat;
         }));
+        setLoadingStats(false);
+
 
         const newActivityFeed = [];
         if (usersList.length > 0 && validUsersWithDate[0]?.createdAt) {
             try {
-                const userDate = typeof validUsersWithDate[0].createdAt === 'string' ? new Date(validUsersWithDate[0].createdAt) : (validUsersWithDate[0].createdAt as Timestamp).toDate();
+                const userDate = new Date(validUsersWithDate[0].createdAt);
                 newActivityFeed.push({ id: 'activity-user', icon: UserPlus, text: `Нов потребител: ${validUsersWithDate[0].name || validUsersWithDate[0].displayName || 'N/A'}`, time: format(userDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'user' });
             } catch (e) { console.warn("Error formatting user activity time", e); }
         }
         if (salonsList.length > 0 && validSalonsWithDate[0]?.createdAt) {
             try {
-                 const salonDate = typeof validSalonsWithDate[0].createdAt === 'string' ? new Date(validSalonsWithDate[0].createdAt) : (validSalonsWithDate[0].createdAt as Timestamp).toDate();
+                 const salonDate = new Date(validSalonsWithDate[0].createdAt);
                  newActivityFeed.push({ id: 'activity-salon', icon: Building, text: `Нов салон: ${validSalonsWithDate[0].name || 'N/A'}`, time: format(salonDate, 'dd.MM.yyyy HH:mm', { locale: bg }), type: 'salon' });
             } catch (e) { console.warn("Error formatting salon activity time", e); }
         }
@@ -277,7 +289,11 @@ export default function AdminIndexPage() {
                 <stat.icon className={`h-5 w-5 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+                {loadingStats ? (
+                    <Skeleton className="h-8 w-20" />
+                ) : (
+                    <div className={`text-3xl font-bold ${stat.color}`}>{stat.value}</div>
+                )}
                 {stat.trendInfo && (
                   <p className={`text-xs mt-1 ${stat.trendInfo.startsWith('+') ? 'text-green-600' : stat.trendInfo.startsWith('-') ? 'text-red-600' : 'text-muted-foreground'}`}>
                     {stat.trendInfo.startsWith('+') && <TrendingUp className="inline h-3 w-3 mr-1" />}
@@ -434,7 +450,7 @@ export default function AdminIndexPage() {
                       <TableCell>{user.displayName || user.name || 'N/A'}</TableCell>
                       <TableCell>{user.email}</TableCell>
                       <TableCell><Badge variant={user.role === 'admin' ? 'destructive' : user.role === 'business' ? 'secondary' : 'outline'}>{getRoleDisplayName(user.role)}</Badge></TableCell>
-                      <TableCell>{user.createdAt ? format(typeof user.createdAt === 'string' ? new Date(user.createdAt) : (user.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{user.createdAt ? format(new Date(user.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -464,7 +480,7 @@ export default function AdminIndexPage() {
                       <TableCell>{salon.name}</TableCell>
                       <TableCell>{salon.city || 'N/A'}</TableCell>
                       <TableCell className="text-xs">{salon.ownerId || 'N/A'}</TableCell>
-                      <TableCell>{salon.createdAt ? format(typeof salon.createdAt === 'string' ? new Date(salon.createdAt) : (salon.createdAt as Timestamp).toDate(), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
+                      <TableCell>{salon.createdAt ? format(new Date(salon.createdAt), 'dd.MM.yyyy', { locale: bg }) : 'N/A'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

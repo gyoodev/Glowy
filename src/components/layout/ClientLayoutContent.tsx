@@ -3,14 +3,8 @@
 import dynamic from 'next/dynamic';
 import React from 'react';
 
-// The Header component is now rendered completely on the client.
-// This means it won't contribute to the initial server-rendered HTML,
-// which can improve the "Time to First Byte" (TTFB) and "First Contentful Paint" (FCP).
-// It will be loaded and rendered by the client-side JavaScript bundle.
-const Header = dynamic(() => import('@/components/layout/header').then(mod => mod.Header), {
-  ssr: false,
-  loading: () => <header className="h-16 border-b" />, // Simple placeholder during load
-});
+// The Header component is now rendered on the server, but its interactive parts can be client components.
+import { Header } from '@/components/layout/header';
 
 
 interface ClientLayoutContentProps {

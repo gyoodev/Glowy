@@ -16,6 +16,8 @@ import { format, isFuture, parseISO } from 'date-fns'; // Import parseISO
 import { where } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
+import { HeroSlider } from '@/components/layout/HeroSlider'; // Import the main slider
+import { slidesData } from '@/lib/hero-slides-data'; // Import hero slides data
 import NewPageSlider from '@/components/layout/NewPageSlider'; // Import the new slider
 
 const DEFAULT_MIN_RATING = 0;
@@ -150,7 +152,7 @@ export default function SalonDirectoryPage() {
   return (
     <div className="container mx-auto py-10 px-6">
       <header className="mb-10">
-        <NewPageSlider /> {/* Use the new slider component */}
+        <HeroSlider slides={slidesData} /> {/* Use the new slider component */}
       </header>
 
       <div className="flex flex-col md:flex-row gap-8">

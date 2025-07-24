@@ -228,7 +228,7 @@ export function Header() {
 
         <nav className="hidden flex-1 items-center space-x-1 md:flex pr-4">
           {navItems.map((item) => {
-             if (item.label === 'Glowy Препоръка' && !isLoggedIn) {
+             if (item.label === 'Glaura Препоръка' && !isLoggedIn) {
               return null;
             }
             return (
