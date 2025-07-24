@@ -38,3 +38,6 @@ export async function POST(request: NextRequest) {
     } else {
         console.error('API Route: Uncaught non-Error object in POST /api/generate-description:', e);
     }
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
+  }
+}
