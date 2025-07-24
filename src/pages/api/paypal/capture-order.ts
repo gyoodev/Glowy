@@ -2,7 +2,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import paypal from '@paypal/checkout-server-sdk';
 import { adminDb } from '@/lib/firebaseAdmin';
-import { FieldValue } from 'firebase-admin/firestore';
+import { Timestamp as AdminTimestamp } from 'firebase-admin/firestore';
 import type { Promotion } from '@/types';
 import { addDays } from 'date-fns';
 
@@ -88,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         isActive: true,
         packageId: chosenPackage.id,
         packageName: chosenPackage.name,
-        purchasedAt: FieldValue.serverTimestamp() as any, // For Firebase Admin SDK
+        purchasedAt: AdminTimestamp.fromDate(now),
         expiresAt: expiryDate.toISOString(),
         paymentMethod: 'paypal',
         transactionId: transactionId,
@@ -138,7 +138,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               message: notificationMessage,
               link: '/admin/payments',
               read: false,
-              createdAt: FieldValue.serverTimestamp(),
+              createdAt: AdminTimestamp.fromDate(new Date()),
               type: 'new_payment_admin',
               relatedEntityId: businessId,
             });
