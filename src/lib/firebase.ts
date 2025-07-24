@@ -33,6 +33,8 @@ const isFirebaseConfigured =
   firebaseConfig.apiKey !== 'YOUR_API_KEY_HERE';
 
 let app: FirebaseApp;
+let authInstance: ReturnType<typeof getAuth>;
+let firestoreInstance: ReturnType<typeof getFirestore>;
 
 // Initialize Firebase only if it's configured and not already initialized.
 if (isFirebaseConfigured) {
@@ -41,6 +43,8 @@ if (isFirebaseConfigured) {
     } else {
       app = getApp();
     }
+    authInstance = getAuth(app);
+    firestoreInstance = getFirestore(app);
 } else {
     // If not configured, you might want to handle this case,
     // though the RootLayout already prevents rendering.
@@ -49,9 +53,6 @@ if (isFirebaseConfigured) {
     // console.warn("Firebase is not configured. App initialization skipped.");
 }
 
-
-const authInstance = getAuth(app);
-const firestoreInstance = getFirestore(app);
 
 let analytics;
 if (typeof window !== 'undefined' && isFirebaseConfigured) {
