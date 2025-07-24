@@ -1,15 +1,16 @@
 
+
 import './globals.css';
 import { Geist, Geist_Mono } from 'next/font/google';
 import type { Metadata } from 'next';
 
-import ClientLayoutContent from '@/components/layout/ClientLayoutContent';
 import { Footer } from '@/components/layout/footer';
 import { Toaster } from '@/components/ui/toaster';
 import { CookieConsentBanner } from '@/components/layout/CookieConsentBanner';
 import { isFirebaseConfigured } from '@/lib/firebase/config';
 import FirebaseConfigErrorPage from '@/components/layout/FirebaseConfigErrorPage';
 import { PWAInstallBanner } from '@/components/layout/PWAInstallBanner';
+import { Header } from '@/components/layout/header';
 
 export const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -63,11 +64,10 @@ export default function RootLayout({
         <meta name="theme-color" content="#E6E6FA" />
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
-        <ClientLayoutContent>
-          <main className="flex-1 bg-background">
-            {children}
-          </main>
-        </ClientLayoutContent>
+        <Header />
+        <main className="flex-1 bg-background">
+          {children}
+        </main>
         <Footer />
         <Toaster />
         <CookieConsentBanner />

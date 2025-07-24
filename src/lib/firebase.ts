@@ -17,7 +17,7 @@ import {
   serverTimestamp,
   doc,
   getDoc, // Ensure getDoc is imported
-  FieldValue // Keep for serverTimestamp
+  type FieldValue // Keep for serverTimestamp
 } from 'firebase/firestore';
 import type { UserProfile, Service, Booking, Notification, NotificationType, NewsletterSubscriber } from '@/types';
 import { mapUserProfile, mapBooking, mapNotification, mapNewsletterSubscriber } from '@/utils/mappers'; // Path alias should now work
@@ -25,21 +25,36 @@ import firebaseConfig from './firebase/config';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 
-// The critical check that throws an error has been removed from this file.
-// The check now happens in layout.tsx using the isFirebaseConfigured boolean from './firebase/config'.
+// This boolean check is the core of the new mechanism.
+// It verifies that the essential keys are present and not just placeholder values.
+const isFirebaseConfigured =
+  !!firebaseConfig.apiKey &&
+  !!firebaseConfig.projectId &&
+  firebaseConfig.apiKey !== 'YOUR_API_KEY_HERE';
 
 let app: FirebaseApp;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
+
+// Initialize Firebase only if it's configured and not already initialized.
+if (isFirebaseConfigured) {
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApp();
+    }
 } else {
-  app = getApp();
+    // If not configured, you might want to handle this case,
+    // though the RootLayout already prevents rendering.
+    // For safety, we can assign a dummy object or handle errors,
+    // but for now, we rely on the RootLayout check.
+    // console.warn("Firebase is not configured. App initialization skipped.");
 }
+
 
 const authInstance = getAuth(app);
 const firestoreInstance = getFirestore(app);
 
 let analytics;
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && isFirebaseConfigured) {
   isSupported().then((supported) => {
     if (supported) {
       analytics = getAnalytics(app);
@@ -376,4 +391,4 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
 }
 
 // Export the initialized instances
-export { app, authInstance as auth, firestoreInstance as firestore };
+export { app, authInstance as auth, firestoreInstance as firestore, isFirebaseConfigured };
