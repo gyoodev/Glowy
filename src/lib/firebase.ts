@@ -376,4 +376,4 @@ export async function getNewsletterSubscriptionStatus(email: string): Promise<bo
 }
 
 // Export the initialized instances
-export { app, auth
+export { app, authInstance as auth, firestoreInstance as firestore };
