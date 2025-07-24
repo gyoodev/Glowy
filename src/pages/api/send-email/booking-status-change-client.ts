@@ -1,9 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import nodemailer from 'nodemailer';
-import { config } from 'dotenv';
-
-config(); // Load environment variables from .env file
+import { sendEmail } from '@/lib/email-service';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -16,21 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ message: 'Missing required fields' });
   }
 
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  const mailOptions = {
-    from: `"Glaura" <${process.env.SMTP_FROM_EMAIL}>`,
-    to: clientEmail,
-    subject: `Промяна в статуса на Вашата резервация в ${salonName}`,
-    html: `
+  const subject = `Промяна в статуса на Вашата резервация в ${salonName}`;
+  const html = `
       <div style="font-family: Arial, sans-serif; line-height: 1.6;">
         <h2>Здравейте, ${clientName},</h2>
         <p>Има промяна в статуса на Вашата резервация в салон <strong>${salonName}</strong>.</p>
@@ -43,14 +27,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         <p>Ако имате въпроси, моля, свържете се директно със салона.</p>
         <p>Поздрави,<br>Екипът на Glaura</p>
       </div>
-    `,
-  };
+    `;
 
-  try {
-    await transporter.sendMail(mailOptions);
+  const result = await sendEmail({ to: clientEmail, subject, html });
+
+  if (result.success) {
     res.status(200).json({ message: 'Email sent successfully' });
-  } catch (error) {
-    console.error('Error sending email:', error);
-    res.status(500).json({ message: 'Failed to send email' });
+  } else {
+    res.status(500).json({ message: result.message });
   }
 }
