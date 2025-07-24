@@ -32,10 +32,11 @@ export function PWAInstallBanner() {
       event.preventDefault();
       // Stash the event so it can be triggered later.
       const typedEvent = event as BeforeInstallPromptEvent;
-      setInstallPromptEvent(typedEvent);
+      
       // Check cookie status before showing the banner
       const userChoice = getCookie(PWA_INSTALL_COOKIE_KEY);
       if (!userChoice) {
+        setInstallPromptEvent(typedEvent);
         setIsVisible(true);
       }
     };
@@ -77,7 +78,7 @@ export function PWAInstallBanner() {
     setIsVisible(false);
   };
   
-  if (!isVisible) {
+  if (!isVisible || !installPromptEvent) {
     return null;
   }
 
