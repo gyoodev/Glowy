@@ -313,7 +313,8 @@ export default function EditBusinessPage() {
           name: s.name,
           description: s.description || '',
           price: Number(s.price),
-          duration: Number(s.duration)
+          duration: Number(s.duration),
+          category: s.category || 'Други', // Added missing category
         })) || [],
         lastUpdatedAt: new Date().toISOString(),
     };
