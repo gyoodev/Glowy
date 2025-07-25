@@ -157,7 +157,11 @@ export default function ServicesManagementPage() {
 
   const onManualSubmit: SubmitHandler<ManualServiceFormValues> = async (data) => {
     if (!salon) return;
-    const newService: Service = { ...data, id: uuidv4() };
+    const newService: Service = { 
+        ...data, 
+        id: uuidv4(),
+        category: 'Други', // Added default category
+    };
     
     const currentServices = salon.services || [];
      if (currentServices.some(s => s.name.toLowerCase() === newService.name.toLowerCase())) {
