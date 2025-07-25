@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -122,7 +123,7 @@ export default function AdminIndexPage() {
         const usersSnapshot = await getDocs(usersRef);
         const usersList = usersSnapshot.docs.map(doc => mapUserProfile(doc.data(), doc.id));
         
-        const validUsersWithDate = usersList.filter(user => user.createdAt); // Corrected filter
+        const validUsersWithDate = usersList.filter(user => user.createdAt);
         setLatestUsers(validUsersWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
         
         const aggregatedMonthlyUsers: { [key: string]: number } = {};
@@ -150,17 +151,23 @@ export default function AdminIndexPage() {
         const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         
         const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); 
-        setLatestSalons(validSalonsWithDate.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
+        setLatestSalons(validSalonsWithDate.sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA;
+        }).slice(0, 3));
 
         const aggregatedMonthlySalons: { [key: string]: number } = {};
          validSalonsWithDate.forEach(salon => {
           try {
-            const date = new Date(salon.createdAt); 
-             if (!isNaN(date.getTime())) {
-              const monthKey = format(date, 'LLL yy', { locale: bg });
-              aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
-            } else {
-              console.warn(`Invalid createdAt date for salon ${salon.id}: ${salon.createdAt}`);
+            if (salon.createdAt) { // Ensure createdAt exists
+              const date = new Date(salon.createdAt); 
+              if (!isNaN(date.getTime())) {
+                const monthKey = format(date, 'LLL yy', { locale: bg });
+                aggregatedMonthlySalons[monthKey] = (aggregatedMonthlySalons[monthKey] || 0) + 1;
+              } else {
+                console.warn(`Invalid createdAt date for salon ${salon.id}: ${salon.createdAt}`);
+              }
             }
           } catch (e) {
             console.warn(`Error parsing date for salon ${salon.id}: ${salon.createdAt}`, e);
@@ -535,3 +542,5 @@ export default function AdminIndexPage() {
     </div>
   );
 }
+
+    
