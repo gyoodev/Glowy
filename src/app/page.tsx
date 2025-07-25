@@ -58,7 +58,7 @@ export default function SalonDirectoryPage() {
     return Object.keys(categoriesMap).map(categoryName => ({
       category: categoryName,
       services: categoriesMap[categoryName],
-    })).sort((a,b) => a.category.localeCompare(b, 'bg'));
+    })).sort((a,b) => a.category.localeCompare(b.category, 'bg'));
   }, []);
 
   useEffect(() => {
