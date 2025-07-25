@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { format, isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
+import { isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
 import type { Salon, BusinessStatus } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
@@ -22,6 +22,7 @@ import { PromotedSalons } from '@/components/salon/PromotedSalons';
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
 const DEFAULT_MIN_PRICE = 0;
+const ALL_REGIONS_VALUE = "--all-regions--";
 const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
@@ -35,6 +36,7 @@ export default function SalonDirectoryPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
+    region: ALL_REGIONS_VALUE,
     location: ALL_CITIES_VALUE,
     category: ALL_CATEGORIES_VALUE,
     serviceId: ALL_SERVICES_IN_CATEGORY_VALUE,
@@ -56,7 +58,7 @@ export default function SalonDirectoryPage() {
     return Object.keys(categoriesMap).map(categoryName => ({
       category: categoryName,
       services: categoriesMap[categoryName],
-    })).sort((a,b) => a.category.localeCompare(b.category));
+    })).sort((a,b) => a.category.localeCompare(b, 'bg'));
   }, []);
 
   useEffect(() => {
@@ -97,8 +99,10 @@ export default function SalonDirectoryPage() {
 
     const hasActiveFilters = 
       searchTerm ||
+      filters.region !== ALL_REGIONS_VALUE ||
       filters.location !== ALL_CITIES_VALUE ||
       filters.category !== ALL_CATEGORIES_VALUE ||
+      filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE ||
       filters.minRating > DEFAULT_MIN_RATING ||
       filters.maxPrice > DEFAULT_MIN_PRICE;
       
@@ -115,6 +119,9 @@ export default function SalonDirectoryPage() {
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (salon.description && salon.description.toLowerCase().includes(searchTerm.toLowerCase()))
       );
+    }
+     if (filters.region !== ALL_REGIONS_VALUE) {
+      tempSalons = tempSalons.filter(salon => salon.region === filters.region);
     }
     if (filters.location !== ALL_CITIES_VALUE) {
       tempSalons = tempSalons.filter(salon => salon.city === filters.location);
