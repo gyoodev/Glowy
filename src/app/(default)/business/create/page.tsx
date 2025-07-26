@@ -11,13 +11,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { auth } from '@/lib/firebase';
+import { auth, getUserProfile } from '@/lib/firebase';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc, Timestamp, query, where, getDocs } from 'firebase/firestore';
 import { generateSalonDescription } from '@/ai/flows/generate-salon-description';
 import { Building, Sparkles, Loader2, PlusCircle, Trash2, ArrowLeft, ArrowRight, Phone, Mail } from 'lucide-react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, type User as FirebaseUser } from 'firebase/auth';
 import { bulgarianRegionsAndCities, bulgarianCitiesWithNeighborhoods } from '@/lib/mock-data';
-import type { Service, NotificationType } from '@/types';
+import type { Service, NotificationType, UserProfile } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { motion } from 'framer-motion';
@@ -46,8 +46,9 @@ type CreateBusinessFormValues = z.infer<typeof createBusinessSchema>;
 export default function CreateBusinessPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [isBusinessUser, setIsBusinessUser] = useState(false);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const firestore = getFirestore();
   const [currentStep, setCurrentStep] = useState(1);
@@ -111,11 +112,10 @@ export default function CreateBusinessPage() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data()?.role === 'business') {
-          setIsBusinessUser(true);
-        } else {
+        setCurrentUser(user);
+        const profile = await getUserProfile(user.uid);
+        setUserProfile(profile);
+        if (!profile || profile.role !== 'business') {
           toast({ title: 'Достъп отказан', description: 'Само бизнес потребители могат да създават бизнеси.', variant: 'destructive' });
           router.push('/');
         }
@@ -127,6 +127,30 @@ export default function CreateBusinessPage() {
     });
     return () => unsubscribe();
   }, [router, toast, firestore]);
+
+  const sendEmailNotifications = async (salonName: string, ownerName: string, ownerEmail: string) => {
+    // Notify admin
+    try {
+      await fetch('/api/send-email/new-business-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ salonName, ownerName, ownerEmail }),
+      });
+    } catch (error) {
+      console.error("Failed to send new business notification to admin:", error);
+    }
+    
+    // Notify business owner
+    try {
+       await fetch('/api/send-email/new-business-owner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ salonName, ownerName, ownerEmail }),
+      });
+    } catch (error) {
+       console.error("Failed to send new business confirmation to owner:", error);
+    }
+  };
 
   const notifyAdminsOfNewSalon = async (salonName: string, salonId: string) => {
     try {
@@ -203,8 +227,8 @@ export default function CreateBusinessPage() {
   };
 
   const onSubmit: SubmitHandler<CreateBusinessFormValues> = async (data) => {
-    if (!auth.currentUser) {
-      toast({ title: 'Грешка', description: 'Потребителят не е удостоверен.', variant: 'destructive' });
+    if (!currentUser || !userProfile) {
+      toast({ title: 'Грешка', description: 'Потребителят не е удостоверен или профилът му не е зареден.', variant: 'destructive' });
       return;
     }
 
@@ -242,7 +266,7 @@ export default function CreateBusinessPage() {
         atmosphereForAi: data.atmosphereForAi,
         targetCustomerForAi: data.targetCustomerForAi,
         uniqueSellingPointsForAi: data.uniqueSellingPointsForAi,
-        ownerId: auth.currentUser.uid,
+        ownerId: currentUser.uid,
         rating: 0, 
         reviews: [], 
         photos: ['https://placehold.co/600x400.png?text=Photo+1'], 
@@ -260,6 +284,7 @@ export default function CreateBusinessPage() {
         description: `${data.name} беше добавен и очаква одобрение от администратор.`,
       });
       await notifyAdminsOfNewSalon(data.name, docRef.id);
+      await sendEmailNotifications(data.name, userProfile.name, userProfile.email);
       router.push('/business/manage');
     } catch (error: any) {
       console.error('Error creating business:', error);
@@ -296,7 +321,7 @@ export default function CreateBusinessPage() {
   if (isAuthLoading) {
     return <div className="container mx-auto py-10 px-6 text-center">Зареждане на данни...</div>;
   }
-  if (!isBusinessUser) {
+  if (!userProfile || userProfile.role !== 'business') {
     return <div className="container mx-auto py-10 px-6 text-center">Неоторизиран достъп. Пренасочване...</div>;
   }
 

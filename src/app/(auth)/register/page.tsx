@@ -63,23 +63,38 @@ export default function RegisterPage() {
   });
 
   const notifyAdminsOfNewUser = async (newUserEmail: string | null, newUserName: string) => {
-    // TODO: Implement fetching admin UIDs more securely, e.g., from a config or specific query
-    // For now, this part is conceptual for client-side.
-    // In a real app, a Cloud Function triggered on user creation is better.
-    console.log(`Conceptual: Notify admins about new user: ${newUserName} (${newUserEmail})`);
-    // Example:
-    // const adminUsersQuery = query(collection(firestore, 'users'), where('role', '==', 'admin'));
-    // const adminSnapshot = await getDocs(adminUsersQuery);
-    // adminSnapshot.forEach(async (adminDoc) => {
-    //   await addDoc(collection(firestore, 'notifications'), {
-    //     userId: adminDoc.id,
-    //     message: `Нов потребител се регистрира: ${newUserName} (${newUserEmail}).`,
-    //     link: `/admin/users`, // Link to user management
-    //     read: false,
-    //     createdAt: Timestamp.fromDate(new Date()),
-    //     type: 'new_user_admin',
-    //   });
-    // });
+    try {
+      await fetch('/api/send-email/new-user-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          newUserEmail,
+          newUserName,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to send admin notification email on client side:", error);
+    }
+  };
+  
+  const sendWelcomeEmail = async (userEmail: string | null, userName: string) => {
+    if (!userEmail) return;
+    try {
+      await fetch('/api/send-email/welcome', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userEmail,
+          userName,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to send welcome email on client side:", error);
+    }
   };
 
 
@@ -126,7 +141,7 @@ export default function RegisterPage() {
           type: 'welcome_user',
         });
 
-        // Placeholder for notifying admins (better done server-side)
+        await sendWelcomeEmail(user.email, data.name);
         await notifyAdminsOfNewUser(user.email, data.name);
 
 
@@ -207,6 +222,9 @@ export default function RegisterPage() {
             createdAt: Timestamp.fromDate(new Date()),
             role: 'customer', // Default role for Google sign-up, will be prompted to select
           });
+          
+          await sendWelcomeEmail(user.email, user.displayName || 'Потребител');
+          await notifyAdminsOfNewUser(user.email, user.displayName || 'Google Потребител');
 
           // Create welcome notification for new Google user
           await addDoc(collection(firestore, 'notifications'), {
@@ -218,8 +236,6 @@ export default function RegisterPage() {
             type: 'welcome_user',
           });
 
-          // Placeholder for notifying admins (better done server-side)
-          await notifyAdminsOfNewUser(user.email, user.displayName || 'Google User');
 
           // Show role selection bubble for new Google sign-ups
           // Ensure these are called after the user document is set
