@@ -332,8 +332,18 @@ export async function subscribeToNewsletter(email: string): Promise<{ success: b
     return { success: false, message: 'Имейлът е задължителен.' };
   }
   try {
+    // Check if the email is already subscribed
+    const subscribersCollectionRef = collection(firestoreInstance, 'newsletterSubscribers');
+    const q = query(subscribersCollectionRef, where('email', '==', email.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return { success: false, message: 'Този имейл вече е абониран за нашия бюлетин.' };
+    }
+
+    // If not subscribed, add the new subscriber
     await addDoc(collection(firestoreInstance, 'newsletterSubscribers'), {
-      email: email,
+      email: email.toLowerCase(),
       subscribedAt: serverTimestamp(),
     });
     return { success: true, message: 'Вие се абонирахте успешно!' };
