@@ -2,19 +2,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getNewsletterSubscribers } from '@/lib/firebase'; 
-import type { NewsletterSubscriber } from '@/types'; 
+import { getNewsletterSubscribers } from '@/lib/firebase';
+import type { NewsletterSubscriber } from '@/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast'; 
+import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
 import { Newspaper, Send, Loader2, Users } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mapNewsletterSubscriber } from '@/utils/mappers';
 
 interface EmailFormData {
   subject: string;
@@ -32,7 +31,6 @@ export default function AdminNewsletterPage() {
     const fetchSubscribers = async () => {
       setIsLoadingSubscribers(true);
       try {
-        // getNewsletterSubscribers already uses the mapper internally
         const fetchedSubscribers = await getNewsletterSubscribers();
         setSubscribers(fetchedSubscribers);
       } catch (error) {
@@ -66,22 +64,35 @@ export default function AdminNewsletterPage() {
 
     setIsSendingEmail(true);
 
-    const subscriberEmails = subscribers.map(s => s.email).join(', ');
-    console.log(`SIMULATING: Sending email...
-      Subject: ${emailForm.subject}
-      Message: ${emailForm.message}
-      To: ${subscriberEmails} (${subscribers.length} subscribers)
-    `);
+    try {
+      const response = await fetch('/api/send-email/newsletter', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(emailForm),
+      });
 
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
+      const result = await response.json();
 
-    toast({
-      title: 'Симулация на изпращане',
-      description: `Имейлът "${emailForm.subject}" е "изпратен" до ${subscribers.length} абонат${subscribers.length === 1 ? '' : 'и'}.`,
-    });
-    setEmailForm({ subject: '', message: '' }); // Clear form
-    setIsSendingEmail(false);
+      if (!response.ok) {
+        throw new Error(result.message || 'Възникна грешка при изпращането.');
+      }
+
+      toast({
+        title: 'Имейлът е изпратен успешно!',
+        description: `Съобщението е изпратено до ${result.sentCount} абонат${result.sentCount === 1 ? '' : 'и'}.`,
+      });
+      setEmailForm({ subject: '', message: '' }); // Clear form
+    } catch (error: any) {
+      toast({
+        title: 'Грешка при изпращане',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSendingEmail(false);
+    }
   };
 
   return (
@@ -129,8 +140,8 @@ export default function AdminNewsletterPage() {
                       <TableRow key={subscriber.id}>
                         <TableCell className="font-medium">{subscriber.email}</TableCell>
                         <TableCell>
-                          {subscriber.subscribedAt 
-                            ? format(new Date(subscriber.subscribedAt), 'PPP p', { locale: bg }) 
+                          {subscriber.subscribedAt
+                            ? format(new Date(subscriber.subscribedAt), 'PPP p', { locale: bg })
                             : 'N/A'}
                         </TableCell>
                       </TableRow>
@@ -147,9 +158,9 @@ export default function AdminNewsletterPage() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Send className="mr-2 h-5 w-5 text-primary" />
-                Изпрати Имейл (Симулация)
+                Изпрати Имейл
               </CardTitle>
-              <CardDescription>Създайте и "изпратете" имейл до всички абонати.</CardDescription>
+              <CardDescription>Създайте и изпратете имейл до всички абонати.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSendEmail} className="space-y-4">
@@ -187,9 +198,6 @@ export default function AdminNewsletterPage() {
                   )}
                   {isSendingEmail ? 'Изпращане...' : `Изпрати до ${subscribers.length} абонат${subscribers.length === 1 ? '' : 'и'}`}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center mt-2">
-                  Забележка: Това е само симулация. Реални имейли няма да бъдат изпратени.
-                </p>
               </form>
             </CardContent>
           </Card>
@@ -198,4 +206,3 @@ export default function AdminNewsletterPage() {
     </div>
   );
 }
-
