@@ -3,6 +3,7 @@ import nodemailer from 'nodemailer';
 
 interface MailOptions {
   to: string;
+  bcc?: string;
   subject: string;
   html: string;
   replyTo?: string;
