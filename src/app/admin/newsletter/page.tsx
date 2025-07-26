@@ -65,12 +65,17 @@ export default function AdminNewsletterPage() {
     setIsSendingEmail(true);
 
     try {
+      const subscriberEmails = subscribers.map(s => s.email);
       const response = await fetch('/api/send-email/newsletter', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(emailForm),
+        body: JSON.stringify({ 
+            subject: emailForm.subject, 
+            message: emailForm.message,
+            emails: subscriberEmails // Send the emails to the API
+        }),
       });
 
       const result = await response.json();
