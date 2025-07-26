@@ -1,20 +1,21 @@
+
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore';
-import { format, isFuture, isWithinInterval, subDays } from 'date-fns';
-import { firestore } from '@/lib/firebase';
-import type { Salon } from '@/types';
+import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+import { isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
+import type { Salon, BusinessStatus } from '@/types';
 import { SalonCard } from '@/components/salon/salon-card';
 import { FilterSidebar, type CategorizedService } from '@/components/salon/filter-sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { Search, ListOrdered, ShoppingBag, Sparkles } from 'lucide-react';
 import { bulgarianRegionsAndCities, mockServices as allMockServices } from '@/lib/mock-data';
+import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
-import { Search, ListOrdered, Star } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { PromotedSalons } from '@/components/salon/PromotedSalons';
 
 const DEFAULT_MIN_RATING = 0;
 const DEFAULT_MAX_PRICE = 500;
@@ -24,7 +25,7 @@ const ALL_CITIES_VALUE = "--all-cities--";
 const ALL_CATEGORIES_VALUE = "--all-categories--";
 const ALL_SERVICES_IN_CATEGORY_VALUE = "--all-services-in-category--";
 
-export default function SalonsDirectoryPage() {
+export default function AllSalonsPage() {
   const [salons, setSalons] = useState<Salon[]>([]);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,10 +61,11 @@ export default function SalonsDirectoryPage() {
       setIsLoading(true);
       try {
         const salonsCollectionRef = collection(firestore, 'salons');
-        const q = query(salonsCollectionRef, orderBy('name'));
+        const q = query(salonsCollectionRef, where('status', '==', 'approved' as BusinessStatus));
         const salonsSnapshot = await getDocs(q);
         const salonsList = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
         setSalons(salonsList);
+        setFilteredSalons(salonsList); // Initially show all approved salons
       } catch (error) {
         console.error("Error fetching salons:", error);
       } finally {
@@ -107,7 +109,6 @@ export default function SalonsDirectoryPage() {
         salon.services?.some(service => service.price <= filters.maxPrice)
       );
     }
-    tempSalons = tempSalons.filter(salon => salon.status === 'approved');
 
     if (sortOrder === 'rating_desc') {
       tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
@@ -217,23 +218,7 @@ export default function SalonsDirectoryPage() {
           ) : filteredSalons.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredSalons.map(salon => (
-                <div key={salon.id} className="relative">
-                  <div className="absolute top-3 left-3 right-3 z-10 flex flex-wrap gap-2 justify-end">
-                    {salon.promotion?.isActive && salon.promotion.expiresAt && isFuture(new Date(salon.promotion.expiresAt)) && (
-                      <Badge variant="default" className="bg-primary hover:bg-primary/80 flex items-center gap-1">
-                        <Star className="h-3 w-3" /> Промотиран
-                      </Badge>
-                    )}
-                    {salon.createdAt && typeof (salon.createdAt as any).toDate === 'function' && isWithinInterval((salon.createdAt as any).toDate(), {
-                      start: subDays(new Date(), 7),
-                      end: new Date(),
-                    }) && (
-
-                      <Badge variant="secondary" className="flex items-center gap-1">Нов в Glaura.eu</Badge>
-                    )}
-                  </div>
-                  <SalonCard salon={salon} key={`salon-card-${salon.id}`} />
-                </div>
+                <SalonCard salon={salon} key={`salon-card-${salon.id}`} />
               ))}
             </div>
           ) : (
@@ -248,3 +233,4 @@ export default function SalonsDirectoryPage() {
     </div>
   );
 }
+
