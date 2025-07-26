@@ -51,7 +51,7 @@ export default function AdminNewsletterPage() {
     setEmailForm({ ...emailForm, [e.target.name]: e.target.value });
   };
 
-  const handleSendEmail = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendEmail = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!emailForm.subject || !emailForm.message) {
       toast({ title: 'Грешка', description: 'Моля, попълнете тема и съобщение.', variant: 'destructive' });
@@ -62,42 +62,16 @@ export default function AdminNewsletterPage() {
       return;
     }
 
-    setIsSendingEmail(true);
+    const subscriberEmails = subscribers.map(s => s.email).join(',');
+    const mailtoLink = `mailto:?bcc=${encodeURIComponent(subscriberEmails)}&subject=${encodeURIComponent(emailForm.subject)}&body=${encodeURIComponent(emailForm.message)}`;
 
-    try {
-      const subscriberEmails = subscribers.map(s => s.email);
-      const response = await fetch('/api/send-email/newsletter', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-            subject: emailForm.subject, 
-            message: emailForm.message,
-            emails: subscriberEmails // Send the emails to the API
-        }),
-      });
+    // Open the mail client
+    window.location.href = mailtoLink;
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Възникна грешка при изпращането.');
-      }
-
-      toast({
-        title: 'Имейлът е изпратен успешно!',
-        description: `Съобщението е изпратено до ${result.sentCount} абонат${result.sentCount === 1 ? '' : 'и'}.`,
-      });
-      setEmailForm({ subject: '', message: '' }); // Clear form
-    } catch (error: any) {
-      toast({
-        title: 'Грешка при изпращане',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSendingEmail(false);
-    }
+    toast({
+        title: 'Пренасочване към имейл клиент',
+        description: 'Вашият имейл клиент се отваря с подготвено съобщение.'
+    });
   };
 
   return (
