@@ -51,7 +51,7 @@ export default function AdminNewsletterPage() {
     setEmailForm({ ...emailForm, [e.target.name]: e.target.value });
   };
 
-  const handleSendEmail = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSendEmail = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!emailForm.subject || !emailForm.message) {
       toast({ title: 'Грешка', description: 'Моля, попълнете тема и съобщение.', variant: 'destructive' });
@@ -62,16 +62,39 @@ export default function AdminNewsletterPage() {
       return;
     }
 
-    const subscriberEmails = subscribers.map(s => s.email).join(',');
-    const mailtoLink = `mailto:?bcc=${encodeURIComponent(subscriberEmails)}&subject=${encodeURIComponent(emailForm.subject)}&body=${encodeURIComponent(emailForm.message)}`;
+    setIsSendingEmail(true);
+    try {
+        const response = await fetch('/api/send-email/newsletter', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                subject: emailForm.subject,
+                message: emailForm.message,
+                emails: subscribers.map(s => s.email),
+            }),
+        });
 
-    // Open the mail client
-    window.location.href = mailtoLink;
+        const result = await response.json();
 
-    toast({
-        title: 'Пренасочване към имейл клиент',
-        description: 'Вашият имейл клиент се отваря с подготвено съобщение.'
-    });
+        if (!response.ok) {
+            throw new Error(result.message || 'Възникна грешка при изпращането на бюлетина.');
+        }
+
+        toast({
+            title: 'Бюлетинът е изпратен!',
+            description: `Съобщението беше изпратено успешно до ${result.sentCount} абонат${result.sentCount === 1 ? '' : 'и'}.`
+        });
+        setEmailForm({ subject: '', message: '' }); // Reset form on success
+
+    } catch (error: any) {
+        toast({
+            title: 'Грешка при изпращане',
+            description: error.message,
+            variant: 'destructive'
+        });
+    } finally {
+        setIsSendingEmail(false);
+    }
   };
 
   return (
