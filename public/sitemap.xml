@@ -1,8 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://gllowy.netlify.app/</loc>
-    <lastmod>2023-10-26T12:00:00+00:00</lastmod>
-    <priority>1.0</priority>
-  </url>
+<urlset
+      xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+            http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+<!-- created with Free Online Sitemap Generator www.xml-sitemaps.com -->
+
+
+<url>
+  <loc>https://glaura.eu/</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>1.00</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/salons</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/salons?category=%D0%9C%D0%B0%D1%81%D0%B0%D0%B6%D0%B8</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/salons?category=%D0%94%D0%B0%D0%BC%D1%81%D0%BA%D0%B8+%D1%84%D1%80%D0%B8%D0%B7%D1%8C%D0%BE%D1%80%D1%81%D0%BA%D0%B8+%D1%83%D1%81%D0%BB%D1%83%D0%B3%D0%B8</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/salons/Emi_Style</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/about-glowy</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/terms</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/privacy</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/contact</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+<url>
+  <loc>https://glaura.eu/faq</loc>
+  <lastmod>2025-07-26T11:56:26+00:00</lastmod>
+  <priority>0.80</priority>
+</url>
+
+
 </urlset>
