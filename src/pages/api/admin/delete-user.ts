@@ -1,7 +1,6 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
-// dotenv config is now handled in firebaseAdmin.ts, so it's not needed here.
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

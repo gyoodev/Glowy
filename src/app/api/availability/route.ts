@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebaseAdmin';
 import { Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
+import { format, parseISO, startOfDay } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   if (!adminDb) {
@@ -11,9 +12,9 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const salonId = searchParams.get('salonId');
-  const date = searchParams.get('date'); // Expects date in 'yyyy-MM-dd' format
+  const dateStr = searchParams.get('date'); // Expects date in 'yyyy-MM-dd' format
 
-  if (!salonId || !date) {
+  if (!salonId || !dateStr) {
     return NextResponse.json({ error: 'salonId and date are required' }, { status: 400 });
   }
 
@@ -26,12 +27,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Salon not found' }, { status: 404 });
     }
     const salonData = mapSalon(salonSnap.data(), salonSnap.id);
-    const availableSlotsFromSchedule = salonData.availability?.[date] || [];
+    const availableSlotsFromSchedule = salonData.availability?.[dateStr] || [];
 
     // 2. Get all bookings for that salon on that specific day that are 'pending' or 'confirmed'
+    // Convert the 'yyyy-MM-dd' string from the query to a Date object at the start of the day in UTC
+    const bookingDate = startOfDay(parseISO(dateStr));
+    
     const bookingsQuery = adminDb.collection('bookings')
       .where('salonId', '==', salonId)
-      .where('date', '==', `${date}T00:00:00.000Z`) // Query date in ISO format as stored
+      // Firestore stores the date as an ISO string. Query using the exact string.
+      .where('date', '==', bookingDate.toISOString()) 
       .where('status', 'in', ['pending', 'confirmed']);
       
     const bookingsSnapshot = await bookingsQuery.get();
@@ -43,7 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ availableTimes: trulyAvailableSlots });
 
   } catch (error) {
-    console.error('Error fetching availability:', error);
+    console.error(`Error fetching availability for salon ${salonId} on date ${dateStr}:`, error);
     let errorMessage = 'An unknown error occurred while fetching availability.';
     if (error instanceof Error) {
         errorMessage = error.message;
