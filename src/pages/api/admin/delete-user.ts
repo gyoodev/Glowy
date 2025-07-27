@@ -1,6 +1,9 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { adminAuth, adminDb } from '@/lib/firebaseAdmin';
+import { config } from 'dotenv';
+
+config(); // Force load .env variables
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
