@@ -11,7 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2, Phone } from 'lucide-react'; // Added Phone icon
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2, Phone, KeyRound } from 'lucide-react'; // Added KeyRound icon
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -20,6 +20,7 @@ import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { useState, useEffect } from 'react';
 import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribeToNewsletter
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { updatePassword, type User as FirebaseUser } from 'firebase/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const ANY_PRICE_FORM_VALUE = "any";
@@ -46,6 +47,12 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
   const [servicePopoverOpen, setServicePopoverOpen] = useState(false);
   const [locationPopoverOpen, setLocationPopoverOpen] = useState(false);
   const [isSubscribingToNewsletter, setIsSubscribingToNewsletter] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
+  const [isPasswordPopoverOpen, setIsPasswordPopoverOpen] = useState(false);
+
   const firestore = getFirestore();
 
   const form = useForm<ProfileFormValues>({
@@ -145,6 +152,41 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     }
     setIsSubscribingToNewsletter(false);
   };
+  
+  const handlePasswordChange = async () => {
+      setPasswordError('');
+      if (newPassword.length < 6) {
+          setPasswordError('Паролата трябва да е поне 6 символа.');
+          return;
+      }
+      if (newPassword !== confirmPassword) {
+          setPasswordError('Паролите не съвпадат.');
+          return;
+      }
+      const user = auth.currentUser;
+      if (!user) {
+          toast({ title: 'Грешка', description: 'Потребителят не е удостоверен.', variant: 'destructive' });
+          return;
+      }
+
+      setIsChangingPassword(true);
+      try {
+          await updatePassword(user, newPassword);
+          toast({ title: 'Успех!', description: 'Паролата Ви е променена успешно.' });
+          setNewPassword('');
+          setConfirmPassword('');
+          setIsPasswordPopoverOpen(false);
+      } catch (error: any) {
+          console.error("Error updating password:", error);
+          let errorMessage = 'Възникна грешка при смяна на паролата.';
+          if (error.code === 'auth/requires-recent-login') {
+              errorMessage = 'Тази операция изисква скорошно влизане. Моля, излезте и влезте отново, преди да смените паролата.';
+          }
+          toast({ title: 'Грешка при смяна на парола', description: errorMessage, variant: 'destructive' });
+      } finally {
+          setIsChangingPassword(false);
+      }
+  };
 
   return (
     <Card className="shadow-lg max-w-2xl mx-auto border-border/50">
@@ -228,6 +270,54 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                         </FormItem>
                       )}
                     />
+                    <FormItem>
+                        <FormLabel>Парола</FormLabel>
+                         <Popover open={isPasswordPopoverOpen} onOpenChange={setIsPasswordPopoverOpen}>
+                            <PopoverTrigger asChild>
+                               <Button variant="outline" type="button">
+                                  <KeyRound className="mr-2 h-4 w-4" />
+                                  Смяна на парола
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80">
+                                <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">Смяна на парола</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                    Въведете нова парола за Вашия акаунт.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2">
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor="new-password">Нова парола</Label>
+                                        <Input
+                                            id="new-password"
+                                            type="password"
+                                            value={newPassword}
+                                            onChange={(e) => setNewPassword(e.target.value)}
+                                            className="col-span-2 h-8"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-3 items-center gap-4">
+                                        <Label htmlFor="confirm-password">Потвърди</Label>
+                                        <Input
+                                            id="confirm-password"
+                                            type="password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            className="col-span-2 h-8"
+                                        />
+                                    </div>
+                                     {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
+                                </div>
+                                <Button onClick={handlePasswordChange} disabled={isChangingPassword}>
+                                     {isChangingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                     Запази новата парола
+                                </Button>
+                                </div>
+                            </PopoverContent>
+                         </Popover>
+                    </FormItem>
                      {/* Display Newsletter Subscription Status */}
                      <FormItem className="pt-2">
                         <FormLabel className="flex items-center">
@@ -437,3 +527,4 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     </Card>
   );
 }
+
