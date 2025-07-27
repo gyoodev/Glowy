@@ -375,7 +375,7 @@ service cloud.firestore {
       allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /newsletterSubscribers/{subscriberId} {
-        allow create: if true; 
+        allow create: if true;
         allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; 
     }
     match /promotionsPayments/{paymentId} {
