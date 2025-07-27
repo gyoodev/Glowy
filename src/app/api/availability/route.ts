@@ -1,12 +1,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
+import { config } from 'dotenv';
+config(); // Force load .env variables
+
 import { adminDb } from '@/lib/firebaseAdmin';
 import { Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
 
 export async function GET(request: NextRequest) {
   if (!adminDb) {
-    return NextResponse.json({ error: 'Firebase Admin SDK not initialized' }, { status: 503 });
+    return NextResponse.json({ error: 'Firebase Admin SDK not initialized. Check server logs for environment variable issues.' }, { status: 503 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -51,4 +54,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
-
