@@ -9,9 +9,9 @@ if (!admin.apps.length) {
     const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY;
 
-    // The build fails if these are missing. The check MUST be inside the try...catch.
+    // A more robust check to see if the variables are actually present and not just empty strings
     if (!projectId || !clientEmail || !privateKey) {
-        throw new Error('Firebase Admin credentials are not set in environment variables.');
+        throw new Error('Firebase Admin credentials (PROJECT_ID, CLIENT_EMAIL, PRIVATE_KEY) are not fully set in environment variables.');
     }
 
     admin.initializeApp({
@@ -22,12 +22,10 @@ if (!admin.apps.length) {
         privateKey: privateKey.replace(/\\n/g, '\n'),
       }),
     });
-    console.log('Firebase Admin SDK initialized.');
+    console.log('Firebase Admin SDK initialized successfully.');
   } catch (error: any) {
-    // This will catch the error if credentials are not set, preventing the build crash.
-    // It will log a warning, which is what we see in the build logs, but it won't crash the build itself.
-    // The crash happens *after* this, when something tries to use `admin.firestore()`.
-    console.warn(`Firebase Admin SDK initialization failed. This is expected during the build on systems without admin credentials. Admin features will be disabled. Error: ${error.message}`);
+    // This will catch the error if credentials are not set, preventing a build crash.
+    console.error(`CRITICAL: Firebase Admin SDK initialization failed. Admin features will be disabled. Error: ${error.message}`);
   }
 }
 

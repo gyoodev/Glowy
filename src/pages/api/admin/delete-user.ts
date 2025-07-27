@@ -8,13 +8,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method Not Allowed');
   }
 
+  // Check if Admin SDK was initialized
+  if (!adminDb || !adminAuth) {
+    console.error("Firebase Admin SDK is not initialized. Check server logs for environment variable issues.");
+    return res.status(503).json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs.' });
+  }
+
   const { authorization } = req.headers;
   if (!authorization?.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token.' });
-  }
-
-  if (!adminDb || !adminAuth) {
-    return res.status(503).json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs.' });
   }
 
   const idToken = authorization.split('Bearer ')[1];
@@ -23,7 +25,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const decodedToken = await adminAuth.verifyIdToken(idToken);
     const requestingUserId = decodedToken.uid;
 
-    // Fetch the user's profile from Firestore to check their role
     const userDoc = await adminDb.collection('users').doc(requestingUserId).get();
     if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Forbidden: User is not an admin.' });
