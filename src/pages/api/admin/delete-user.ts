@@ -8,52 +8,43 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end('Method Not Allowed');
   }
 
-  // --- Authorization Check ---
   const { authorization } = req.headers;
   if (!authorization?.startsWith('Bearer ')) {
     return res.status(401).json({ success: false, message: 'Unauthorized: Missing or invalid token.' });
-  }
-  const idToken = authorization.split('Bearer ')[1];
-
-  try {
-    if (!adminAuth) {
-      throw new Error('Firebase Admin Auth SDK not initialized.');
-    }
-    const decodedToken = await adminAuth.verifyIdToken(idToken);
-    
-    // Check if the user is an admin
-    if (decodedToken.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Forbidden: User is not an admin.' });
-    }
-
-  } catch (error: any) {
-    console.error('Error verifying admin token:', error);
-    return res.status(401).json({ success: false, message: `Unauthorized: ${error.message}` });
-  }
-  // --- End Authorization Check ---
-
-
-  const { uid } = req.body;
-  if (!uid) {
-    return res.status(400).json({ success: false, message: 'User ID (uid) is required.' });
   }
 
   if (!adminDb || !adminAuth) {
     return res.status(503).json({ success: false, message: 'Firebase Admin SDK not initialized on the server. Check server logs.' });
   }
 
+  const idToken = authorization.split('Bearer ')[1];
+
   try {
-    // 1. Delete user from Firebase Authentication
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const requestingUserId = decodedToken.uid;
+
+    // Fetch the user's profile from Firestore to check their role
+    const userDoc = await adminDb.collection('users').doc(requestingUserId).get();
+    if (!userDoc.exists || userDoc.data()?.role !== 'admin') {
+      return res.status(403).json({ success: false, message: 'Forbidden: User is not an admin.' });
+    }
+  } catch (error: any) {
+    console.error('Error verifying admin token or fetching role:', error);
+    return res.status(401).json({ success: false, message: `Unauthorized: ${error.message}` });
+  }
+
+  const { uid } = req.body;
+  if (!uid) {
+    return res.status(400).json({ success: false, message: 'User ID (uid) is required.' });
+  }
+
+  try {
     await adminAuth.deleteUser(uid);
     console.log(`Successfully deleted user with UID: ${uid} from Firebase Authentication.`);
 
-    // 2. Delete user document from Firestore
     const userDocRef = adminDb.collection('users').doc(uid);
     await userDocRef.delete();
     console.log(`Successfully deleted user document for UID: ${uid} from Firestore.`);
-
-    // Potentially, you could also delete related data here (e.g., their reviews, bookings)
-    // but that can be complex. For now, we delete the primary records.
 
     return res.status(200).json({ success: true, message: 'Потребителят е изтрит успешно.' });
 
