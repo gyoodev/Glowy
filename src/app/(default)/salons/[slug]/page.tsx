@@ -533,12 +533,12 @@ export default function SalonProfilePage() {
                 </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
-                 <Alert className="mb-6 relative overflow-hidden bg-gray-900 text-white border-teal-400/50">
-                    <AlertTitle className="text-teal-300 bg-teal-500/80 px-3 py-1 rounded-md absolute -top-3 left-3 text-sm font-bold tracking-wider">EUR BGN</AlertTitle>
-                    <AlertDescription className="pt-8 text-base">
-                        Валутен курс: 1 EUR = 1.95583 лв.
-                    </AlertDescription>
-                </Alert>
+                 <div className="mb-6 relative p-3 border border-primary rounded-md bg-transparent text-foreground">
+                    <div className="absolute -top-3 left-3 px-2 py-0.5 text-sm font-semibold bg-primary text-primary-foreground rounded-sm">EUR BGN 🔄</div>
+                    <p className="pt-3 text-base">
+                      Валутен курс: <strong>1 EUR = 1.95583 лв.</strong>
+                    </p>
+                </div>
                 <div className="space-y-1">
                   {(salon.services && salon.services.length > 0) ? salon.services.map(service => (<ServiceListItem key={service.id} service={service} isBookingEnabled={salon.workingMethod === 'appointment'} {...(salon.workingMethod === 'appointment' && { onBook: handleBookService })}/>)) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                 </div>
@@ -574,4 +574,5 @@ export default function SalonProfilePage() {
  </>
   );
 }
+
 
