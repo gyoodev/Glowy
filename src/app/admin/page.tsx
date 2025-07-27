@@ -70,7 +70,7 @@ const initialStats = [
   { title: 'Общо Потребители', value: '0', icon: Users, color: 'text-blue-500', bgColor: 'bg-stat-blue-light dark:bg-stat-blue-light/30', trendInfo: '', dataKey: 'totalUsers', href: '/admin/users' },
   { title: 'Общо Салони', value: '0', icon: Briefcase, color: 'text-green-500', bgColor: 'bg-stat-green-light dark:bg-stat-green-light/30', trendInfo: '', dataKey: 'totalSalons', href: '/admin/business' },
   { title: 'Активни Резервации', value: '0', icon: CalendarCheck, color: 'text-purple-500', bgColor: 'bg-purple-500/10 dark:bg-purple-500/30', trendInfo: '', dataKey: 'activeBookings', href: '/admin/bookings' }, 
-  { title: 'Приходи (Промоции)', value: '0.00 лв.', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-stat-orange-light dark:bg-stat-orange-light/30', trendInfo: '', dataKey: 'totalRevenue', href: '/admin/payments' },
+  { title: 'Приходи (Промоции)', value: '0.00 €', icon: DollarSign, color: 'text-orange-500', bgColor: 'bg-stat-orange-light dark:bg-stat-orange-light/30', trendInfo: '', dataKey: 'totalRevenue', href: '/admin/payments' },
 ];
 
 const monthlyDataPlaceholder = Array(12).fill(null).map((_, i) => {
@@ -152,6 +152,7 @@ export default function AdminIndexPage() {
         
         const validSalonsWithDate = salonsList.filter(salon => salon.createdAt); 
         setLatestSalons(validSalonsWithDate.sort((a, b) => {
+          // Add a check to ensure createdAt is not undefined before creating a new Date
           const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
           const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
           return dateB - dateA;
@@ -220,7 +221,7 @@ export default function AdminIndexPage() {
           if (stat.dataKey === 'totalUsers') return { ...stat, value: usersSnapshot.size.toString() };
           if (stat.dataKey === 'totalSalons') return { ...stat, value: salonsSnapshot.size.toString() };
           if (stat.dataKey === 'activeBookings') return { ...stat, value: activeBookingsCount.toString() };
-          if (stat.dataKey === 'totalRevenue') return { ...stat, value: `${totalRevenue.toFixed(2)} лв.` };
+          if (stat.dataKey === 'totalRevenue') return { ...stat, value: `${totalRevenue.toFixed(2)} €` };
           return stat;
         }));
         setLoadingStats(false);
@@ -280,7 +281,7 @@ export default function AdminIndexPage() {
   const chartConfig = {
     users: { label: "Потребители", color: "hsl(var(--chart-1))" },
     salons: { label: "Салони", color: "hsl(var(--chart-2))" },
-    payments: { label: "Плащания (лв.)", color: "hsl(var(--chart-3))" },
+    payments: { label: "Плащания (EUR)", color: "hsl(var(--chart-3))" },
   };
 
 
@@ -417,12 +418,12 @@ export default function AdminIndexPage() {
               <BarChart data={monthlyPaymentData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                 <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value.toFixed(0)} лв.`} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value.toFixed(0)} €`} />
                 <Tooltip
                   cursor={{ fill: 'hsl(var(--muted))', radius: 4 }}
                   contentStyle={{ backgroundColor: 'hsl(var(--background))', borderColor: 'hsl(var(--border))', borderRadius: '0.5rem' }}
                   labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 'bold' }}
-                  formatter={(value: number) => [`${value.toFixed(2)} лв.`, "Плащания"]}
+                  formatter={(value: number) => [`${value.toFixed(2)} €`, "Плащания"]}
                 />
                 <Legend iconSize={10} wrapperStyle={{fontSize: "12px", paddingTop: "10px"}} />
                 <Bar dataKey="payments" fill={chartConfig.payments.color} name="Плащания" radius={[4, 4, 0, 0]} barSize={25} />
@@ -542,5 +543,3 @@ export default function AdminIndexPage() {
     </div>
   );
 }
-
-    
