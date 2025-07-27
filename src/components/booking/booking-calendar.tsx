@@ -6,30 +6,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Clock } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
+import { format } from 'date-fns';
 // sendReviewReminderEmail is not used here anymore
 
 export interface BookingCalendarProps {
   salonName: string;
   serviceName?: string;
   availability?: Record<string, string[]>; // Date string -> array of time slots "HH:mm"
+  onDateChange: (date: Date) => void;
   onTimeSelect?: (date: Date | undefined, time: string | undefined) => void;
 }
 
-export default function BookingCalendar({ salonName, serviceName, availability = {}, onTimeSelect }: BookingCalendarProps) {
+export default function BookingCalendar({ salonName, serviceName, availability = {}, onDateChange, onTimeSelect }: BookingCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
-  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const { toast } = useToast(); // toast is not used in this component anymore
 
+  const availableTimes = selectedDate ? availability[format(selectedDate, 'yyyy-MM-dd')] || [] : [];
+  
   useEffect(() => {
     if (selectedDate) {
-      const dateString = selectedDate.toISOString().split('T')[0];
-      setAvailableTimes(availability[dateString] || []);
+      onDateChange(selectedDate);
       setSelectedTime(undefined); // Reset time when date changes
-    } else {
-      setAvailableTimes([]);
     }
-  }, [selectedDate, availability]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
+
 
   const handleTimeSlotClick = (time: string) => {
     setSelectedTime(time);
@@ -62,9 +64,9 @@ export default function BookingCalendar({ salonName, serviceName, availability =
             selected={selectedDate}
             onSelect={setSelectedDate}
             className="rounded-md border p-0"
-            disabled={(date) => date < today || !!availability[date.toISOString().split('T')[0]] && availability[date.toISOString().split('T')[0]].length === 0}
+            disabled={{ before: today }}
             modifiers={{
-              available: (date) => !!availability[date.toISOString().split('T')[0]] && availability[date.toISOString().split('T')[0]].length > 0,
+              available: (date) => (availability[format(date, 'yyyy-MM-dd')]?.length || 0) > 0,
             }}
             modifiersStyles={{
                 available: { border: "2px solid hsl(var(--primary))", borderRadius: 'var(--radius)'}

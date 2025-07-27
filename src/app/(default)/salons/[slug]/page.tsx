@@ -131,6 +131,7 @@ export default function SalonProfilePage() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const reminderTimeoutId = useRef<NodeJS.Timeout | null>(null);
+  const [dynamicAvailability, setDynamicAvailability] = useState<Record<string, string[]>>({});
 
   const salonNameToSlug = (name?: string) => name ? name.replace(/\s+/g, '_') : 'unknown-salon';
 
@@ -155,6 +156,7 @@ export default function SalonProfilePage() {
           salonData.photos = salonData.photos || [];
           
           setSalon(salonData);
+          setDynamicAvailability(salonData.availability || {});
         } else {
           setSalon(null);
           toast({
@@ -187,6 +189,22 @@ export default function SalonProfilePage() {
       }
     };
   }, [slug, firestore, toast]);
+
+  const fetchAvailabilityForDate = useCallback(async (date: Date, salonId: string) => {
+    const dateKey = format(date, 'yyyy-MM-dd');
+    try {
+        const response = await fetch(`/api/availability?salonId=${salonId}&date=${dateKey}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch availability');
+        }
+        const data = await response.json();
+        setDynamicAvailability(prev => ({ ...prev, [dateKey]: data.availableTimes || [] }));
+    } catch (error) {
+        console.error("Error fetching dynamic availability:", error);
+        toast({ title: "Грешка", description: "Неуспешно зареждане на свободните часове.", variant: "destructive" });
+        setDynamicAvailability(prev => ({ ...prev, [dateKey]: [] })); // Set to empty on error
+    }
+  }, [toast]);
 
   const fetchSalonReviews = useCallback(async (salonId: string, startAfterDoc: any = null) => {
     if (!salonId) return;
@@ -334,25 +352,13 @@ export default function SalonProfilePage() {
             salonPhoneNumber: salon.phoneNumber,
         });
 
-        // Step 2: Update the salon's availability
+        // Step 2: Update the local availability state
         const dateKey = format(selectedBookingDate, 'yyyy-MM-dd');
-        const salonRef = doc(db, 'salons', salon.id);
-        
-        const updatedAvailability = arrayRemove(selectedBookingTime);
-        await updateDoc(salonRef, {
-            [`availability.${dateKey}`]: updatedAvailability
+        setDynamicAvailability(prev => {
+            const updatedSlots = (prev[dateKey] || []).filter(t => t !== selectedBookingTime);
+            return { ...prev, [dateKey]: updatedSlots };
         });
         
-        // Step 3: Update local state to reflect the change immediately
-        setSalon(prevSalon => {
-            if (!prevSalon) return null;
-            const newAvailability = { ...prevSalon.availability };
-            if (newAvailability[dateKey]) {
-                newAvailability[dateKey] = newAvailability[dateKey].filter(time => time !== selectedBookingTime);
-            }
-            return { ...prevSalon, availability: newAvailability };
-        });
-
         // Reset selections
         setSelectedBookingTime(undefined);
 
@@ -559,7 +565,13 @@ export default function SalonProfilePage() {
             {hasServices && salon.workingMethod === 'appointment' && (
               <div className="lg:w-1/3">
                 <div id="booking-calendar-section" className="sticky top-20">
-                  <BookingCalendar salonName={salon.name} serviceName={selectedService?.name} availability={salon.availability || {}} onTimeSelect={handleTimeSelected} />
+                  <BookingCalendar 
+                    salonName={salon.name} 
+                    serviceName={selectedService?.name} 
+                    availability={dynamicAvailability} 
+                    onDateChange={(date) => fetchAvailabilityForDate(date, salon.id)}
+                    onTimeSelect={handleTimeSelected} 
+                  />
                   {selectedService && selectedBookingDate && selectedBookingTime && (
                     <div className="mt-4">
                       <Card className="shadow-md mb-4 border-primary bg-secondary/30 dark:bg-secondary/50"><CardHeader className="pb-3 pt-4"><CardTitle className="text-lg text-secondary-foreground flex items-center"><Info className="mr-2 h-5 w-5" />Вашата Резервация</CardTitle></CardHeader><CardContent className="text-sm space-y-2 text-secondary-foreground"><div className="flex items-center"><Scissors className="mr-2 h-4 w-4 text-primary" /><span className="font-medium">Услуга:</span>&nbsp;{selectedService.name}</div><div className="flex items-center"><CalendarDays className="mr-2 h-4 w-4 text-primary" /><span className="font-medium">Дата:</span>&nbsp;{format(selectedBookingDate, "PPP", { locale: bg })}</div><div className="flex items-center"><Clock className="mr-2 h-4 w-4 text-primary" /><span className="font-medium">Час:</span>&nbsp;{selectedBookingTime}</div></CardContent></Card>
@@ -574,6 +586,7 @@ export default function SalonProfilePage() {
  </>
   );
 }
+
 
 
 
