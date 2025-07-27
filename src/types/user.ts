@@ -17,4 +17,5 @@ export interface UserProfile {
   phoneNumber?: string;
   numericId?: number;
   lastUpdatedAt?: string; // Changed from Date
+  deactivationRequested?: boolean; // New field for deactivation request
 }

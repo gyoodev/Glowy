@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getFirestore, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, getDocs, where, query as firestoreQuery } from 'firebase/firestore'; // Renamed query
 import { auth } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,10 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, UserPlus, Loader2, Copy } from 'lucide-react';
+import { AlertTriangle, Trash2, UserPlus, Loader2, Copy, UserX } from 'lucide-react'; // Added UserX
 import { useToast } from '@/hooks/use-toast';
 import { mapUserProfile } from '@/utils/mappers';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'; // Added TooltipProvider
 
 interface NewUserFormState {
   email: string;
@@ -31,6 +32,7 @@ export default function AdminUsersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'deactivationRequested'>('all');
   const { toast } = useToast();
   const firestoreInstance = getFirestore(auth.app);
 
@@ -47,7 +49,13 @@ export default function AdminUsersPage() {
     setError(null);
     try {
       const usersCollection = collection(firestoreInstance, 'users');
-      const userSnapshot = await getDocs(usersCollection);
+      let q;
+      if (filter === 'deactivationRequested') {
+        q = firestoreQuery(usersCollection, where('deactivationRequested', '==', true));
+      } else {
+        q = firestoreQuery(usersCollection);
+      }
+      const userSnapshot = await getDocs(q);
       const usersList = userSnapshot.docs.map(docSnap => mapUserProfile(docSnap.data(), docSnap.id));
       setUsers(usersList);
     } catch (err: any) {
@@ -57,7 +65,7 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [firestoreInstance, toast]);
+  }, [firestoreInstance, toast, filter]);
 
   useEffect(() => {
     fetchUsers();
@@ -156,7 +164,7 @@ export default function AdminUsersPage() {
       }
 
       toast({ title: "Успех", description: `Ролята на потребителя е актуализирана.` });
-      setEditingUserId(null); // Close the edit UI on success
+      setEditingUserId(null);
       await fetchUsers();
     } catch (err: any) {
       console.error('Error updating user role:', err);
@@ -258,6 +266,7 @@ export default function AdminUsersPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на потребители</h1>
 
@@ -342,6 +351,18 @@ export default function AdminUsersPage() {
       <Card className="shadow-md">
          <CardHeader>
             <CardTitle className="text-2xl font-semibold">Списък с потребители ({users.length})</CardTitle>
+            <div className="flex items-center space-x-4 pt-2">
+                <Label htmlFor="filter">Филтър:</Label>
+                <Select value={filter} onValueChange={(value) => setFilter(value as 'all' | 'deactivationRequested')}>
+                    <SelectTrigger id="filter" className="w-[250px]">
+                        <SelectValue placeholder="Филтрирай потребители" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Всички потребители</SelectItem>
+                        <SelectItem value="deactivationRequested">Със заявка за деактивация</SelectItem>
+                    </SelectContent>
+                </Select>
+            </div>
          </CardHeader>
          <CardContent>
             {isLoading && users.length > 0 ? (
@@ -350,7 +371,7 @@ export default function AdminUsersPage() {
                     <p className="ml-2">Обновяване на списъка...</p>
                 </div>
             ) : users.length === 0 && !error ? (
-            <p className="text-muted-foreground text-center py-4">Няма намерени потребители.</p>
+            <p className="text-muted-foreground text-center py-4">Няма намерени потребители с избрания филтър.</p>
             ) : (
             <div className="overflow-x-auto">
                 <Table>
@@ -366,7 +387,7 @@ export default function AdminUsersPage() {
                 </TableHeader>
                 <TableBody className="bg-card divide-y divide-border">
                     {users.map(user => (
-                    <TableRow key={user.id}>
+                    <TableRow key={user.id} className={user.deactivationRequested ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-mono">
                           <div className="flex items-center gap-2">
                             <span className="truncate" title={user.id}>{user.id}</span>
@@ -388,7 +409,21 @@ export default function AdminUsersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.email || 'N/A'}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.displayName || user.name || 'N/A'}</TableCell>
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                            <div className="flex items-center gap-2">
+                                {user.displayName || user.name || 'N/A'}
+                                {user.deactivationRequested && (
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <UserX className="h-5 w-5 text-destructive" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Потребителят е подал заявка за деактивация.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                )}
+                            </div>
+                        </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">{user.role || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.phoneNumber || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -437,5 +472,6 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }

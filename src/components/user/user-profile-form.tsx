@@ -11,18 +11,19 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from "@/hooks/use-toast";
-import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2, Phone, KeyRound } from 'lucide-react'; // Added KeyRound icon
+import { UserCircle2, X, Sparkles, MapPin, Tag, Heart, MailCheck, Loader2, Phone, KeyRound, UserX } from 'lucide-react'; // Added UserX
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { mockServices, allBulgarianCities } from '@/lib/mock-data';
 import { useState, useEffect } from 'react';
-import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribeToNewsletter
-import { getFirestore, doc, setDoc } from 'firebase/firestore';
+import { auth, subscribeToNewsletter } from '@/lib/firebase';
+import { getFirestore, doc, setDoc, updateDoc } from 'firebase/firestore'; // Added updateDoc
 import { updatePassword, type User as FirebaseUser } from 'firebase/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'; // Added AlertDialog
 
 const ANY_PRICE_FORM_VALUE = "any";
 
@@ -40,7 +41,7 @@ type ProfileFormValues = z.infer<typeof profileSchema>;
 interface UserProfileFormProps {
   userProfile: UserProfile;
   newsletterSubscriptionStatus?: boolean | null;
-  onNewsletterSubscriptionChange?: () => void; // New prop to refresh status
+  onNewsletterSubscriptionChange?: () => void;
 }
 
 export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onNewsletterSubscriptionChange }: UserProfileFormProps) {
@@ -53,6 +54,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [isPasswordPopoverOpen, setIsPasswordPopoverOpen] = useState(false);
+  const [isRequestingDeactivation, setIsRequestingDeactivation] = useState(false);
 
   const firestore = getFirestore();
 
@@ -91,20 +93,19 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     try {
       const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
       const profileDataToSave: Partial<UserProfile> & { userId: string } = {
-        userId: auth.currentUser.uid, // Ensure userId is always set
+        userId: auth.currentUser.uid,
         name: data.name,
-        displayName: data.name, // Keep displayName in sync with name
-        email: data.email, // Email is read-only but include it
+        displayName: data.name,
+        email: data.email,
         phoneNumber: data.phoneNumber || '',
         preferences: {
           favoriteServices: data.favoriteServices || [],
           priceRange: data.priceRange === ANY_PRICE_FORM_VALUE ? '' : data.priceRange,
           preferredLocations: data.preferredLocations || [],
         },
-        lastUpdatedAt: new Date().toISOString(), // Corrected: Convert Date to ISO string
+        lastUpdatedAt: new Date().toISOString(),
       };
 
-      // Preserve existing fields not in the form
       if (userProfile.role) {
         profileDataToSave.role = userProfile.role;
       }
@@ -142,7 +143,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
         description: result.message,
       });
       if (onNewsletterSubscriptionChange) {
-        onNewsletterSubscriptionChange(); // Notify parent to refresh status
+        onNewsletterSubscriptionChange();
       }
     } else {
       toast({
@@ -187,6 +188,29 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
       } finally {
           setIsChangingPassword(false);
       }
+  };
+
+  const handleDeactivationRequest = async () => {
+    if (!auth.currentUser) {
+        toast({ title: "Грешка", description: "Трябва да сте влезли, за да изпратите заявка.", variant: "destructive" });
+        return;
+    }
+    setIsRequestingDeactivation(true);
+    try {
+        const userDocRef = doc(firestore, 'users', auth.currentUser.uid);
+        await updateDoc(userDocRef, { deactivationRequested: true });
+        toast({
+            title: 'Заявката е изпратена',
+            description: 'Вашата заявка за деактивиране на профил беше изпратена успешно. Администратор ще я прегледа.',
+        });
+        // You might want to update the local state as well
+        // setUserProfile(prev => ({...prev, deactivationRequested: true})); // this would require passing setUserProfile as a prop
+    } catch (error) {
+        console.error("Error requesting deactivation:", error);
+        toast({ title: 'Грешка', description: 'Неуспешно изпращане на заявката.', variant: 'destructive' });
+    } finally {
+        setIsRequestingDeactivation(false);
+    }
   };
 
   return (
@@ -319,7 +343,6 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                             </PopoverContent>
                          </Popover>
                     </FormItem>
-                     {/* Display Newsletter Subscription Status */}
                      <FormItem className="pt-2">
                         <FormLabel className="flex items-center">
                             <MailCheck className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -351,7 +374,6 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                 </div>
             </div>
 
-
             <div className="border-t border-border/30 pt-6">
                 <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center">
                     <Sparkles className="mr-2 h-5 w-5 text-primary" />
@@ -368,7 +390,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                             <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={servicePopoverOpen} className="w-full justify-between text-base">
                                 {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? 'а': 'и'} услуг${field.value.length === 1 ? 'а': 'и'}` : "Изберете услуги..."}
-                                <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" /> {/* Changed icon for consistency */}
+                                <Sparkles className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -459,7 +481,7 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                             <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" aria-expanded={locationPopoverOpen} className="w-full justify-between text-base">
                                 {field.value?.length ? `${field.value.length} избран${field.value.length === 1 ? '' : 'и'} град${field.value.length === 1 ? '' : 'а'}` : "Изберете градове..."}
-                                <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" /> {/* Changed icon for consistency */}
+                                <MapPin className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -518,10 +540,33 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
                 </div>
             </div>
           </CardContent>
-          <CardFooter className="border-t border-border/30 p-6">
+          <CardFooter className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between border-t border-border/30 p-6">
             <Button type="submit" className="w-full sm:w-auto text-lg py-3" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? 'Запазване...' : 'Запази промените'}
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" type="button" className="w-full sm:w-auto mt-4 sm:mt-0" disabled={userProfile.deactivationRequested}>
+                  <UserX className="mr-2 h-4 w-4" />
+                  {userProfile.deactivationRequested ? 'Заявката е изпратена' : 'Заявка за деактивиране'}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Сигурни ли сте?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Това действие ще изпрати заявка до администратор за изтриване на Вашия профил. След като бъде одобрена, тази операция е необратима и всички Ваши данни ще бъдат премахнати.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Отказ</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeactivationRequest} disabled={isRequestingDeactivation}>
+                    {isRequestingDeactivation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Потвърди заявката
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </CardFooter>
         </form>
       </Form>

@@ -81,6 +81,7 @@ export function mapUserProfile(raw: any, idOverride?: string): UserProfile {
     phoneNumber: raw.phoneNumber || '',
     numericId: raw.numericId || undefined, 
     lastUpdatedAt: raw.lastUpdatedAt ? timestampToISOString(raw.lastUpdatedAt) : undefined,
+    deactivationRequested: raw.deactivationRequested ?? false, // Map the new field
   };
 }
 
