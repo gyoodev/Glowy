@@ -22,14 +22,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const subject = `Нов потребител се регистрира в Glaura: ${newUserName}`;
+    const htmlBody = `
+      <h2 style="color: #8c59f2; margin-top: 0;">Нов потребител се регистрира в платформата.</h2>
+      <p><strong>Име:</strong> ${newUserName}</p>
+      <p><strong>Имейл:</strong> ${newUserEmail}</p>
+      <p style="margin: 30px 0;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/users" style="background-color: #8c59f2; color: #ffffff; padding: 12px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">
+          Виж всички потребители
+        </a>
+      </p>
+    `;
+
     const html = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>Нов потребител се регистрира в платформата.</h2>
-          <p><strong>Име:</strong> ${newUserName}</p>
-          <p><strong>Имейл:</strong> ${newUserEmail}</p>
-          <p>Можете да видите всички потребители в <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/users">административния панел</a>.</p>
-        </div>
-      `;
+      <!DOCTYPE html>
+      <html lang="bg">
+      <head>
+          <meta charset="UTF-8">
+          <title>${subject}</title>
+          <style>
+            body { margin: 0; padding: 0; background-color: #f8f5ff; font-family: Arial, sans-serif; }
+          </style>
+      </head>
+      <body>
+          <table width="100%" bgcolor="#f8f5ff" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="center">
+                <table width="600" style="background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                  <tr>
+                    <td align="center" bgcolor="#8c59f2" style="padding: 20px; color: #ffffff; font-size: 24px;">
+                      ✨ Glaura.eu - Нов Потребител
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 30px; color: #333333; font-size: 16px;">
+                      ${htmlBody}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding: 20px; font-size: 13px; color: #888888;">
+                      © ${new Date().getFullYear()} Glaura.eu. Всички права запазени.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+      </body>
+      </html>
+    `;
 
     const result = await sendEmail({ to: adminEmail, subject, html });
 

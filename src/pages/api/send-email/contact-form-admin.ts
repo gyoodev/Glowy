@@ -22,17 +22,59 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const emailSubject = `Ново запитване от Glaura: ${subject || 'Без тема'}`;
+    
+    const htmlBody = `
+      <h2 style="color: #8c59f2; margin-top: 0;">Получено е ново запитване от контактната форма.</h2>
+      <p><strong>Име:</strong> ${name}</p>
+      <p><strong>Имейл:</strong> ${email}</p>
+      ${subject ? `<p><strong>Тема:</strong> ${subject}</p>` : ''}
+      <hr style="border: none; border-top: 1px solid #eeeeee; margin: 20px 0;">
+      <h3>Съобщение:</h3>
+      <p style="white-space: pre-wrap; background-color: #f9f9f9; padding: 15px; border-radius: 5px;">${message}</p>
+       <p style="margin: 30px 0;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/contacts" style="background-color: #8c59f2; color: #ffffff; padding: 12px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">
+            Виж в Админ Панела
+          </a>
+        </p>
+    `;
+
     const html = `
-        <div style="font-family: Arial, sans-serif; line-height: 1.6;">
-          <h2>Получено е ново запитване от контактната форма на Glaura.</h2>
-          <p><strong>Име:</strong> ${name}</p>
-          <p><strong>Имейл:</strong> ${email}</p>
-          ${subject ? `<p><strong>Тема:</strong> ${subject}</p>` : ''}
-          <hr>
-          <h3>Съобщение:</h3>
-          <p style="white-space: pre-wrap;">${message}</p>
-        </div>
-      `;
+      <!DOCTYPE html>
+      <html lang="bg">
+      <head>
+          <meta charset="UTF-8">
+          <title>${emailSubject}</title>
+          <style>
+            body { margin: 0; padding: 0; background-color: #f8f5ff; font-family: Arial, sans-serif; }
+          </style>
+      </head>
+      <body>
+          <table width="100%" bgcolor="#f8f5ff" cellpadding="0" cellspacing="0">
+            <tr>
+              <td align="center">
+                <table width="600" style="background-color: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05);">
+                  <tr>
+                    <td align="center" bgcolor="#8c59f2" style="padding: 20px; color: #ffffff; font-size: 24px;">
+                      ✨ Glaura.eu - Ново Запитване
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 30px; color: #333333; font-size: 16px;">
+                      ${htmlBody}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td align="center" style="padding: 20px; font-size: 13px; color: #888888;">
+                      © ${new Date().getFullYear()} Glaura.eu. Всички права запазени.
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+      </body>
+      </html>
+    `;
 
     const result = await sendEmail({
       to: adminEmail,
