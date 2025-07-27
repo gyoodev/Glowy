@@ -1,6 +1,9 @@
-
 // src/lib/firebaseAdmin.ts
 import * as admin from 'firebase-admin';
+import { config } from 'dotenv';
+
+// Force load environment variables from .env file
+config();
 
 // This is the key: only initialize if not already done.
 if (!admin.apps.length) {
