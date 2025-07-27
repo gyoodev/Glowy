@@ -1,8 +1,5 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { config } from 'dotenv';
-config(); // Force load .env variables
-
 import { adminDb } from '@/lib/firebaseAdmin';
 import { Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
