@@ -433,7 +433,7 @@ export default function SalonProfilePage() {
         <div className="container mx-auto py-10 px-6 text-center flex flex-col items-center justify-center min-h-[calc(100vh-200px)]">
             <MapPin className="w-16 h-16 text-destructive mb-4" />
             <h1 className="text-3xl font-bold text-foreground mb-2">Салонът не е намерен</h1>
-            <p className="text-lg text-muted-foreground mb-6">Изглежда, че салонът, който търсите, не съществува или адресът е грешен.</p>
+            <p className="text-lg text-muted-foreground mb-6">Изглежда, че страницата, която търсите, не съществува или адресът е грешен.</p>
             <Button asChild size="lg"><Link href="/">Обратно към всички салони</Link></Button>
         </div>
     );
@@ -533,12 +533,11 @@ export default function SalonProfilePage() {
                 </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
-                <Alert className="mb-6 border-primary/20 bg-primary/5">
-                  <Euro className="h-4 w-4 text-primary" />
-                  <AlertTitle className="text-primary/90">Информация за цените</AlertTitle>
-                  <AlertDescription>
-                    Цените в евро са изчислени по фиксирания курс на БНБ: 1 EUR = 1.95583 BGN.
-                  </AlertDescription>
+                 <Alert className="mb-6 relative overflow-hidden bg-gray-900 text-white border-teal-400/50">
+                    <AlertTitle className="text-teal-300 bg-teal-500/80 px-3 py-1 rounded-md absolute -top-3 left-3 text-sm font-bold tracking-wider">EUR BGN</AlertTitle>
+                    <AlertDescription className="pt-8 text-base">
+                        Валутен курс: 1 EUR = 1.95583 лв.
+                    </AlertDescription>
                 </Alert>
                 <div className="space-y-1">
                   {(salon.services && salon.services.length > 0) ? salon.services.map(service => (<ServiceListItem key={service.id} service={service} isBookingEnabled={salon.workingMethod === 'appointment'} {...(salon.workingMethod === 'appointment' && { onBook: handleBookService })}/>)) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
