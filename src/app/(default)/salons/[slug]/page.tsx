@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ReviewCard } from '@/components/salon/review-card';
 import { Button } from '@/components/ui/button';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Euro } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
@@ -21,6 +21,7 @@ import { bg } from 'date-fns/locale';
 import { ServiceListItem } from '@/components/salon/service-list-item';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -532,6 +533,13 @@ export default function SalonProfilePage() {
                 </TabsContent>
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
+                <Alert className="mb-6 border-primary/20 bg-primary/5">
+                  <Euro className="h-4 w-4 text-primary" />
+                  <AlertTitle className="text-primary/90">Информация за цените</AlertTitle>
+                  <AlertDescription>
+                    Цените в евро са изчислени по фиксирания курс на БНБ: 1 EUR = 1.95583 BGN.
+                  </AlertDescription>
+                </Alert>
                 <div className="space-y-1">
                   {(salon.services && salon.services.length > 0) ? salon.services.map(service => (<ServiceListItem key={service.id} service={service} isBookingEnabled={salon.workingMethod === 'appointment'} {...(salon.workingMethod === 'appointment' && { onBook: handleBookService })}/>)) : <p className="text-muted-foreground">Все още няма добавени услуги за този салон.</p>}
                 </div>
@@ -568,4 +576,3 @@ export default function SalonProfilePage() {
   );
 }
 
-    
