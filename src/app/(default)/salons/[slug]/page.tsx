@@ -4,7 +4,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
-import type { Review, Salon, Service, UserProfile, WorkingHoursStructure } from '@/types';
+import type { Review, Salon, Service, UserProfile, WorkingHoursStructure, Booking } from '@/types';
 import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ReviewCard } from '@/components/salon/review-card';
@@ -192,19 +192,34 @@ export default function SalonProfilePage() {
 
   const fetchAvailabilityForDate = useCallback(async (date: Date, salonId: string) => {
     const dateKey = format(date, 'yyyy-MM-dd');
+    const dateISO = date.toISOString();
+
     try {
-        const response = await fetch(`/api/availability?salonId=${salonId}&date=${dateKey}`);
-        if (!response.ok) {
-            throw new Error('Failed to fetch availability');
+        if (!salon || !salon.availability) {
+            setDynamicAvailability(prev => ({ ...prev, [dateKey]: [] }));
+            return;
         }
-        const data = await response.json();
-        setDynamicAvailability(prev => ({ ...prev, [dateKey]: data.availableTimes || [] }));
+
+        const scheduledSlots = salon.availability[dateKey] || [];
+        
+        const bookingsQuery = query(
+            collection(firestore, 'bookings'),
+            where('salonId', '==', salonId),
+            where('date', '==', dateISO),
+            where('status', 'in', ['pending', 'confirmed'])
+        );
+        const bookingsSnapshot = await getDocs(bookingsQuery);
+        const bookedSlots = new Set(bookingsSnapshot.docs.map(doc => doc.data().time));
+        
+        const availableSlots = scheduledSlots.filter(slot => !bookedSlots.has(slot));
+
+        setDynamicAvailability(prev => ({ ...prev, [dateKey]: availableSlots }));
     } catch (error) {
         console.error("Error fetching dynamic availability:", error);
         toast({ title: "Грешка", description: "Неуспешно зареждане на свободните часове.", variant: "destructive" });
-        setDynamicAvailability(prev => ({ ...prev, [dateKey]: [] })); // Set to empty on error
+        setDynamicAvailability(prev => ({ ...prev, [dateKey]: [] }));
     }
-  }, [toast]);
+}, [firestore, salon, toast]);
 
   const fetchSalonReviews = useCallback(async (salonId: string, startAfterDoc: any = null) => {
     if (!salonId) return;
@@ -586,7 +601,3 @@ export default function SalonProfilePage() {
  </>
   );
 }
-
-
-
-

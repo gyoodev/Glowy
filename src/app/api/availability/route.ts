@@ -1,58 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebaseAdmin';
-import { Salon } from '@/types';
-import { mapSalon } from '@/utils/mappers';
-import { format, parseISO, startOfDay } from 'date-fns';
 
 export async function GET(request: NextRequest) {
-  if (!adminDb) {
-    return NextResponse.json({ error: 'Firebase Admin SDK not initialized. Check server logs for environment variable issues.' }, { status: 503 });
-  }
-
-  const { searchParams } = new URL(request.url);
-  const salonId = searchParams.get('salonId');
-  const dateStr = searchParams.get('date'); // Expects date in 'yyyy-MM-dd' format
-
-  if (!salonId || !dateStr) {
-    return NextResponse.json({ error: 'salonId and date are required' }, { status: 400 });
-  }
-
-  try {
-    // 1. Get the salon's general availability for the given date
-    const salonRef = adminDb.collection('salons').doc(salonId);
-    const salonSnap = await salonRef.get();
-
-    if (!salonSnap.exists) {
-      return NextResponse.json({ error: 'Salon not found' }, { status: 404 });
-    }
-    const salonData = mapSalon(salonSnap.data(), salonSnap.id);
-    const availableSlotsFromSchedule = salonData.availability?.[dateStr] || [];
-
-    // 2. Get all bookings for that salon on that specific day that are 'pending' or 'confirmed'
-    // Convert the 'yyyy-MM-dd' string from the query to a Date object at the start of the day in UTC
-    const bookingDate = startOfDay(parseISO(dateStr));
-    
-    const bookingsQuery = adminDb.collection('bookings')
-      .where('salonId', '==', salonId)
-      // Firestore stores the date as an ISO string. Query using the exact string.
-      .where('date', '==', bookingDate.toISOString()) 
-      .where('status', 'in', ['pending', 'confirmed']);
-      
-    const bookingsSnapshot = await bookingsQuery.get();
-    const bookedSlots = new Set(bookingsSnapshot.docs.map(doc => doc.data().time));
-
-    // 3. Filter out the booked slots from the available slots
-    const trulyAvailableSlots = availableSlotsFromSchedule.filter(slot => !bookedSlots.has(slot));
-
-    return NextResponse.json({ availableTimes: trulyAvailableSlots });
-
-  } catch (error) {
-    console.error(`Error fetching availability for salon ${salonId} on date ${dateStr}:`, error);
-    let errorMessage = 'An unknown error occurred while fetching availability.';
-    if (error instanceof Error) {
-        errorMessage = error.message;
-    }
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
+  return NextResponse.json({ error: 'This API endpoint is deprecated and should not be used.' }, { status: 410 });
 }
