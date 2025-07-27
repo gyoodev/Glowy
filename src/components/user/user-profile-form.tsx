@@ -22,6 +22,7 @@ import { auth, subscribeToNewsletter } from '@/lib/firebase'; // Added subscribe
 import { getFirestore, doc, setDoc } from 'firebase/firestore';
 import { updatePassword, type User as FirebaseUser } from 'firebase/auth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const ANY_PRICE_FORM_VALUE = "any";
 
@@ -527,4 +528,3 @@ export function UserProfileForm({ userProfile, newsletterSubscriptionStatus, onN
     </Card>
   );
 }
-
