@@ -9,7 +9,7 @@ import dynamic from 'next/dynamic';
 import { getFirestore, collection, query, where, getDocs, limit, doc, getDoc, addDoc, updateDoc, Timestamp, orderBy, arrayUnion, arrayRemove, startAfter } from 'firebase/firestore';
 import { ReviewCard } from '@/components/salon/review-card';
 import { Button } from '@/components/ui/button';
-import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Euro } from 'lucide-react';
+import { Star, MapPin, Phone, ThumbsUp, MessageSquare, Sparkles, Image as ImageIcon, CalendarDays, Info, Clock, Scissors, Gift, Heart, AlertTriangle, HeartOff, Euro, ArrowRightLeft } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from '@/components/ui/skeleton';
 import { createBooking, auth, getUserProfile, firestore as db } from '@/lib/firebase';
@@ -534,7 +534,7 @@ export default function SalonProfilePage() {
               <TabsContent value="services" className="mt-0 md:mt-0 bg-card p-6 rounded-lg shadow-md">
                 <h3 className="text-xl font-semibold mb-4 text-foreground">Услуги</h3>
                  <div className="mb-6 relative p-3 border border-primary rounded-md bg-transparent text-foreground">
-                    <div className="absolute -top-3 left-3 px-2 py-0.5 text-sm font-semibold bg-primary text-primary-foreground rounded-sm">EUR BGN 🔄</div>
+                    <div className="absolute -top-3 left-3 px-2 py-0.5 text-sm font-semibold bg-primary text-primary-foreground rounded-sm flex items-center gap-1">EUR / BGN <ArrowRightLeft className="h-3 w-3" /></div>
                     <p className="pt-3 text-base">
                       Валутен курс: <strong>1 EUR = 1.95583 лв.</strong>
                     </p>
@@ -574,5 +574,6 @@ export default function SalonProfilePage() {
  </>
   );
 }
+
 
 
