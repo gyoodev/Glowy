@@ -63,16 +63,13 @@ export default function RegisterPage() {
   });
 
   const notifyAdminsOfNewUser = async (newUserEmail: string | null, newUserName: string) => {
+    if (!newUserEmail) return;
     try {
-      await fetch('/api/send-email/new-user-admin', {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+      await fetch(`${appUrl}/api/send-email/new-user-admin`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          newUserEmail,
-          newUserName,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newUserEmail, newUserName }),
       });
     } catch (error) {
       console.error("Failed to send admin notification email on client side:", error);
@@ -82,16 +79,12 @@ export default function RegisterPage() {
   const sendWelcomeEmail = async (userEmail: string | null, userName: string) => {
     if (!userEmail) return;
     try {
-      await fetch('/api/send-email/welcome', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userEmail,
-          userName,
-        }),
-      });
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+        await fetch(`${appUrl}/api/send-email/welcome`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userEmail, userName }),
+        });
     } catch (error) {
       console.error("Failed to send welcome email on client side:", error);
     }

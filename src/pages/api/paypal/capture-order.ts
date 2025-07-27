@@ -103,7 +103,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // Send email notification to admin
       try {
-        const adminEmailResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/send-email/new-payment-admin`, {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+        const adminEmailResponse = await fetch(`${appUrl}/api/send-email/new-payment-admin`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
