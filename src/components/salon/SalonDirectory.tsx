@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Search, ListOrdered, ShoppingBag, Sparkles } from 'lucide-react';
+import { Search, ListOrdered, ShoppingBag, Sparkles, Home } from 'lucide-react';
 import { PromotedSalons } from '@/components/salon/PromotedSalons';
 
 const DEFAULT_MIN_RATING = 0;
@@ -49,6 +49,12 @@ export function SalonDirectory({
   });
   const [sortOrder, setSortOrder] = useState<string>('default');
 
+  const regularSalons = useMemo(() => {
+    const promotedIds = new Set(initialPromotedSalons.map(s => s.id));
+    const recentIds = new Set(initialRecentlyAddedSalons.map(s => s.id));
+    return initialSalons.filter(s => !promotedIds.has(s.id) && !recentIds.has(s.id));
+  }, [initialSalons, initialPromotedSalons, initialRecentlyAddedSalons]);
+
   const hasActiveFilters = useMemo(() => {
     return searchTerm.trim() !== '' ||
            filters.region !== ALL_REGIONS_VALUE ||
@@ -61,19 +67,23 @@ export function SalonDirectory({
 
   const applyFiltersAndSort = useCallback(() => {
     if (!hasActiveFilters) {
-        setFilteredSalons([]);
+        setFilteredSalons([]); // Clear search results if no filters are active
         return;
     }
 
     let tempSalons = [...salons];
 
+    // Apply text search
     if (searchTerm.trim()) {
+      const lowercasedTerm = searchTerm.toLowerCase();
       tempSalons = tempSalons.filter(salon =>
-        salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (salon.description && salon.description.toLowerCase().includes(searchTerm.toLowerCase()))
+        salon.name.toLowerCase().includes(lowercasedTerm) ||
+        (salon.description && salon.description.toLowerCase().includes(lowercasedTerm))
       );
     }
-     if (filters.region !== ALL_REGIONS_VALUE) {
+    
+    // Apply structured filters
+    if (filters.region !== ALL_REGIONS_VALUE) {
       tempSalons = tempSalons.filter(salon => salon.region === filters.region);
     }
     if (filters.location !== ALL_CITIES_VALUE) {
@@ -99,14 +109,15 @@ export function SalonDirectory({
       );
     }
 
+    // Apply sorting
     if (sortOrder === 'rating_desc') {
       tempSalons.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
     } else if (sortOrder === 'rating_asc') {
       tempSalons.sort((a, b) => (a.rating ?? 0) - (b.rating ?? 0));
     } else if (sortOrder === 'name_asc') {
-      tempSalons.sort((a, b) => a.name.localeCompare(b.name));
+      tempSalons.sort((a, b) => a.name.localeCompare(b.name, 'bg'));
     } else if (sortOrder === 'name_desc') {
-      tempSalons.sort((a, b) => b.name.localeCompare(a.name));
+      tempSalons.sort((a, b) => b.name.localeCompare(a.name, 'bg'));
     } else if (sortOrder === 'default') {
       tempSalons.sort((a, b) => {
         const aIsPromoted = a.promotion?.isActive && a.promotion.expiresAt ? isFuture(parseISO(a.promotion.expiresAt)) : false;
@@ -114,7 +125,7 @@ export function SalonDirectory({
         if (aIsPromoted && !bIsPromoted) return -1;
         if (!aIsPromoted && bIsPromoted) return 1;
         if ((b.rating ?? 0) !== (a.rating ?? 0)) return (b.rating ?? 0) - (a.rating ?? 0);
-        return a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name, 'bg');
       });
     }
     setFilteredSalons(tempSalons);
@@ -186,7 +197,7 @@ export function SalonDirectory({
             )
         ) : (
            <div className="space-y-12">
-              {initialPromotedSalons.length > 0 && <PromotedSalons salons={initialPromotedSalons} />}
+              <PromotedSalons salons={initialPromotedSalons} />
               
               {initialRecentlyAddedSalons.length > 0 && (
                 <div>
@@ -202,12 +213,26 @@ export function SalonDirectory({
                 </div>
               )}
               
-              {(initialPromotedSalons.length === 0 && initialRecentlyAddedSalons.length === 0) && (
+               {regularSalons.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold flex items-center mb-4">
+                    <Home className="mr-3 h-6 w-6 text-primary" />
+                    Всички салони
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {regularSalons.map((salon) => (
+                      <SalonCard key={salon.id} salon={salon} />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(initialPromotedSalons.length === 0 && initialRecentlyAddedSalons.length === 0 && regularSalons.length === 0) && (
                  <div className="text-center py-12">
                   <ShoppingBag className="mx-auto h-16 w-16 text-muted-foreground mb-4" />
                   <h3 className="text-xl font-semibold text-foreground">Добре дошли в Glaura!</h3>
                   <p className="text-muted-foreground mt-2">
-                      Използвайте търсачката или филтрите, за да намерите перфектния салон за Вас.
+                      Използвайте търсачката или филтрите, за да намерите перфектния салон за Вас. Все още няма одобрени салони.
                   </p>
               </div>
               )}
