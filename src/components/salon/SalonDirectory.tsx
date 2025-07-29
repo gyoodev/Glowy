@@ -38,7 +38,6 @@ export function SalonDirectory({
 }: SalonDirectoryProps) {
   const [salons, setSalons] = useState<Salon[]>(initialSalons);
   const [filteredSalons, setFilteredSalons] = useState<Salon[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
     region: ALL_REGIONS_VALUE,
@@ -50,27 +49,25 @@ export function SalonDirectory({
   });
   const [sortOrder, setSortOrder] = useState<string>('default');
 
-  const applyFiltersAndSort = useCallback(() => {
-    let tempSalons = [...salons];
+  const hasActiveFilters = useMemo(() => {
+    return searchTerm.trim() !== '' ||
+           filters.region !== ALL_REGIONS_VALUE ||
+           filters.location !== ALL_CITIES_VALUE ||
+           filters.category !== ALL_CATEGORIES_VALUE ||
+           filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE ||
+           filters.minRating > DEFAULT_MIN_RATING ||
+           filters.maxPrice > DEFAULT_MIN_PRICE;
+  }, [searchTerm, filters]);
 
-    const hasActiveFilters = 
-      searchTerm ||
-      filters.region !== ALL_REGIONS_VALUE ||
-      filters.location !== ALL_CITIES_VALUE ||
-      filters.category !== ALL_CATEGORIES_VALUE ||
-      filters.serviceId !== ALL_SERVICES_IN_CATEGORY_VALUE ||
-      filters.minRating > DEFAULT_MIN_RATING ||
-      filters.maxPrice > DEFAULT_MIN_PRICE;
-      
+  const applyFiltersAndSort = useCallback(() => {
     if (!hasActiveFilters) {
         setFilteredSalons([]);
-        setIsSearching(false);
         return;
     }
-    
-    setIsSearching(true);
 
-    if (searchTerm) {
+    let tempSalons = [...salons];
+
+    if (searchTerm.trim()) {
       tempSalons = tempSalons.filter(salon =>
         salon.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (salon.description && salon.description.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -121,7 +118,7 @@ export function SalonDirectory({
       });
     }
     setFilteredSalons(tempSalons);
-  }, [salons, searchTerm, filters, sortOrder]);
+  }, [salons, searchTerm, filters, sortOrder, hasActiveFilters]);
 
 
   useEffect(() => {
@@ -171,7 +168,7 @@ export function SalonDirectory({
           </div>
         </div>
 
-        {isSearching ? (
+        {hasActiveFilters ? (
             filteredSalons.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredSalons.map((salon) => (
