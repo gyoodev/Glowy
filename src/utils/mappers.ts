@@ -41,7 +41,7 @@ export function mapBooking(raw: any): Booking {
     salonAddress: raw.salonAddress || 'N/A',
     salonPhoneNumber: raw.salonPhoneNumber || 'N/A',
     salonOwnerId: raw.salonOwnerId || 'N/A',
-    service: raw.service as Service || { id: '', name: 'N/A', duration: 0, price: 0, description: '' },
+    service: raw.service as Service || { id: '', name: 'N/A', duration: 0, price: 0, description: '', category: 'Други' },
   };
 }
 
@@ -95,7 +95,7 @@ export function mapSalon(raw: any, id?: string): Salon {
     description: s.description || '',
     price: typeof s.price === 'number' ? s.price : 0,
     duration: typeof s.duration === 'number' ? s.duration : 0,
-    category: s.category || '',
+    category: s.category || 'Други',
     categoryIcon: s.categoryIcon,
   })) : [];
 

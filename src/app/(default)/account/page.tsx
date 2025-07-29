@@ -342,8 +342,9 @@ export default function AccountPage() {
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{userId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow create: if request.auth != null;
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
     match /notifications/{notificationId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;

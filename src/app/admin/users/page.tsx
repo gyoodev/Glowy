@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { getFirestore, collection, getDocs, where, query as firestoreQuery } from 'firebase/firestore'; // Renamed query
+import { getFirestore, collection, getDocs, where, query as firestoreQuery, doc, deleteDoc } from 'firebase/firestore'; // Renamed query and added doc, deleteDoc
 import { auth } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -86,55 +86,29 @@ export default function AdminUsersPage() {
       });
     });
   };
-
+  
   const handleDeleteUser = useCallback(async (userId: string, userEmail?: string) => {
-    console.log(`[AdminUsersPage] Attempting to delete user via API route. UID: ${userId}, Email: ${userEmail}`);
-    
-    if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребител ${userEmail || userId}? Тази операция е необратима и ще изтрие потребителя от Firebase Authentication и неговия документ от Firestore.`)) {
-      console.log(`[AdminUsersPage] User deletion cancelled by admin. UID: ${userId}`);
-      return;
+    if (!window.confirm(`Сигурни ли сте, че искате да изтриете потребителския запис на ${userEmail || userId} от базата данни? Това НЕ изтрива техния акаунт за вписване, а само данните им в платформата.`)) {
+        return;
     }
-
-    if (!auth.currentUser) {
-      toast({ title: 'Грешка', description: 'Трябва да сте влезли като администратор, за да извършите това действие.', variant: 'destructive' });
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
-      const idToken = await auth.currentUser.getIdToken();
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-      const response = await fetch(`${appUrl}/api/admin/delete-user`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({ uid: userId }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || 'Грешка от страна на сървъра.');
-      }
-
-      toast({ title: "Успех", description: result.message || "Потребителят е изтрит успешно." });
-      await fetchUsers();
+        const userDocRef = doc(firestoreInstance, 'users', userId);
+        await deleteDoc(userDocRef);
+        toast({ title: "Успех", description: `Записът за потребител ${userEmail || userId} беше изтрит от Firestore.` });
+        await fetchUsers(); // Refresh the list
     } catch (err: any) {
-      console.error(`[AdminUsersPage] Error deleting user UID ${userId}:`, err);
-      toast({
-        title: "Грешка при изтриване",
-        description: err.message || "Неуспешно изтриване на потребителя.",
-        variant: "destructive",
-        duration: 8000
-      });
+        console.error(`[AdminUsersPage] Error deleting user document UID ${userId}:`, err);
+        toast({
+            title: "Грешка при изтриване",
+            description: err.message || "Неуспешно изтриване на потребителския запис.",
+            variant: "destructive",
+        });
     } finally {
-      setIsSubmitting(false);
-      console.log(`[AdminUsersPage] Finished delete process for UID: ${userId}.`);
+        setIsSubmitting(false);
     }
-  }, [fetchUsers, toast]);
+  }, [fetchUsers, firestoreInstance, toast]);
+
 
   const handleUpdateUserRole = useCallback(async (userId: string, newRole: UserProfile['role']) => {
     setIsSubmitting(true);
