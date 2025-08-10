@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { getFirestore, collection, query, orderBy, getDocs, addDoc, serverTimestamp, doc, updateDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { auth, firestore } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import type { SiteAlert } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -25,6 +25,7 @@ export default function AdminAlertsPage() {
   const [newMessage, setNewMessage] = useState('');
   const [newType, setNewType] = useState<'info' | 'message' | 'important'>('info');
   const { toast } = useToast();
+  const firestore = getFirestore(auth.app);
 
   const fetchAlerts = useCallback(async () => {
     setIsLoading(true);
@@ -40,7 +41,7 @@ export default function AdminAlertsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, firestore]);
 
   useEffect(() => {
     fetchAlerts();

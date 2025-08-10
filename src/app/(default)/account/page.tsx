@@ -394,6 +394,10 @@ service cloud.firestore {
       allow read: if true; // Publicly readable settings
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can write
     }
+     match /site_alerts/{alertId} {
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
   }
 }`}
                         </code>
