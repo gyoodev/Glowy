@@ -22,6 +22,7 @@ import {
   Sparkles as AppIcon,
   MessageSquareText, // Added for Reviews
   Gift, // Added for Promotions
+  AlertCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
   { href: '/admin/bookings', label: 'Резервации', icon: CalendarCheck },
   { href: '/admin/reviews', label: 'Отзиви', icon: MessageSquareText },
   { href: '/admin/promotions', label: 'Промоции', icon: Gift },
+  { href: '/admin/alerts', label: 'Съобщения', icon: AlertCircle },
   { href: '/admin/contacts', label: 'Запитвания', icon: Mail },
   { href: '/admin/newsletter', label: 'Бюлетин', icon: Newspaper },
   { href: '/admin/payments', label: 'Плащания', icon: CreditCard },
