@@ -330,7 +330,7 @@ export default function AccountPage() {
                     <div className="text-left space-y-3 p-4 bg-card/50 border border-destructive/30 rounded-md mt-4">
                         <p className="font-bold text-base">ГРЕШКА: Липсват права за достъп до Firestore!</p>
                         <p>
-                        Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни за потребителския Ви профил.
+                        Вашата Firebase база данни (Firestore) не позволява на приложението да чете или записва данни.
                         Това е проблем с конфигурацията на <strong>Firestore Security Rules</strong>.
                         </p>
                         <p>
@@ -341,60 +341,73 @@ export default function AccountPage() {
 {`rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users can only read and write their own data. Admins can read/update any user.
     match /users/{userId} {
       allow read, update: if request.auth != null && (request.auth.uid == userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow create: if request.auth != null;
       allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+
+    // Users can manage their own notifications. Admins can create them.
     match /notifications/{notificationId} {
       allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null; // Server/admin creates notifications for users
     }
+
+    // Users can manage their own bookings. Admins can list/manage all bookings.
     match /bookings/{bookingId} {
       allow read, write: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow create: if request.auth != null;
       allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+
+    // Reviews can be read by anyone. Users can only manage their own reviews. Admins can manage any review.
      match /reviews/{reviewId} {
-      allow read: if true; // Anyone can read reviews
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId; // User can create their own review
-      allow update: if request.auth != null && (
-                       (request.auth.uid == resource.data.userId && request.resource.data.keys().hasOnly(['comment', 'rating'])) || // User can update their own comment/rating
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' // Admin can update anything
-                     );
-      allow delete: if request.auth != null && (
-                       request.auth.uid == resource.data.userId || // User can delete their own review
-                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' // Admin can delete any review
-                     );
-      // Admin list access for all reviews
-      allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+
+    // Salons are public to read. Only owners or admins can modify them.
     match /salons/{salonId} {
       allow read: if true;
       allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
-      allow update: if request.auth != null && (request.auth.uid == resource.data.ownerId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+      allow update: if request.auth != null && (resource.data.ownerId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    // Newsletter subscribers can be created by anyone. Only admins can read the list.
     match /newsletterSubscribers/{subscriberId} {
         allow create: if true;
-        allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; 
+        allow read, list, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; 
     }
+    
+    // Only admins can read payment logs. Users can create them.
     match /promotionsPayments/{paymentId} {
         allow read, list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
         allow create: if request.auth != null; 
     }
-     match /contacts/{contactId} {
+    
+    // Contact forms can be created by anyone, but only read/managed by admins.
+    match /contacts/{contactId} {
       allow create: if true;
       allow read, list, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
+    
+    // Internal counters, should be writable by authenticated users for user counters.
     match /counters/{counterName} {
-        allow read, write: if request.auth != null; // Consider more specific rules if needed
+        allow read, write: if request.auth != null; // Keep it simple, or specify logic for different counters
     }
+    
+    // General website settings, publicly readable but only admin writable.
     match /settings/{settingId} {
-      allow read: if true; // Publicly readable settings
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; // Only admins can write
+      allow read: if true;
+      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
-     match /site_alerts/{alertId} {
+    
+    // Site-wide alerts, publicly readable, admin writable.
+    match /site_alerts/{alertId} {
       allow read: if true;
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
@@ -587,5 +600,3 @@ service cloud.firestore {
     </div>
   );
 }
-
-    
