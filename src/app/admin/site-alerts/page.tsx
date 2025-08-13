@@ -80,7 +80,7 @@ export default function AdminSiteAlertsPage() {
       setNewTitle('');
       setNewMessage('');
       setNewAlertType('info');
-      fetchAlerts();
+      await fetchAlerts();
     } catch (error) {
       console.error("Error creating alert:", error);
       toast({ title: "Грешка", description: "Неуспешно създаване на съобщение.", variant: "destructive" });
@@ -105,7 +105,7 @@ export default function AdminSiteAlertsPage() {
       });
       toast({ title: "Успех!", description: "Съобщението е редактирано." });
       setEditingAlert(null);
-      fetchAlerts();
+      await fetchAlerts();
     } catch (error) {
       console.error("Error editing alert:", error);
       toast({ title: "Грешка", description: "Неуспешно редактиране на съобщение.", variant: "destructive" });
@@ -119,7 +119,7 @@ export default function AdminSiteAlertsPage() {
     try {
       await updateDoc(alertRef, { isActive: !currentStatus });
       toast({ title: "Статусът е променен", description: `Съобщението е ${!currentStatus ? 'активирано' : 'деактивирано'}.` });
-      fetchAlerts();
+      setAlerts(prevAlerts => prevAlerts.map(alert => alert.id === id ? { ...alert, isActive: !currentStatus } : alert));
     } catch (error) {
       console.error("Error toggling alert status:", error);
       toast({ title: "Грешка", description: "Неуспешна промяна на статуса.", variant: "destructive" });
@@ -133,7 +133,7 @@ export default function AdminSiteAlertsPage() {
       const alertRef = doc(firestore, 'siteAlerts', id);
       await deleteDoc(alertRef);
       toast({ title: "Изтрито", description: "Съобщението беше изтрито успешно." });
-      fetchAlerts(); // Refresh the list after deletion
+      setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== id));
     } catch (error) {
       console.error("Error deleting alert:", error);
       toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение.", variant: "destructive" });
