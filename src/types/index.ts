@@ -10,4 +10,3 @@ export * from './promotion';
 export * from './newsletter';
 export * from './hero-image'; // Add this line
 export * from './businessStatus';
-export * from './site-alert';

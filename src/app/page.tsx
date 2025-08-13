@@ -1,7 +1,7 @@
 
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
-import type { Salon, BusinessStatus, SiteAlert } from '@/types';
+import type { Salon, BusinessStatus } from '@/types';
 import { firestore } from '@/lib/firebase';
 import { mapSalon } from '@/utils/mappers';
 import { HeroSlider } from '@/components/layout/HeroSlider';
@@ -9,7 +9,6 @@ import { slidesData } from '@/lib/hero-slides-data';
 import { SalonDirectory } from '@/components/salon/SalonDirectory';
 import { bulgarianRegionsAndCities, mockServices as allMockServices } from '@/lib/mock-data';
 import type { CategorizedService } from '@/components/salon/filter-sidebar';
-import { AlertBox } from '@/components/layout/AlertBox';
 
 async function getInitialSalons() {
   try {
@@ -36,18 +35,6 @@ async function getInitialSalons() {
   }
 }
 
-async function getActiveAlerts(): Promise<SiteAlert[]> {
-  try {
-    const alertsCollectionRef = collection(firestore, 'site_alerts');
-    const q = query(alertsCollectionRef, where('isActive', '==', true), orderBy('createdAt', 'desc'));
-    const alertsSnapshot = await getDocs(q);
-    return alertsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as SiteAlert));
-  } catch (error) {
-    console.error("Error fetching site alerts:", error);
-    return [];
-  }
-}
-
 function getCategorizedServices(): CategorizedService[] {
     const categoriesMap: Record<string, { id: string; name: string }[]> = {};
     allMockServices.forEach(service => {
@@ -68,13 +55,9 @@ function getCategorizedServices(): CategorizedService[] {
 export default async function HomePage() {
   const { allSalons, promotedSalons, recentlyAddedSalons } = await getInitialSalons();
   const categorizedServices = getCategorizedServices();
-  const activeAlerts = await getActiveAlerts();
 
   return (
     <div className="container mx-auto py-10 px-6">
-      {activeAlerts.map(alert => (
-        <AlertBox key={alert.id} alert={alert} />
-      ))}
       <header className="mb-10">
         <HeroSlider slides={slidesData} />
       </header>
