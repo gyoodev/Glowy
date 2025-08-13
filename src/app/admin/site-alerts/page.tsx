@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -14,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, PlusCircle, Trash2, Megaphone } from 'lucide-react';
 import type { SiteAlert, SiteAlertType } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 export default function AdminSiteAlertsPage() {
   const [alerts, setAlerts] = useState<SiteAlert[]>([]);
