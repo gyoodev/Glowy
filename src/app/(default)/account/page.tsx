@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, type ReactNode, useCallback } from 'react';
@@ -9,7 +10,7 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking, Review, Salon, Service, SiteAlert } from '@/types';
+import type { UserProfile, Booking, Review, Salon, SiteAlert } from '@/types';
 import { UserCircle, UserCircle2, History, Edit3, AlertTriangle, MessageSquareText, Heart, Briefcase, Star, Settings2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
@@ -409,7 +410,8 @@ service cloud.firestore {
     // Site-wide alerts, publicly readable, admin writable.
     match /siteAlerts/{alertId} {
       allow read: if true;
-      allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow create, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }`}
@@ -600,3 +602,5 @@ service cloud.firestore {
     </div>
   );
 }
+
+    
