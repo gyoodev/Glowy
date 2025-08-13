@@ -208,7 +208,7 @@ export default function AdminSiteAlertsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                       <Dialog>
+                       <Dialog onOpenChange={(isOpen) => !isOpen && setEditingAlert(null)}>
                         <DialogTrigger asChild>
                            <Button variant="outline" size="icon" onClick={() => setEditingAlert(alert)}>
                              <Edit className="h-4 w-4" />
@@ -219,15 +219,15 @@ export default function AdminSiteAlertsPage() {
                             <DialogTitle>Редактиране на съобщение</DialogTitle>
                             <DialogDescription>Променете детайлите на съобщението по-долу.</DialogDescription>
                           </DialogHeader>
-                          {editingAlert && (
+                          {editingAlert && editingAlert.id === alert.id && (
                             <form onSubmit={handleEditAlert} className="space-y-4 py-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-title">Заглавие</Label>
-                                  <Input id="edit-title" value={editingAlert.title} onChange={(e) => setEditingAlert({...editingAlert, title: e.target.value})} required />
+                                  <Input id="edit-title" value={editingAlert.title || ''} onChange={(e) => setEditingAlert({...editingAlert, title: e.target.value})} required />
                                 </div>
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-message">Съобщение</Label>
-                                  <Textarea id="edit-message" value={editingAlert.message} onChange={(e) => setEditingAlert({...editingAlert, message: e.target.value})} required />
+                                  <Textarea id="edit-message" value={editingAlert.message || ''} onChange={(e) => setEditingAlert({...editingAlert, message: e.target.value})} required />
                                 </div>
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-type">Тип</Label>
