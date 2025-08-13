@@ -13,14 +13,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, Megaphone } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Megaphone, Edit } from 'lucide-react';
 import type { SiteAlert, SiteAlertType } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
+
 
 export default function AdminSiteAlertsPage() {
   const [alerts, setAlerts] = useState<SiteAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingAlert, setEditingAlert] = useState<SiteAlert | null>(null);
+  
   const [newTitle, setNewTitle] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [newAlertType, setNewAlertType] = useState<SiteAlertType>('info');
@@ -79,6 +83,31 @@ export default function AdminSiteAlertsPage() {
     } catch (error) {
       console.error("Error creating alert:", error);
       toast({ title: "Грешка", description: "Неуспешно създаване на съобщение.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const handleEditAlert = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAlert || !editingAlert.title.trim() || !editingAlert.message.trim()) {
+      toast({ title: "Грешка", description: "Заглавието и съобщението не могат да бъдат празни.", variant: "destructive" });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const alertRef = doc(firestore, 'siteAlerts', editingAlert.id);
+      await updateDoc(alertRef, {
+        title: editingAlert.title,
+        message: editingAlert.message,
+        type: editingAlert.type,
+      });
+      toast({ title: "Успех!", description: "Съобщението е редактирано." });
+      setEditingAlert(null);
+      fetchAlerts();
+    } catch (error) {
+      console.error("Error editing alert:", error);
+      toast({ title: "Грешка", description: "Неуспешно редактиране на съобщение.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
     }
@@ -159,18 +188,18 @@ export default function AdminSiteAlertsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[30%]">Заглавие</TableHead>
-                  <TableHead className="w-[40%]">Съобщение</TableHead>
+                  <TableHead className="w-[25%]">Заглавие</TableHead>
+                  <TableHead className="w-[35%]">Съобщение</TableHead>
                   <TableHead>Тип</TableHead>
                   <TableHead>Активно</TableHead>
-                  <TableHead>Действия</TableHead>
+                  <TableHead className="text-right">Действия</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {alerts.map((alert) => (
                   <TableRow key={alert.id}>
                     <TableCell className="font-semibold">{alert.title}</TableCell>
-                    <TableCell>{alert.message}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{alert.message}</TableCell>
                     <TableCell><Badge variant={alert.type === 'important' ? 'destructive' : alert.type === 'success' ? 'default' : 'secondary'} className={alert.type === 'info' ? 'bg-blue-500' : ''}>{alert.type}</Badge></TableCell>
                     <TableCell>
                       <Switch
@@ -178,7 +207,52 @@ export default function AdminSiteAlertsPage() {
                         onCheckedChange={() => handleToggleActive(alert.id, alert.isActive)}
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right space-x-2">
+                       <Dialog>
+                        <DialogTrigger asChild>
+                           <Button variant="outline" size="icon" onClick={() => setEditingAlert(alert)}>
+                             <Edit className="h-4 w-4" />
+                           </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Редактиране на съобщение</DialogTitle>
+                            <DialogDescription>Променете детайлите на съобщението по-долу.</DialogDescription>
+                          </DialogHeader>
+                          {editingAlert && (
+                            <form onSubmit={handleEditAlert} className="space-y-4 py-4">
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-title">Заглавие</Label>
+                                  <Input id="edit-title" value={editingAlert.title} onChange={(e) => setEditingAlert({...editingAlert, title: e.target.value})} required />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-message">Съобщение</Label>
+                                  <Textarea id="edit-message" value={editingAlert.message} onChange={(e) => setEditingAlert({...editingAlert, message: e.target.value})} required />
+                                </div>
+                                <div className="grid gap-2">
+                                  <Label htmlFor="edit-type">Тип</Label>
+                                   <Select value={editingAlert.type} onValueChange={(value: SiteAlertType) => setEditingAlert({...editingAlert, type: value})}>
+                                    <SelectTrigger id="edit-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="info">Информация</SelectItem>
+                                      <SelectItem value="success">Успех</SelectItem>
+                                      <SelectItem value="important">Важно</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <DialogFooter>
+                                    <DialogClose asChild><Button type="button" variant="secondary">Отказ</Button></DialogClose>
+                                    <Button type="submit" disabled={isSubmitting}>
+                                      {isSubmitting ? <Loader2 className="animate-spin mr-2" /> : null}
+                                      Запази промените
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                          )}
+                        </DialogContent>
+                      </Dialog>
                       <Button variant="destructive" size="icon" onClick={() => handleDeleteAlert(alert.id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -190,6 +264,9 @@ export default function AdminSiteAlertsPage() {
           )}
         </CardContent>
       </Card>
+
     </div>
   );
 }
+
+    
