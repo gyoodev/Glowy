@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -24,6 +23,7 @@ export default function AdminSiteAlertsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingAlert, setEditingAlert] = useState<SiteAlert | null>(null);
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null);
   
   const [newTitle, setNewTitle] = useState('');
   const [newMessage, setNewMessage] = useState('');
@@ -127,14 +127,17 @@ export default function AdminSiteAlertsPage() {
 
   const handleDeleteAlert = async (id: string) => {
     if (!window.confirm("Сигурни ли сте, че искате да изтриете това съобщение?")) return;
-    const alertRef = doc(firestore, 'siteAlerts', id);
+    setIsDeletingId(id);
     try {
+      const alertRef = doc(firestore, 'siteAlerts', id);
       await deleteDoc(alertRef);
       toast({ title: "Изтрито", description: "Съобщението беше изтрито успешно." });
       fetchAlerts();
     } catch (error) {
       console.error("Error deleting alert:", error);
       toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение.", variant: "destructive" });
+    } finally {
+        setIsDeletingId(null);
     }
   };
 
@@ -210,7 +213,7 @@ export default function AdminSiteAlertsPage() {
                     <TableCell className="text-right space-x-2">
                        <Dialog onOpenChange={(isOpen) => !isOpen && setEditingAlert(null)}>
                         <DialogTrigger asChild>
-                           <Button variant="outline" size="icon" onClick={() => setEditingAlert(alert)}>
+                           <Button variant="outline" size="icon" onClick={() => setEditingAlert(alert)} disabled={!!isDeletingId}>
                              <Edit className="h-4 w-4" />
                            </Button>
                         </DialogTrigger>
@@ -253,8 +256,8 @@ export default function AdminSiteAlertsPage() {
                           )}
                         </DialogContent>
                       </Dialog>
-                      <Button variant="destructive" size="icon" onClick={() => handleDeleteAlert(alert.id)}>
-                        <Trash2 className="h-4 w-4" />
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteAlert(alert.id)} disabled={isDeletingId === alert.id}>
+                        {isDeletingId === alert.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -268,5 +271,3 @@ export default function AdminSiteAlertsPage() {
     </div>
   );
 }
-
-    
