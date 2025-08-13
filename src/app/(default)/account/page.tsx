@@ -9,7 +9,7 @@ import { SalonCard } from '@/components/salon/salon-card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import type { UserProfile, Booking, Review, Salon, Service } from '@/types';
+import type { UserProfile, Booking, Review, Salon, Service, SiteAlert } from '@/types';
 import { UserCircle, UserCircle2, History, Edit3, AlertTriangle, MessageSquareText, Heart, Briefcase, Star, Settings2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
