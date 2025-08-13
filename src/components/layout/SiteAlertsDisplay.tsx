@@ -1,9 +1,11 @@
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, Megaphone, Info } from "lucide-react";
 import { SiteAlert } from "@/types";
 import { cn } from "@/lib/utils";
