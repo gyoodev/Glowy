@@ -359,7 +359,7 @@ service cloud.firestore {
     match /bookings/{bookingId} {
       allow read, write: if request.auth != null && (request.auth.uid == resource.data.userId || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
       allow create: if request.auth != null;
-      allow list: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow list: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     // Reviews can be read by anyone. Users can only manage their own reviews. Admins can manage any review.
@@ -410,8 +410,7 @@ service cloud.firestore {
     // Site-wide alerts, publicly readable, admin writable.
     match /siteAlerts/{alertId} {
       allow read: if true;
-      allow create, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      allow delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      allow write, update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
   }
 }`}
