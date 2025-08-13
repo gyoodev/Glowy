@@ -4,6 +4,7 @@ export type SiteAlertType = 'important' | 'info' | 'success';
 
 export interface SiteAlert {
   id: string;
+  title: string;
   message: string;
   type: SiteAlertType;
   isActive: boolean;

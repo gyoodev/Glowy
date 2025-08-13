@@ -4,30 +4,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
 import { firestore } from '@/lib/firebase';
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Megaphone, Info } from "lucide-react";
+import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { SiteAlert } from "@/types";
 import { cn } from "@/lib/utils";
 
 const alertTypeConfig = {
     important: {
-        icon: <AlertTriangle className="h-5 w-5" />,
-        className: "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        title: "Важно съобщение"
+        icon: <AlertTriangle />,
+        iconColor: "text-red-500",
     },
     info: {
-        icon: <Info className="h-5 w-5" />,
-        className: "border-blue-500/50 text-blue-800 dark:border-blue-500/80 dark:text-blue-300 [&>svg]:text-blue-500",
-        title: "Информация"
+        icon: <Info />,
+        iconColor: "text-primary",
     },
     success: {
-        icon: <Megaphone className="h-5 w-5" />,
-        className: "border-primary/50 text-primary dark:border-primary [&>svg]:text-primary",
-        title: "Новини"
+        icon: <CheckCircle />,
+        iconColor: "text-green-500",
     },
 };
-
 
 export function SiteAlertsDisplay() {
     const [alerts, setAlerts] = useState<SiteAlert[]>([]);
@@ -46,7 +40,6 @@ export function SiteAlertsDisplay() {
             setAlerts(fetchedAlerts);
         } catch (error) {
             console.error("Error fetching active site alerts:", error);
-            // Don't show an error to the user, just fail silently.
         } finally {
             setIsLoading(false);
         }
@@ -64,14 +57,23 @@ export function SiteAlertsDisplay() {
         <div className="space-y-4 my-8">
             {alerts.map((alert) => {
                 const config = alertTypeConfig[alert.type] || alertTypeConfig.info;
+                // Split message by newline to create list items
+                const messageItems = alert.message.split('\\n').map((item, index) => (
+                    <li key={index} className="text-sm text-primary/80 dark:text-primary-foreground/80">{item}</li>
+                ));
+
                 return (
-                    <Alert key={alert.id} className={cn("flex items-start", config.className)}>
-                        <div className="flex-shrink-0">{config.icon}</div>
-                        <div className="ml-4">
-                            <AlertTitle className="font-bold">{config.title}</AlertTitle>
-                            <AlertDescription>{alert.message}</AlertDescription>
+                    <div key={alert.id} className="flex items-start gap-4 rounded-lg border border-primary/50 bg-primary/10 p-4">
+                         <div className={cn("h-6 w-6 mt-1 flex-shrink-0", config.iconColor)}>
+                            {React.cloneElement(config.icon, { className: "h-full w-full" })}
+                         </div>
+                        <div className="flex-1">
+                            <h3 className="font-semibold text-base text-primary dark:text-primary-foreground">{alert.title}</h3>
+                            <ul className="mt-2 list-disc pl-5 space-y-1">
+                                {messageItems}
+                            </ul>
                         </div>
-                    </Alert>
+                    </div>
                 );
             })}
         </div>

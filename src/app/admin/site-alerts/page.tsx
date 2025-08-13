@@ -21,6 +21,7 @@ export default function AdminSiteAlertsPage() {
   const [alerts, setAlerts] = useState<SiteAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
   const [newMessage, setNewMessage] = useState('');
   const [newAlertType, setNewAlertType] = useState<SiteAlertType>('info');
   const { toast } = useToast();
@@ -35,6 +36,7 @@ export default function AdminSiteAlertsPage() {
         const data = docSnap.data();
         return {
           id: docSnap.id,
+          title: data.title,
           message: data.message,
           type: data.type,
           isActive: data.isActive,
@@ -56,19 +58,21 @@ export default function AdminSiteAlertsPage() {
 
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) {
-      toast({ title: "Грешка", description: "Съобщението не може да бъде празно.", variant: "destructive" });
+    if (!newTitle.trim() || !newMessage.trim()) {
+      toast({ title: "Грешка", description: "Заглавието и съобщението не могат да бъдат празни.", variant: "destructive" });
       return;
     }
     setIsSubmitting(true);
     try {
       await addDoc(collection(firestore, 'siteAlerts'), {
+        title: newTitle,
         message: newMessage,
         type: newAlertType,
         isActive: true,
         createdAt: serverTimestamp(),
       });
       toast({ title: "Успех!", description: "Новото съобщение е създадено." });
+      setNewTitle('');
       setNewMessage('');
       setNewAlertType('info');
       fetchAlerts();
@@ -115,6 +119,10 @@ export default function AdminSiteAlertsPage() {
         <form onSubmit={handleCreateAlert}>
           <CardContent className="space-y-4">
             <div className="grid gap-2">
+              <Label htmlFor="title">Заглавие</Label>
+              <Input id="title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Въведете заглавие..." required />
+            </div>
+            <div className="grid gap-2">
               <Label htmlFor="message">Текст на съобщението</Label>
               <Textarea id="message" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Въведете вашето съобщение тук..." required />
             </div>
@@ -151,7 +159,8 @@ export default function AdminSiteAlertsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[50%]">Съобщение</TableHead>
+                  <TableHead className="w-[30%]">Заглавие</TableHead>
+                  <TableHead className="w-[40%]">Съобщение</TableHead>
                   <TableHead>Тип</TableHead>
                   <TableHead>Активно</TableHead>
                   <TableHead>Действия</TableHead>
@@ -160,6 +169,7 @@ export default function AdminSiteAlertsPage() {
               <TableBody>
                 {alerts.map((alert) => (
                   <TableRow key={alert.id}>
+                    <TableCell className="font-semibold">{alert.title}</TableCell>
                     <TableCell>{alert.message}</TableCell>
                     <TableCell><Badge variant={alert.type === 'important' ? 'destructive' : alert.type === 'success' ? 'default' : 'secondary'} className={alert.type === 'info' ? 'bg-blue-500' : ''}>{alert.type}</Badge></TableCell>
                     <TableCell>
