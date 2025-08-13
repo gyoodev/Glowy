@@ -13,10 +13,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, UserPlus, Loader2, Copy, UserX } from 'lucide-react'; // Added UserX
+import { AlertTriangle, Trash2, UserPlus, Loader2, Copy, UserX, Mail } from 'lucide-react'; // Added UserX, Mail
 import { useToast } from '@/hooks/use-toast';
 import { mapUserProfile } from '@/utils/mappers';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'; // Added TooltipProvider
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
 
 interface NewUserFormState {
   email: string;
@@ -24,6 +26,12 @@ interface NewUserFormState {
   displayName: string;
   phoneNumber: string;
   role: UserProfile['role'];
+}
+
+interface DirectEmailState {
+  to: string;
+  subject: string;
+  message: string;
 }
 
 export default function AdminUsersPage() {
@@ -35,6 +43,10 @@ export default function AdminUsersPage() {
   const [filter, setFilter] = useState<'all' | 'deactivationRequested'>('all');
   const { toast } = useToast();
   const firestoreInstance = getFirestore(auth.app);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [currentEmailTarget, setCurrentEmailTarget] = useState<DirectEmailState>({ to: '', subject: '', message: '' });
+
 
   const [newUser, setNewUser] = useState<NewUserFormState>({
     email: '',
@@ -198,6 +210,33 @@ export default function AdminUsersPage() {
     }
   }, [newUser, fetchUsers, toast]);
 
+  const handleOpenEmailDialog = (userEmail: string) => {
+    setCurrentEmailTarget({ to: userEmail, subject: '', message: '' });
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleSendDirectEmail = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSendingEmail(true);
+    try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
+      const response = await fetch(`${appUrl}/api/send-email/direct-message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(currentEmailTarget),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || 'Неуспешно изпращане на имейла.');
+      
+      toast({ title: "Имейлът е изпратен успешно!", description: `Съобщението до ${currentEmailTarget.to} беше изпратено.` });
+      setIsEmailDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: "Грешка при изпращане", description: err.message, variant: "destructive" });
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
+
   if (isLoading && users.length === 0) {
     return (
        <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
@@ -240,6 +279,7 @@ export default function AdminUsersPage() {
   }
 
   return (
+    <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
     <TooltipProvider>
     <div className="container mx-auto py-10 px-4 sm:px-6 lg:px-8">
       <h1 className="text-3xl font-bold mb-6">Управление на потребители</h1>
@@ -400,7 +440,7 @@ export default function AdminUsersPage() {
                         </TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">{user.role || 'N/A'}</TableCell>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{user.phoneNumber || 'N/A'}</TableCell>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <Button
                             variant="outline"
                             size="sm"
@@ -429,6 +469,14 @@ export default function AdminUsersPage() {
                             </div>
                           )}
                           <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => handleOpenEmailDialog(user.email)}
+                            disabled={isSubmitting}
+                          >
+                           <Mail className="mr-1 h-4 w-4" /> Имейл
+                          </Button>
+                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => handleDeleteUser(user.id, user.email)}
@@ -447,5 +495,54 @@ export default function AdminUsersPage() {
       </Card>
     </div>
     </TooltipProvider>
+
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Изпращане на имейл до {currentEmailTarget.to}</DialogTitle>
+          <DialogDescription>
+            Напишете Вашето съобщение, което ще бъде изпратено до потребителя, като използвате стандартния темплейт на платформата.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={handleSendDirectEmail} className="grid gap-4 py-4">
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="email-to" className="text-right">
+              До
+            </Label>
+            <Input id="email-to" value={currentEmailTarget.to} readOnly className="col-span-3" />
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="email-subject" className="text-right">
+              Тема
+            </Label>
+            <Input 
+              id="email-subject" 
+              value={currentEmailTarget.subject}
+              onChange={(e) => setCurrentEmailTarget({...currentEmailTarget, subject: e.target.value})}
+              className="col-span-3"
+              required
+            />
+          </div>
+          <div className="grid grid-cols-4 items-start gap-4">
+            <Label htmlFor="email-message" className="text-right pt-2">
+              Съобщение
+            </Label>
+            <Textarea 
+              id="email-message"
+              placeholder="Въведете Вашето съобщение тук..."
+              value={currentEmailTarget.message}
+              onChange={(e) => setCurrentEmailTarget({...currentEmailTarget, message: e.target.value})}
+              className="col-span-3 min-h-[120px]"
+              required
+            />
+          </div>
+          <div className="flex justify-end pt-2">
+            <Button type="submit" disabled={isSendingEmail}>
+              {isSendingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isSendingEmail ? 'Изпращане...' : 'Изпрати имейл'}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
