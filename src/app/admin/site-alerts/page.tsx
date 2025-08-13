@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { firestore } from '@/lib/firebase';
+import { collection, query, orderBy, getDocs, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, Timestamp, getFirestore } from 'firebase/firestore';
+import { auth } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,11 +30,12 @@ export default function AdminSiteAlertsPage() {
   const [newMessage, setNewMessage] = useState('');
   const [newAlertType, setNewAlertType] = useState<SiteAlertType>('info');
   const { toast } = useToast();
+  const firestoreInstance = getFirestore(auth.app); // Correct instance initialization
 
   const fetchAlerts = useCallback(async () => {
     setIsLoading(true);
     try {
-      const alertsCollection = collection(firestore, 'siteAlerts');
+      const alertsCollection = collection(firestoreInstance, 'siteAlerts');
       const q = query(alertsCollection, orderBy('createdAt', 'desc'));
       const querySnapshot = await getDocs(q);
       const fetchedAlerts = querySnapshot.docs.map(docSnap => {
@@ -55,7 +56,7 @@ export default function AdminSiteAlertsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, firestoreInstance]);
 
   useEffect(() => {
     fetchAlerts();
@@ -69,7 +70,7 @@ export default function AdminSiteAlertsPage() {
     }
     setIsSubmitting(true);
     try {
-      await addDoc(collection(firestore, 'siteAlerts'), {
+      await addDoc(collection(firestoreInstance, 'siteAlerts'), {
         title: newTitle,
         message: newMessage,
         type: newAlertType,
@@ -97,7 +98,7 @@ export default function AdminSiteAlertsPage() {
     }
     setIsSubmitting(true);
     try {
-      const alertRef = doc(firestore, 'siteAlerts', editingAlert.id);
+      const alertRef = doc(firestoreInstance, 'siteAlerts', editingAlert.id);
       await updateDoc(alertRef, {
         title: editingAlert.title,
         message: editingAlert.message,
@@ -115,7 +116,7 @@ export default function AdminSiteAlertsPage() {
   };
 
   const handleToggleActive = async (id: string, currentStatus: boolean) => {
-    const alertRef = doc(firestore, 'siteAlerts', id);
+    const alertRef = doc(firestoreInstance, 'siteAlerts', id);
     try {
       await updateDoc(alertRef, { isActive: !currentStatus });
       toast({ title: "Статусът е променен", description: `Съобщението е ${!currentStatus ? 'активирано' : 'деактивирано'}.` });
@@ -130,11 +131,10 @@ export default function AdminSiteAlertsPage() {
     if (!window.confirm("Сигурни ли сте, че искате да изтриете това съобщение?")) return;
     setIsDeletingId(id);
     try {
-      const alertRef = doc(firestore, 'siteAlerts', id);
+      const alertRef = doc(firestoreInstance, 'siteAlerts', id);
       await deleteDoc(alertRef);
       toast({ title: "Изтрито", description: "Съобщението беше изтрито успешно." });
-      // Update state locally for immediate feedback before refetch
-      setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== id));
+      await fetchAlerts();
     } catch (error) {
       console.error("Error deleting alert:", error);
       toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение. Проверете конзолата и Firestore правилата.", variant: "destructive" });
