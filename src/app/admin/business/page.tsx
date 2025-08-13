@@ -40,31 +40,29 @@ export default function AdminBusinessPage() {
     ownerId: '',
   });
 
-  const fetchSalons = useCallback(async (statusFilter: typeof filterStatus = 'approved') => {
-    console.log("AdminBusinessPage: Starting fetchSalons...");
-    setIsLoading(true);
-    setError(null);
-    console.log("AdminBusinessPage: Starting fetchSalons...");
+  const fetchSalons = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       let salonsQuery = collection(firestoreInstance, 'salons');
       let q;
-      if (statusFilter === 'all') {
+      if (filterStatus === 'all') {
          q = query(salonsQuery, orderBy('name', 'asc'));
       } else {
-        q = query(salonsQuery, where('status', '==', statusFilter), orderBy('name', 'asc'));
+        q = query(salonsQuery, where('status', '==', filterStatus), orderBy('name', 'asc'));
       }
       const salonsSnapshot = await getDocs(q);
       const salonsList = salonsSnapshot.docs.map(docSnap => mapSalon(docSnap.data(), docSnap.id));
       setSalons(salonsList);
-      console.log(`AdminBusinessPage: Fetched ${salonsList.length} salons with status filter "${statusFilter}".`);
     } catch (err: any) {
-      console.error('AdminBusinessPage: Error fetching salons:', err);
-      setError('Неуспешно зареждане на салоните.');
+      console.error('Error fetching salons:', err);
+      setError('Неуспешно зареждане на салоните. Проверете конзолата за грешки.');
+      toast({ title: 'Грешка', description: err.message, variant: 'destructive'});
     } finally {
       setIsLoading(false); 
-    }  }, [firestoreInstance]);
+    }  
+  }, [firestoreInstance, filterStatus, toast]);
+
 
    useEffect(() => {
     fetchSalons();
@@ -78,7 +76,6 @@ export default function AdminBusinessPage() {
     }
     setIsSubmitting(true);
     setError(null);
-    console.log("AdminBusinessPage: Attempting to create new business:", newBusiness);
     try {
       const salonsCollectionRef = collection(firestoreInstance, 'salons');
       const docRef = await addDoc(salonsCollectionRef, {
@@ -91,25 +88,21 @@ export default function AdminBusinessPage() {
         photos: [],
         services: [],
       });
-      console.log(`AdminBusinessPage: Business created successfully with ID: ${docRef.id}`);
       toast({
         title: 'Бизнесът е създаден',
         description: `Нов салон "${newBusiness.name}" е добавен с ID: ${docRef.id}`,
       });
       setNewBusiness({ name: '', city: '', address: '', ownerId: '' });
-      await fetchSalons(filterStatus); 
+      await fetchSalons(); 
     } catch (err: any) {
-      console.error('AdminBusinessPage: Error creating business:', err);
       setError('Неуспешно създаване на бизнес.');
-      toast({ title: 'Грешка', description: 'Неуспешно създаване на бизнес.', variant: 'destructive' });
+      toast({ title: 'Грешка', description: err.message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
-      console.log("AdminBusinessPage: Create business process finished.");
     }
   };
 
   const handleChangeStatus = useCallback(async (businessId: string, newStatus: 'approved' | 'pending_approval' | 'rejected') => {
-    console.log(`AdminBusinessPage: Attempting to change status for business ID ${businessId} to ${newStatus}.`);
     setIsSubmitting(true);
     try {
       const businessDocRef = doc(firestoreInstance, 'salons', businessId);
@@ -136,7 +129,6 @@ export default function AdminBusinessPage() {
           type: 'salon_status_change',
           relatedEntityId: businessId,
         });
-        console.log(`AdminBusinessPage: Notification sent to owner ${ownerId} for status change of salon ${businessId}.`);
          toast({
             title: 'Известие изпратено',
             description: 'Собственикът на салона беше уведомен за промяната на статуса.',
@@ -145,9 +137,7 @@ export default function AdminBusinessPage() {
       }
 
       setSalons(prevSalons => prevSalons.map(s => s.id === businessId ? { ...s, status: newStatus } : s).filter(s => filterStatus === 'all' || s.status === filterStatus));
-      console.log(`AdminBusinessPage: Status updated for business ID ${businessId} to ${newStatus}.`);
     } catch (err: any) {
-      console.error(`AdminBusinessPage: Error changing status for business ID ${businessId}:`, err);
       toast({ title: 'Грешка при промяна на статуса', description: `Неуспешна промяна на статуса: ${err.message}`, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
@@ -155,33 +145,26 @@ export default function AdminBusinessPage() {
   }, [firestoreInstance, toast, filterStatus]);
 
   const handleDeleteBusiness = useCallback(async (businessId: string, businessName: string) => {
-    console.log(`AdminBusinessPage: Confirmation prompt for deleting business: ID=${businessId}, Name=${businessName}`);
     if (!window.confirm(`Сигурни ли сте, че искате да изтриете салон "${businessName}"? Тази операция е необратима и ще премахне салона от системата.`)) {
-        console.log(`AdminBusinessPage: Deletion cancelled by user for business ID: ${businessId}`);
         return;
     }
 
-    console.log(`AdminBusinessPage: Proceeding with deletion for business ID: ${businessId}`);
     setIsSubmitting(true);
     try {
         const businessDocRef = doc(firestoreInstance, 'salons', businessId);
         await deleteDoc(businessDocRef);
-        console.log(`AdminBusinessPage: Successfully deleted business ID: ${businessId} from Firestore.`);
         toast({ title: 'Салонът е изтрит', description: `Салон "${businessName}" беше успешно изтрит.` });
-        await fetchSalons(filterStatus); 
-        console.log("AdminBusinessPage: Salon list refreshed after deletion.");
+        await fetchSalons(); 
     } catch (err: any) {
-        console.error(`AdminBusinessPage: Error deleting business ID ${businessId}:`, err.message, err.code, err.stack);
         toast({ title: 'Грешка при изтриване', description: `Неуспешно изтриване на салон: ${err.message}`, variant: 'destructive' });
     } finally {
         setIsSubmitting(false);
-        console.log("AdminBusinessPage: Deletion process finished, isSubmitting set to false.");
     }
-  }, [firestoreInstance, toast, fetchSalons, filterStatus]);
+  }, [firestoreInstance, toast, fetchSalons]);
 
   useEffect(() => {
-    fetchSalons(filterStatus);
-  }, [fetchSalons, filterStatus]);
+    fetchSalons();
+  }, [filterStatus]);
 
   if (isLoading) {
     return (
@@ -216,7 +199,7 @@ export default function AdminBusinessPage() {
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-destructive mb-2">Грешка при зареждане на бизнеси</h2>
         <p className="text-muted-foreground mb-6">{error}</p>
-        <Button onClick={() => window.location.reload()}>Опитай отново</Button>
+        <Button onClick={fetchSalons}>Опитай отново</Button>
       </div>
     );
   }
@@ -340,16 +323,7 @@ export default function AdminBusinessPage() {
                        <Button
                         variant="destructive"
                         size="sm"
-                        onClick={() => {
-                          if (!salon || !salon.id) {
-                            toast({ title: 'Грешка при изтриване', description: 'Липсва ID на салона. Изтриването е невъзможно.', variant: 'destructive' });
-                            console.error("AdminBusinessPage: Delete attempt failed: Salon object or ID is missing.", salon);
-                            return;
-                          }
-                          const nameForConfirmation = salon.name || `салон с ID: ${salon.id}`;
-                          console.log(`AdminBusinessPage: Initiating delete for salon: ID=${salon.id}, Name=${nameForConfirmation}`);
-                          handleDeleteBusiness(salon.id, nameForConfirmation);
-                        }}
+                        onClick={() => handleDeleteBusiness(salon.id, salon.name)}
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}

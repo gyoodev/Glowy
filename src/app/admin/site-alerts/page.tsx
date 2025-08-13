@@ -133,10 +133,11 @@ export default function AdminSiteAlertsPage() {
       const alertRef = doc(firestore, 'siteAlerts', id);
       await deleteDoc(alertRef);
       toast({ title: "Изтрито", description: "Съобщението беше изтрито успешно." });
+      // Update state locally for immediate feedback before refetch
       setAlerts(prevAlerts => prevAlerts.filter(alert => alert.id !== id));
     } catch (error) {
       console.error("Error deleting alert:", error);
-      toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение.", variant: "destructive" });
+      toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение. Проверете конзолата и Firestore правилата.", variant: "destructive" });
     } finally {
         setIsDeletingId(null);
     }
