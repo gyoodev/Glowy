@@ -1,4 +1,3 @@
-
 import { collection, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
 import { isFuture, parseISO, subDays, isWithinInterval } from 'date-fns';
 import type { Salon, BusinessStatus } from '@/types';

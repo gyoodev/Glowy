@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, type ReactNode } from 'react';
@@ -20,8 +19,8 @@ import {
   Menu,
   PanelLeft, 
   Sparkles as AppIcon,
-  MessageSquareText, // Added for Reviews
-  Gift, // Added for Promotions
+  MessageSquareText,
+  Gift,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

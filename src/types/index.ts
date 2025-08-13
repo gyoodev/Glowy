@@ -1,12 +1,11 @@
-
 export * from './booking';
 export * from './user';
 export * from './review';
 export * from './salon';
 export * from './service';
 export * from './notification';
-export * from './location'; // Ensure this line is present and correct
+export * from './location';
 export * from './promotion';
 export * from './newsletter';
-export * from './hero-image'; // Add this line
+export * from './hero-image';
 export * from './businessStatus';
