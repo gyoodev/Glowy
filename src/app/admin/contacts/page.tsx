@@ -168,7 +168,7 @@ export default function AdminContactsPage() {
                     {contact.message}
                   </div>
                    <div className="flex justify-end pt-2">
-                     <Dialog>
+                     <Dialog open={isReplyDialogOpen} onOpenChange={setIsReplyDialogOpen}>
                         <DialogTrigger asChild>
                            <Button onClick={() => handleOpenReplyDialog(contact)}>
                               <Mail className="mr-2 h-4 w-4" /> Отговори по Имейл
