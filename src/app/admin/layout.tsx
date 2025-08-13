@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState, type ReactNode } from 'react';
@@ -27,6 +28,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'; 
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -151,7 +153,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             isDesktopSidebarOpen ? "w-64 p-5" : "w-20 p-3 items-center"
           )}
         >
-          <div>
+          <div className="flex flex-col flex-1 overflow-y-hidden">
             <h1
               className={cn(
                 "text-2xl font-bold mb-10 text-primary text-center",
@@ -160,31 +162,33 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               Glaura Админ
             </h1>
-            <nav className="space-y-1">
-              {navItems.map((item) => (
-                <Tooltip key={item.label}>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href={item.href}
-                      className={cn(
-                        "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
-                        !isDesktopSidebarOpen && "justify-center",
-                        isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
-                      )}
-                      aria-label={isDesktopSidebarOpen ? undefined : item.label}
-                    >
-                      <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
-                      {isDesktopSidebarOpen && <span>{item.label}</span>}
-                    </Link>
-                  </TooltipTrigger>
-                  {!isDesktopSidebarOpen && (
-                    <TooltipContent side="right" sideOffset={5}>
-                      <p>{item.label}</p>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-              ))}
-            </nav>
+            <ScrollArea className="flex-1 -mr-4 pr-4">
+              <nav className="space-y-1">
+                {navItems.map((item) => (
+                  <Tooltip key={item.label}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.href}
+                        className={cn(
+                          "flex items-center space-x-3 p-3 rounded-lg hover:bg-admin-sidebar-active-background/70 hover:text-admin-sidebar-active-foreground transition-colors font-medium text-admin-sidebar-foreground",
+                          !isDesktopSidebarOpen && "justify-center",
+                          isActive(item.href) && "bg-admin-sidebar-active-background text-admin-sidebar-active-foreground font-semibold shadow-sm"
+                        )}
+                        aria-label={isDesktopSidebarOpen ? undefined : item.label}
+                      >
+                        <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
+                        {isDesktopSidebarOpen && <span>{item.label}</span>}
+                      </Link>
+                    </TooltipTrigger>
+                    {!isDesktopSidebarOpen && (
+                      <TooltipContent side="right" sideOffset={5}>
+                        <p>{item.label}</p>
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                ))}
+              </nav>
+            </ScrollArea>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -222,8 +226,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <span className="sr-only">Toggle navigation menu</span>
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="flex flex-col">
-                <SheetHeader className="mb-4 border-b pb-4">
+              <SheetContent side="left" className="flex flex-col p-0">
+                <SheetHeader className="p-4 mb-4 border-b">
                   <SheetTitle>
                     <Link
                       href="/admin"
@@ -235,23 +239,25 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                     </Link>
                   </SheetTitle>
                 </SheetHeader>
-                <nav className="grid gap-2 text-lg font-medium">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={cn(
-                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                        isActive(item.href) && "text-primary bg-muted"
-                      )}
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  ))}
-                </nav>
-                <div className="mt-auto">
+                <ScrollArea className="flex-1 px-4">
+                  <nav className="grid gap-2 text-lg font-medium">
+                    {navItems.map((item) => (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                          isActive(item.href) && "text-primary bg-muted"
+                        )}
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {item.label}
+                      </Link>
+                    ))}
+                  </nav>
+                </ScrollArea>
+                <div className="mt-auto p-4 border-t">
                   <Button
                     variant="ghost"
                     onClick={() => {

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Trash2, Megaphone, Edit } from 'lucide-react';
+import { Loader2, PlusCircle, Trash2, Megaphone, Edit, Info, AlertTriangle, CheckCircle } from 'lucide-react';
 import type { SiteAlert, SiteAlertType } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -133,7 +133,7 @@ export default function AdminSiteAlertsPage() {
       const alertRef = doc(firestore, 'siteAlerts', id);
       await deleteDoc(alertRef);
       toast({ title: "Изтрито", description: "Съобщението беше изтрито успешно." });
-      fetchAlerts();
+      fetchAlerts(); // Refresh the list after deletion
     } catch (error) {
       console.error("Error deleting alert:", error);
       toast({ title: "Грешка", description: "Неуспешно изтриване на съобщение.", variant: "destructive" });
@@ -166,9 +166,9 @@ export default function AdminSiteAlertsPage() {
                   <SelectValue placeholder="Изберете тип" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="info">Информация (Синьо)</SelectItem>
-                  <SelectItem value="success">Успех (Зелено)</SelectItem>
-                  <SelectItem value="important">Важно (Червено)</SelectItem>
+                  <SelectItem value="info">Информация</SelectItem>
+                  <SelectItem value="success">Успех</SelectItem>
+                  <SelectItem value="important">Важно</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -204,7 +204,14 @@ export default function AdminSiteAlertsPage() {
                   <TableRow key={alert.id}>
                     <TableCell className="font-semibold">{alert.title}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{alert.message}</TableCell>
-                    <TableCell><Badge variant={alert.type === 'important' ? 'destructive' : alert.type === 'success' ? 'default' : 'secondary'} className={alert.type === 'info' ? 'bg-blue-500' : ''}>{alert.type}</Badge></TableCell>
+                    <TableCell>
+                      <Badge variant={alert.type === 'important' ? 'destructive' : alert.type === 'success' ? 'default' : 'secondary'} className={alert.type === 'info' ? 'bg-blue-500' : ''}>
+                          {alert.type === 'info' && <Info className="mr-1 h-3 w-3"/>}
+                          {alert.type === 'important' && <AlertTriangle className="mr-1 h-3 w-3"/>}
+                          {alert.type === 'success' && <CheckCircle className="mr-1 h-3 w-3"/>}
+                          {alert.type}
+                      </Badge>
+                    </TableCell>
                     <TableCell>
                       <Switch
                         checked={alert.isActive}
@@ -268,7 +275,6 @@ export default function AdminSiteAlertsPage() {
           )}
         </CardContent>
       </Card>
-
     </div>
   );
 }
