@@ -9,3 +9,4 @@ export * from './promotion';
 export * from './newsletter';
 export * from './hero-image';
 export * from './businessStatus';
+export * from './site-alert';

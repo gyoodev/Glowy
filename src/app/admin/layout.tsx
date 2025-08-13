@@ -21,6 +21,7 @@ import {
   Sparkles as AppIcon,
   MessageSquareText,
   Gift,
+  Megaphone,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -43,7 +44,8 @@ const navItems: NavItem[] = [
   { href: '/admin/business', label: 'Бизнеси', icon: Briefcase },
   { href: '/admin/bookings', label: 'Резервации', icon: CalendarCheck },
   { href: '/admin/reviews', label: 'Отзиви', icon: MessageSquareText },
-  { href: '/admin/promotions', label: 'Промоции', icon: Gift }, // Added for Promotions
+  { href: '/admin/promotions', label: 'Промоции', icon: Gift },
+  { href: '/admin/site-alerts', label: 'Системни съобщения', icon: Megaphone },
   { href: '/admin/contacts', label: 'Запитвания', icon: Mail },
   { href: '/admin/newsletter', label: 'Бюлетин', icon: Newspaper },
   { href: '/admin/payments', label: 'Плащания', icon: CreditCard },

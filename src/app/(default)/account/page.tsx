@@ -407,7 +407,7 @@ service cloud.firestore {
     }
     
     // Site-wide alerts, publicly readable, admin writable.
-    match /site_alerts/{alertId} {
+    match /siteAlerts/{alertId} {
       allow read: if true;
       allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }

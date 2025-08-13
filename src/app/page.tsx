@@ -8,6 +8,7 @@ import { slidesData } from '@/lib/hero-slides-data';
 import { SalonDirectory } from '@/components/salon/SalonDirectory';
 import { bulgarianRegionsAndCities, mockServices as allMockServices } from '@/lib/mock-data';
 import type { CategorizedService } from '@/components/salon/filter-sidebar';
+import { SiteAlertsDisplay } from '@/components/layout/SiteAlertsDisplay';
 
 async function getInitialSalons() {
   try {
@@ -57,6 +58,7 @@ export default async function HomePage() {
 
   return (
     <div className="container mx-auto py-10 px-6">
+      <SiteAlertsDisplay />
       <header className="mb-10">
         <HeroSlider slides={slidesData} />
       </header>
