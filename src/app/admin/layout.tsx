@@ -153,7 +153,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             isDesktopSidebarOpen ? "w-64 p-5" : "w-20 p-3 items-center"
           )}
         >
-          <div className="flex flex-col flex-1 overflow-y-hidden">
+          <div className="flex flex-col flex-1 overflow-y-auto overflow-x-hidden -mr-4 pr-4">
             <h1
               className={cn(
                 "text-2xl font-bold mb-10 text-primary text-center",
@@ -162,7 +162,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
             >
               Glaura Админ
             </h1>
-            <ScrollArea className="flex-1 -mr-4 pr-4">
+            
               <nav className="space-y-1">
                 {navItems.map((item) => (
                   <Tooltip key={item.label}>
@@ -176,8 +176,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                         )}
                         aria-label={isDesktopSidebarOpen ? undefined : item.label}
                       >
-                        <item.icon size={isDesktopSidebarOpen ? 20 : 24} />
-                        {isDesktopSidebarOpen && <span>{item.label}</span>}
+                        <item.icon className="flex-shrink-0" size={isDesktopSidebarOpen ? 20 : 24} />
+                        {isDesktopSidebarOpen && <span className="break-words">{item.label}</span>}
                       </Link>
                     </TooltipTrigger>
                     {!isDesktopSidebarOpen && (
@@ -188,7 +188,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   </Tooltip>
                 ))}
               </nav>
-            </ScrollArea>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
