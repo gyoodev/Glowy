@@ -1,16 +1,18 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { getFirestore, collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { auth } from '@/lib/firebase'; // Assuming firebase auth is needed for context/initialization
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertTriangle, DollarSign, Loader2 } from 'lucide-react';
+import { AlertTriangle, DollarSign, Loader2, Search, ArrowUpDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { bg } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 
 // Define the structure for a payment document
 interface PromotionPayment {
@@ -23,13 +25,15 @@ interface PromotionPayment {
   currency: string;
   status: 'pending' | 'completed' | 'failed';
   createdAt: Timestamp;
-  // Add other relevant fields from your Firestore documents
+  transactionId?: string;
 }
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<PromotionPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof PromotionPayment; direction: 'ascending' | 'descending' } | null>({ key: 'createdAt', direction: 'descending' });
   const firestoreInstance = getFirestore(auth.app); // Use firestoreInstance
 
   useEffect(() => {
@@ -53,6 +57,7 @@ export default function AdminPaymentsPage() {
             currency: data.currency || 'BGN', // Default to BGN if not specified
             status: data.status || 'pending',
             createdAt: data.createdAt instanceof Timestamp ? data.createdAt : Timestamp.fromDate(new Date()), // Handle potential non-Timestamp dates
+            transactionId: data.transactionId,
           } as PromotionPayment;
         });
         setPayments(paymentsList);
@@ -66,6 +71,44 @@ export default function AdminPaymentsPage() {
 
     fetchPayments();
   }, [firestoreInstance]);
+
+  const requestSort = (key: keyof PromotionPayment) => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const sortedAndFilteredPayments = useMemo(() => {
+      let sortablePayments = [...payments];
+      if (searchTerm) {
+          sortablePayments = sortablePayments.filter(p => 
+              p.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+              p.transactionId?.toLowerCase().includes(searchTerm.toLowerCase())
+          );
+      }
+      if (sortConfig !== null) {
+          sortablePayments.sort((a, b) => {
+              const aValue = a[sortConfig.key];
+              const bValue = b[sortConfig.key];
+
+              if (aValue === undefined || aValue === null) return 1;
+              if (bValue === undefined || bValue === null) return -1;
+
+              if (sortConfig.key === 'createdAt') {
+                return (aValue.toMillis() - bValue.toMillis()) * (sortConfig.direction === 'ascending' ? 1 : -1);
+              }
+              
+              if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+              if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+              return 0;
+          });
+      }
+      return sortablePayments;
+  }, [payments, searchTerm, sortConfig]);
+
 
   if (isLoading) {
     return (
@@ -100,8 +143,7 @@ export default function AdminPaymentsPage() {
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-destructive mb-2">Грешка при зареждане на плащания</h2>
         <p className="text-muted-foreground mb-6">{error}</p>
-        {/* Consider adding a retry button */}
-        {/* <Button onClick={fetchPayments}>Опитай отново</Button> */}
+        <Button onClick={() => window.location.reload()}>Опитай отново</Button>
       </div>
     );
   }
@@ -111,7 +153,6 @@ export default function AdminPaymentsPage() {
       <h1 className="text-3xl font-bold mb-6 flex items-center">
         <DollarSign className="mr-3 h-8 w-8 text-primary"/>
         Управление на плащания от промоции
-        <span className="ml-3 text-muted-foreground font-normal text-base">({payments.length} плащания)</span>
       </h1>
 
       {payments.length === 0 ? (
@@ -127,40 +168,55 @@ export default function AdminPaymentsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="overflow-x-auto bg-card p-4 rounded-lg shadow">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">ID на Плащане</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Бизнес (Салон)</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Детайли за Промоцията</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Сума</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Дата на Плащане</TableHead>
-                <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Статус</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="bg-card divide-y divide-border">
-              {payments.map(payment => (
-                <TableRow key={payment.id}>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{payment.id}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.businessName}</TableCell>
-                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.promotionDetails}</TableCell>
-                   <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.amount.toFixed(2)} {payment.currency}</TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
-                    {payment.createdAt ? format(payment.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }) : 'N/A'}
-                  </TableCell>
-                  <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">
-                    {/* Basic status display, could be enhanced with colors/badges */}
-                    {payment.status === 'completed' && <span className="text-green-600 font-semibold">Завършено</span>}
-                    {payment.status === 'failed' && <span className="text-red-600 font-semibold">Неуспешно</span>}
-                    {payment.status === 'pending' && <span className="text-yellow-600 font-semibold">Чакащо</span>}
-                     {!['completed', 'pending', 'failed'].includes(payment.status) && <span>{payment.status}</span>} {/* Display unknown statuses */}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <Card>
+          <CardHeader>
+              <CardTitle>Всички плащания ({sortedAndFilteredPayments.length})</CardTitle>
+              <div className="relative pt-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                <Input 
+                    placeholder="Търсене по име на бизнес, ID на плащане/трансакция..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto bg-card p-4 rounded-lg shadow">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead> <Button variant="ghost" onClick={() => requestSort('id')}>Плащане ID <ArrowUpDown className="ml-2 h-4 w-4 inline-block" /></Button></TableHead>
+                    <TableHead> <Button variant="ghost" onClick={() => requestSort('businessName')}>Бизнес (Салон) <ArrowUpDown className="ml-2 h-4 w-4 inline-block" /></Button></TableHead>
+                    <TableHead>Детайли</TableHead>
+                    <TableHead> <Button variant="ghost" onClick={() => requestSort('amount')}>Сума <ArrowUpDown className="ml-2 h-4 w-4 inline-block" /></Button></TableHead>
+                    <TableHead> <Button variant="ghost" onClick={() => requestSort('createdAt')}>Дата <ArrowUpDown className="ml-2 h-4 w-4 inline-block" /></Button></TableHead>
+                    <TableHead>Статус</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody className="bg-card divide-y divide-border">
+                  {sortedAndFilteredPayments.map(payment => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">{payment.id}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.businessName}</TableCell>
+                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.promotionDetails}</TableCell>
+                       <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">{payment.amount.toFixed(2)} {payment.currency}</TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
+                        {payment.createdAt ? format(payment.createdAt.toDate(), 'dd.MM.yyyy HH:mm', { locale: bg }) : 'N/A'}
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground capitalize">
+                        {payment.status === 'completed' && <span className="text-green-600 font-semibold">Завършено</span>}
+                        {payment.status === 'failed' && <span className="text-red-600 font-semibold">Неуспешно</span>}
+                        {payment.status === 'pending' && <span className="text-yellow-600 font-semibold">Чакащо</span>}
+                         {!['completed', 'pending', 'failed'].includes(payment.status) && <span>{payment.status}</span>}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

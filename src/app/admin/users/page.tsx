@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { getFirestore, collection, getDocs, where, query as firestoreQuery, doc, deleteDoc } from 'firebase/firestore'; // Renamed query and added doc, deleteDoc
 import { auth } from '@/lib/firebase';
 import type { UserProfile } from '@/types';
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Trash2, UserPlus, Loader2, Copy, UserX, Mail } from 'lucide-react'; // Added UserX, Mail
+import { AlertTriangle, Trash2, UserPlus, Loader2, Copy, UserX, Mail, Search, ArrowUpDown } from 'lucide-react'; // Added UserX, Mail, Search, ArrowUpDown
 import { useToast } from '@/hooks/use-toast';
 import { mapUserProfile } from '@/utils/mappers';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'; // Added TooltipProvider
@@ -41,6 +41,9 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'deactivationRequested'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof UserProfile | 'numericId'; direction: 'ascending' | 'descending' } | null>({ key: 'numericId', direction: 'ascending' });
+  
   const { toast } = useToast();
   const firestoreInstance = getFirestore(auth.app);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
@@ -82,6 +85,56 @@ export default function AdminUsersPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+  
+  const sortedAndFilteredUsers = useMemo(() => {
+    let sortableUsers = [...users];
+
+    // Filter by search term
+    if (searchTerm) {
+        sortableUsers = sortableUsers.filter(user => {
+            const term = searchTerm.toLowerCase();
+            return (
+                user.displayName?.toLowerCase().includes(term) ||
+                user.name?.toLowerCase().includes(term) ||
+                user.email?.toLowerCase().includes(term) ||
+                user.id?.toLowerCase().includes(term) ||
+                user.numericId?.toString().includes(term)
+            );
+        });
+    }
+
+    // Sort the filtered users
+    if (sortConfig !== null) {
+        sortableUsers.sort((a, b) => {
+            const aValue = a[sortConfig.key as keyof UserProfile] ?? (sortConfig.key === 'numericId' ? a.numericId : undefined);
+            const bValue = b[sortConfig.key as keyof UserProfile] ?? (sortConfig.key === 'numericId' ? b.numericId : undefined);
+
+            if (aValue === undefined || aValue === null) return 1;
+            if (bValue === undefined || bValue === null) return -1;
+            
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+              if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+              if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            } else if (typeof aValue === 'number' && typeof bValue === 'number') {
+              if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
+              if (aValue > bValue) return sortConfig.direction === 'ascending' ? 1 : -1;
+            }
+
+            return 0;
+        });
+    }
+
+    return sortableUsers;
+  }, [users, searchTerm, sortConfig]);
+
+  const requestSort = (key: keyof UserProfile | 'numericId') => {
+    let direction: 'ascending' | 'descending' = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+        direction = 'descending';
+    }
+    setSortConfig({ key, direction });
+  };
+
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text).then(() => {
@@ -364,43 +417,69 @@ export default function AdminUsersPage() {
 
       <Card className="shadow-md">
          <CardHeader>
-            <CardTitle className="text-2xl font-semibold">Списък с потребители ({users.length})</CardTitle>
-            <div className="flex items-center space-x-4 pt-2">
-                <Label htmlFor="filter">Филтър:</Label>
-                <Select value={filter} onValueChange={(value) => setFilter(value as 'all' | 'deactivationRequested')}>
-                    <SelectTrigger id="filter" className="w-[250px]">
-                        <SelectValue placeholder="Филтрирай потребители" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Всички потребители</SelectItem>
-                        <SelectItem value="deactivationRequested">Със заявка за деактивация</SelectItem>
-                    </SelectContent>
-                </Select>
+            <CardTitle className="text-2xl font-semibold">Списък с потребители ({sortedAndFilteredUsers.length})</CardTitle>
+            <div className="flex flex-col sm:flex-row gap-4 pt-2">
+                <div className="relative flex-grow">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"/>
+                    <Input 
+                        placeholder="Търсене по име, имейл, ID..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                    />
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Label htmlFor="filter" className="flex-shrink-0">Филтър:</Label>
+                    <Select value={filter} onValueChange={(value) => setFilter(value as 'all' | 'deactivationRequested')}>
+                        <SelectTrigger id="filter" className="w-full sm:w-[250px]">
+                            <SelectValue placeholder="Филтрирай потребители" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Всички потребители</SelectItem>
+                            <SelectItem value="deactivationRequested">Със заявка за деактивация</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
          </CardHeader>
          <CardContent>
-            {isLoading && users.length > 0 ? (
+            {isLoading && users.length === 0 ? (
                 <div className="flex justify-center items-center py-4">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="ml-2">Обновяване на списъка...</p>
                 </div>
-            ) : users.length === 0 && !error ? (
-            <p className="text-muted-foreground text-center py-4">Няма намерени потребители с избрания филтър.</p>
+            ) : sortedAndFilteredUsers.length === 0 ? (
+              <p className="text-muted-foreground text-center py-4">Няма намерени потребители с избраните критерии.</p>
             ) : (
             <div className="overflow-x-auto">
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">ID</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Имейл</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Име</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Роля</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Телефон</TableHead>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                           <Button variant="ghost" onClick={() => requestSort('numericId')}>
+                                ID <ArrowUpDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <Button variant="ghost" onClick={() => requestSort('email')}>
+                                Имейл <ArrowUpDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                           <Button variant="ghost" onClick={() => requestSort('name')}>
+                                Име <ArrowUpDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                            <Button variant="ghost" onClick={() => requestSort('role')}>
+                                Роля <ArrowUpDown className="ml-2 h-4 w-4" />
+                            </Button>
+                        </TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Телефон</TableHead>
+                        <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Действия</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody className="bg-card divide-y divide-border">
-                    {users.map(user => (
+                    {sortedAndFilteredUsers.map(user => (
                     <TableRow key={user.id} className={user.deactivationRequested ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
                         <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           <div className="flex items-center gap-2">
