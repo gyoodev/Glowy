@@ -1,7 +1,6 @@
 
 
 import './globals.css';
-import { Geist, Geist_Mono } from 'next/font/google';
 import type { Metadata } from 'next';
 
 import { Footer } from '@/components/layout/footer';
@@ -12,15 +11,8 @@ import FirebaseConfigErrorPage from '@/components/layout/FirebaseConfigErrorPage
 import { PWAInstallBanner } from '@/components/layout/PWAInstallBanner';
 import { Header } from '@/components/layout/header';
 
-export const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
-});
+// Removed direct font import to use @font-face in globals.css for better performance.
+// This prevents render-blocking font loading.
 
 export const metadata: Metadata = {
   title: {
@@ -63,7 +55,7 @@ export default function RootLayout({
         {/* Favicon links are still recommended to be placed here for broad compatibility */}
         <meta name="theme-color" content="#E6E6FA" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}>
+      <body className="antialiased flex flex-col min-h-screen">
         <Header />
         <main className="flex-1 bg-background">
           {children}

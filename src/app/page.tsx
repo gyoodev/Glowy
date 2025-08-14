@@ -13,7 +13,14 @@ import { SiteAlertsDisplay } from '@/components/layout/SiteAlertsDisplay';
 async function getInitialSalons() {
   try {
     const salonsCollectionRef = collection(firestore, 'salons');
-    const q = query(salonsCollectionRef, where('status', '==', 'approved' as BusinessStatus));
+    // PERFORMANCE OPTIMIZATION: Fetch only the top 100 salons ordered by rating initially,
+    // instead of all approved salons. This reduces the initial server load and TTFB.
+    const q = query(
+      salonsCollectionRef, 
+      where('status', '==', 'approved' as BusinessStatus),
+      orderBy('rating', 'desc'), // Order by rating to get the best ones first
+      limit(100) // Limit the initial fetch
+    );
     const salonsSnapshot = await getDocs(q);
     const allSalons = salonsSnapshot.docs.map(doc => mapSalon(doc.data(), doc.id));
     
