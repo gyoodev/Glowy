@@ -30,7 +30,7 @@ export default function AdminSiteAlertsPage() {
   const [newMessage, setNewMessage] = useState('');
   const [newAlertType, setNewAlertType] = useState<SiteAlertType>('info');
   const { toast } = useToast();
-  const firestoreInstance = getFirestore(auth.app); // Correct instance initialization
+  const firestoreInstance = getFirestore(auth.app);
 
   const fetchAlerts = useCallback(async () => {
     setIsLoading(true);
@@ -105,7 +105,7 @@ export default function AdminSiteAlertsPage() {
         type: editingAlert.type,
       });
       toast({ title: "Успех!", description: "Съобщението е редактирано." });
-      setEditingAlert(null);
+      setEditingAlert(null); // Close the dialog by resetting state
       await fetchAlerts();
     } catch (error) {
       console.error("Error editing alert:", error);
@@ -220,18 +220,18 @@ export default function AdminSiteAlertsPage() {
                       />
                     </TableCell>
                     <TableCell className="text-right space-x-2">
-                       <Dialog onOpenChange={(isOpen) => !isOpen && setEditingAlert(null)}>
+                       <Dialog onOpenChange={(open) => !open && setEditingAlert(null)}>
                         <DialogTrigger asChild>
                            <Button variant="outline" size="icon" onClick={() => setEditingAlert(alert)} disabled={!!isDeletingId}>
                              <Edit className="h-4 w-4" />
                            </Button>
                         </DialogTrigger>
-                        <DialogContent>
-                          <DialogHeader>
-                            <DialogTitle>Редактиране на съобщение</DialogTitle>
-                            <DialogDescription>Променете детайлите на съобщението по-долу.</DialogDescription>
-                          </DialogHeader>
-                          {editingAlert && editingAlert.id === alert.id && (
+                        {editingAlert && editingAlert.id === alert.id && (
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Редактиране на съобщение</DialogTitle>
+                              <DialogDescription>Променете детайлите на съобщението по-долу.</DialogDescription>
+                            </DialogHeader>
                             <form onSubmit={handleEditAlert} className="space-y-4 py-4">
                                 <div className="grid gap-2">
                                   <Label htmlFor="edit-title">Заглавие</Label>
@@ -262,8 +262,8 @@ export default function AdminSiteAlertsPage() {
                                     </Button>
                                 </DialogFooter>
                             </form>
-                          )}
-                        </DialogContent>
+                          </DialogContent>
+                        )}
                       </Dialog>
                       <Button variant="destructive" size="icon" onClick={() => handleDeleteAlert(alert.id)} disabled={isDeletingId === alert.id}>
                         {isDeletingId === alert.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
