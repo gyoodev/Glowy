@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { collection, query, orderBy, getDocs, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { firestore as db } from '@/lib/firebase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Loader2, Mail, Send, ArrowLeft } from 'lucide-react';
+import { Loader2, Mail, Send, ArrowLeft, Eye, MessageSquare, Clock, CheckCircle } from 'lucide-react';
 
 interface ContactEntry {
   id: string;
@@ -41,6 +41,7 @@ export default function AdminContactsPage() {
   const [dialogView, setDialogView] = useState<DialogView>('view');
 
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [currentReply, setCurrentReply] = useState<DirectEmailState>({ to: '', subject: '', message: '' });
 
   useEffect(() => {
@@ -73,6 +74,7 @@ export default function AdminContactsPage() {
 
   const handleToggleAnswered = async (e: React.MouseEvent, contactId: string, currentStatus: boolean) => {
     e.stopPropagation(); 
+    setIsUpdatingStatus(true);
     try {
       const contactRef = doc(db, 'contacts', contactId);
       await updateDoc(contactRef, {
@@ -83,6 +85,10 @@ export default function AdminContactsPage() {
           contact.id === contactId ? { ...contact, isAnswered: !currentStatus } : contact
         )
       );
+      toast({
+        title: "Статусът е променен",
+        description: `Запитването е маркирано като ${!currentStatus ? 'отговорено' : 'неотговорено'}.`
+      });
     } catch (err) {
       console.error("Error updating contact status:", err);
       toast({
@@ -90,6 +96,8 @@ export default function AdminContactsPage() {
         description: "Неуспешно актуализиране на статуса.",
         variant: "destructive"
       });
+    } finally {
+        setIsUpdatingStatus(false);
     }
   };
 
@@ -104,7 +112,7 @@ export default function AdminContactsPage() {
     setCurrentReply({
       to: selectedContact.email,
       subject: `Re: ${selectedContact.subject || 'Без тема'}`,
-      message: `\n\n\n--- Оригинално съобщение ---\nОт: ${selectedContact.name} <${selectedContact.email}>\nТема: ${selectedContact.subject}\n\n${selectedContact.message}`
+      message: `\n\n\n--- Оригинално съобщение ---\nОт: ${selectedContact.name} <${selectedContact.email}>\nТема: ${selectedContact.subject || 'Без тема'}\n\n${selectedContact.message}`
     });
     setDialogView('reply');
   };
@@ -123,6 +131,12 @@ export default function AdminContactsPage() {
       if (!response.ok) throw new Error(result.message || 'Неуспешно изпращане на имейла.');
       
       toast({ title: "Имейлът е изпратен успешно!", description: `Съобщението до ${currentReply.to} беше изпратено.` });
+      // Mark as answered if not already
+      if (selectedContact && !selectedContact.isAnswered) {
+          const contactRef = doc(db, 'contacts', selectedContact.id);
+          await updateDoc(contactRef, { isAnswered: true });
+          setContacts(prev => prev.map(c => c.id === selectedContact.id ? { ...c, isAnswered: true } : c));
+      }
       setIsDialogOpen(false); // Close dialog on success
     } catch (err: any) {
       toast({ title: "Грешка при изпращане", description: err.message, variant: "destructive" });
@@ -132,7 +146,7 @@ export default function AdminContactsPage() {
   };
 
   if (isLoading) {
-    return <div className="container mx-auto py-10">Зареждане на запитвания...</div>;
+    return <div className="container mx-auto py-10"><Loader2 className="animate-spin h-8 w-8 text-primary"/></div>;
   }
 
   if (error) {
@@ -145,28 +159,49 @@ export default function AdminContactsPage() {
       {contacts.length === 0 ? (
         <p>Няма намерени запитвания.</p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {contacts.map(contact => (
             <div 
               key={contact.id} 
               onClick={() => handleOpenContact(contact)}
-              className={`p-4 border rounded-md shadow-sm cursor-pointer hover:shadow-lg transition-shadow ${contact.isAnswered ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-card'}`}
+              className="relative p-4 border-l-4 rounded-lg bg-card text-card-foreground shadow-sm cursor-pointer hover:shadow-lg hover:border-primary/80 transition-all duration-200"
+              style={{ borderLeftColor: contact.isAnswered ? 'hsl(var(--primary) / 0.5)' : 'hsl(var(--destructive))' }}
             >
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xl font-semibold">{contact.subject || 'Без тема'}</h3>
-                  <p className="text-sm text-muted-foreground">От: {contact.name} ({contact.email})</p>
-                  <p className="mt-2 text-foreground truncate max-w-2xl">{contact.message}</p>
-                  <p className="mt-2 text-xs text-muted-foreground">Получено: {contact.createdAt.toDate().toLocaleString()}</p>
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    <span>От: {contact.name} ({contact.email})</span>
+                  </p>
+                  <h3 className="text-lg font-semibold truncate mt-1" title={contact.subject || 'Без тема'}>{contact.subject || 'Без тема'}</h3>
+                  <p className="mt-2 text-sm text-foreground line-clamp-2">{contact.message}</p>
                 </div>
-                <Button
-                  onClick={(e) => handleToggleAnswered(e, contact.id, contact.isAnswered)}
-                  variant={contact.isAnswered ? "secondary" : "default"}
-                  size="sm"
-                  className="flex-shrink-0"
-                >
-                  {contact.isAnswered ? 'Маркирай като неотговорено' : 'Маркирай като отговорено'}
-                </Button>
+                <div className="flex flex-col items-start sm:items-end gap-2 shrink-0">
+                   <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-3 w-3" />
+                    {contact.createdAt.toDate().toLocaleString('bg-BG')}
+                  </p>
+                  <div className="flex items-center gap-2">
+                     <Button
+                        onClick={(e) => handleToggleAnswered(e, contact.id, contact.isAnswered)}
+                        variant="outline"
+                        size="sm"
+                        disabled={isUpdatingStatus}
+                        className="h-8 px-2"
+                        title={contact.isAnswered ? 'Маркирай като неотговорено' : 'Маркирай като отговорено'}
+                      >
+                       <CheckCircle className={`h-4 w-4 ${contact.isAnswered ? 'text-green-500' : 'text-muted-foreground'}`}/>
+                      </Button>
+                      <Button
+                        onClick={(e) => { e.stopPropagation(); handleOpenContact(contact); handleSwitchToReply(); }}
+                        variant="default"
+                        size="sm"
+                        className="h-8 px-3"
+                      >
+                         <Send className="mr-2 h-4 w-4" /> Отговори
+                      </Button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -174,25 +209,30 @@ export default function AdminContactsPage() {
       )}
 
       {/* Main Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[625px]">
+      <Dialog open={isDialogOpen} onOpenChange={(isOpen) => {
+        setIsDialogOpen(isOpen);
+        if (!isOpen) {
+            setSelectedContact(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-2xl">
           {selectedContact && (
             <>
               {dialogView === 'view' && (
                 <>
                   <DialogHeader>
-                    <DialogTitle>{selectedContact.subject || 'Без тема'}</DialogTitle>
+                    <DialogTitle className="truncate">{selectedContact.subject || 'Без тема'}</DialogTitle>
                     <DialogDescription>
-                      От: {selectedContact.name} &lt;{selectedContact.email}&gt; на {selectedContact.createdAt.toDate().toLocaleString()}
+                      От: {selectedContact.name} &lt;{selectedContact.email}&gt; на {selectedContact.createdAt.toDate().toLocaleString('bg-BG')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="py-4 space-y-4">
-                    <div className="text-sm text-foreground bg-muted p-4 rounded-md whitespace-pre-wrap">
+                    <div className="text-sm text-foreground bg-muted p-4 rounded-md whitespace-pre-wrap max-h-60 overflow-y-auto">
                       {selectedContact.message}
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button onClick={handleSwitchToReply}>
+                    <Button onClick={handleSwitchToReply} className="w-full sm:w-auto">
                       <Mail className="mr-2 h-4 w-4" /> Отговори по Имейл
                     </Button>
                   </DialogFooter>
