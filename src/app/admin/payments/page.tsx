@@ -96,9 +96,11 @@ export default function AdminPaymentsPage() {
 
               if (aValue === undefined || aValue === null) return 1;
               if (bValue === undefined || bValue === null) return -1;
-
+              
               if (sortConfig.key === 'createdAt') {
-                return (aValue.toMillis() - bValue.toMillis()) * (sortConfig.direction === 'ascending' ? 1 : -1);
+                const dateA = aValue instanceof Timestamp ? aValue.toDate() : new Date();
+                const dateB = bValue instanceof Timestamp ? bValue.toDate() : new Date();
+                return (dateA.getTime() - dateB.getTime()) * (sortConfig.direction === 'ascending' ? 1 : -1);
               }
               
               if (aValue < bValue) return sortConfig.direction === 'ascending' ? -1 : 1;
