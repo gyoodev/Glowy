@@ -391,7 +391,7 @@ export default function AdminUsersPage() {
                 <Table>
                 <TableHeader>
                     <TableRow>
-                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">UID</TableHead>
+                    <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">ID</TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Имейл</TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Име</TableHead>
                     <TableHead className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Роля</TableHead>
@@ -402,9 +402,9 @@ export default function AdminUsersPage() {
                 <TableBody className="bg-card divide-y divide-border">
                     {users.map(user => (
                     <TableRow key={user.id} className={user.deactivationRequested ? 'bg-yellow-100/50 dark:bg-yellow-900/20' : ''}>
-                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground font-mono">
+                        <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                           <div className="flex items-center gap-2">
-                            <span className="truncate" title={user.id}>{user.id}</span>
+                            <span className="font-semibold">{user.numericId || 'N/A'}</span>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <Button
@@ -417,7 +417,7 @@ export default function AdminUsersPage() {
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
-                                <p>Копирай UID</p>
+                                <p>Копирай UID: {user.id}</p>
                               </TooltipContent>
                             </Tooltip>
                           </div>
