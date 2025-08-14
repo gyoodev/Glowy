@@ -24,7 +24,7 @@ export const sendEmail = async (options: MailOptions): Promise<{ success: boolea
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT),
-    secure: true, // Explicitly set to true for port 465
+    secure: Number(process.env.SMTP_PORT) === 465, // Use secure for port 465, common for SMTPS
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
