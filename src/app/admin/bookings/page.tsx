@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, Timestamp, addDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { auth, getUserProfile, firestore as db } from '@/lib/firebase'; 
 import type { Booking, UserProfile } from '@/types'; 
@@ -22,6 +23,7 @@ interface ExtendedBooking extends Booking {
 }
 
 export default function AdminBookingManagementPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<ExtendedBooking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
