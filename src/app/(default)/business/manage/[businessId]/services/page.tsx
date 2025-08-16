@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -24,18 +24,24 @@ import { auth } from '@/lib/firebase';
 import { mockServices as predefinedServices } from '@/lib/mock-data';
 import type { Service, Salon } from '@/types';
 import { mapSalon } from '@/utils/mappers';
-import { AlertTriangle, ArrowLeft, Loader2, PlusCircle, Scissors, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Loader2, PlusCircle, Scissors, Trash2, Edit } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { formatPrice } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogClose, DialogFooter } from '@/components/ui/dialog';
 
-const manualServiceSchema = z.object({
+const serviceSchema = z.object({
+  id: z.string(),
   name: z.string().min(3, "Името на услугата трябва да е поне 3 символа."),
   description: z.string().optional(),
   price: z.coerce.number({ invalid_type_error: "Цената трябва да е число." }).min(0, "Цената не може да бъде отрицателна."),
   duration: z.coerce.number({ invalid_type_error: "Продължителността трябва да е число." }).min(5, "Продължителността трябва да е поне 5 минути."),
+  category: z.string(), // Keep category
 });
 
+const manualServiceSchema = serviceSchema.omit({ id: true, category: true }); // Omit id for manual creation
+
 type ManualServiceFormValues = z.infer<typeof manualServiceSchema>;
+type EditServiceFormValues = z.infer<typeof serviceSchema>;
 
 export default function ServicesManagementPage() {
   const params = useParams();
@@ -50,8 +56,10 @@ export default function ServicesManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPredefinedServiceId, setSelectedPredefinedServiceId] = useState<string>('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingService, setEditingService] = useState<Service | null>(null);
 
-  const form = useForm<ManualServiceFormValues>({
+  const manualForm = useForm<ManualServiceFormValues>({
     resolver: zodResolver(manualServiceSchema),
     defaultValues: {
       name: '',
@@ -59,6 +67,10 @@ export default function ServicesManagementPage() {
       price: 0,
       duration: 30,
     },
+  });
+
+  const editForm = useForm<EditServiceFormValues>({
+    resolver: zodResolver(serviceSchema)
   });
 
   const fetchSalonData = useCallback(async () => {
@@ -118,15 +130,10 @@ export default function ServicesManagementPage() {
     if (!salon) return;
     setIsSubmitting(true);
     try {
-      // This is the fix: Remove the non-serializable `categoryIcon` before saving.
       const servicesToSave = updatedServices.map(({ categoryIcon, ...rest }) => rest);
-
       const salonRef = doc(firestore, 'salons', salon.id);
       await updateDoc(salonRef, { services: servicesToSave });
-      
-      // Update local state with the full service objects (including icons) for rendering
       setSalon(prev => prev ? { ...prev, services: updatedServices } : null);
-      
       toast({ title: 'Успех', description: 'Списъкът с услуги е актуализиран.' });
     } catch (err: any) {
       console.error("Error updating services:", err);
@@ -138,45 +145,49 @@ export default function ServicesManagementPage() {
 
   const handleQuickAddService = async () => {
     if (!selectedPredefinedServiceId || !salon) return;
-    
     const serviceToAdd = predefinedServices.find(s => s.id === selectedPredefinedServiceId);
     if (!serviceToAdd) {
       toast({ title: 'Грешка', description: 'Избраната услуга не е намерена.', variant: 'destructive' });
       return;
     }
-
     const currentServices = salon.services || [];
     if (currentServices.some(s => s.id === serviceToAdd.id || s.name.toLowerCase() === serviceToAdd.name.toLowerCase())) {
       toast({ title: 'Услугата вече съществува', description: `"${serviceToAdd.name}" вече е в списъка.`, variant: 'default' });
       return;
     }
-    
     await handleUpdateServices([...currentServices, serviceToAdd]);
-    setSelectedPredefinedServiceId(''); // Reset select
+    setSelectedPredefinedServiceId('');
   };
 
   const onManualSubmit: SubmitHandler<ManualServiceFormValues> = async (data) => {
     if (!salon) return;
-    const newService: Service = { 
-        ...data, 
-        id: uuidv4(),
-        category: 'Други', // Added default category
-    };
-    
+    const newService: Service = { ...data, id: uuidv4(), category: 'Други' };
     const currentServices = salon.services || [];
-     if (currentServices.some(s => s.name.toLowerCase() === newService.name.toLowerCase())) {
+    if (currentServices.some(s => s.name.toLowerCase() === newService.name.toLowerCase())) {
       toast({ title: 'Услугата вече съществува', description: `Услуга с име "${newService.name}" вече е в списъка.`, variant: 'destructive' });
       return;
     }
-
     await handleUpdateServices([...currentServices, newService]);
-    form.reset();
+    manualForm.reset();
   };
   
+  const handleEditService = (service: Service) => {
+    setEditingService(service);
+    editForm.reset(service);
+    setIsEditModalOpen(true);
+  };
+  
+  const onEditSubmit: SubmitHandler<EditServiceFormValues> = async (data) => {
+    if (!salon || !editingService) return;
+    const updatedServices = (salon.services || []).map(s => s.id === editingService.id ? { ...s, ...data } : s);
+    await handleUpdateServices(updatedServices);
+    setIsEditModalOpen(false);
+    setEditingService(null);
+  };
+
   const handleDeleteService = async (serviceId: string) => {
     if (!salon || !salon.services) return;
     if (!window.confirm("Сигурни ли сте, че искате да изтриете тази услуга?")) return;
-
     const updatedServices = salon.services.filter(s => s.id !== serviceId);
     await handleUpdateServices(updatedServices);
   };
@@ -184,9 +195,7 @@ export default function ServicesManagementPage() {
   const categorizedPredefinedServices = useMemo(() => {
     return predefinedServices.reduce((acc, service) => {
       const category = service.category || 'Други';
-      if (!acc[category]) {
-        acc[category] = [];
-      }
+      if (!acc[category]) acc[category] = [];
       acc[category].push(service);
       return acc;
     }, {} as Record<string, Service[]>);
@@ -202,24 +211,18 @@ export default function ServicesManagementPage() {
         <AlertTriangle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-2xl font-semibold text-destructive mb-2">Грешка</h2>
         <p className="text-muted-foreground mb-6">{error}</p>
-        <Button onClick={() => router.push('/business/manage')}>
-          Обратно към управление на бизнеси
-        </Button>
+        <Button onClick={() => router.push('/business/manage')}>Обратно към управление на бизнеси</Button>
       </div>
     );
   }
 
-  if (!salon) {
-    return null; // or a more specific "not found" component
-  }
+  if (!salon) return null;
 
   return (
+    <>
     <div className="container mx-auto px-4 py-8">
       <Button variant="outline" size="sm" asChild className="mb-4">
-        <Link href="/business/manage">
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Назад към управление
-        </Link>
+        <Link href="/business/manage"><ArrowLeft className="mr-2 h-4 w-4" />Назад към управление</Link>
       </Button>
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-1">Управление на услуги</h1>
@@ -239,9 +242,7 @@ export default function ServicesManagementPage() {
                 <div className="flex-grow">
                   <Label htmlFor="predefined-service">Изберете услуга</Label>
                   <Select value={selectedPredefinedServiceId} onValueChange={setSelectedPredefinedServiceId}>
-                    <SelectTrigger id="predefined-service">
-                      <SelectValue placeholder="Изберете услуга..." />
-                    </SelectTrigger>
+                    <SelectTrigger id="predefined-service"><SelectValue placeholder="Изберете услуга..." /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(categorizedPredefinedServices).map(([category, services]) => (
                         <SelectGroup key={category}>
@@ -254,81 +255,28 @@ export default function ServicesManagementPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleQuickAddService} disabled={!selectedPredefinedServiceId || isSubmitting} size="icon">
-                  <PlusCircle className="h-5 w-5" />
-                </Button>
+                <Button onClick={handleQuickAddService} disabled={!selectedPredefinedServiceId || isSubmitting} size="icon"><PlusCircle className="h-5 w-5" /></Button>
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onManualSubmit)}>
+            <Form {...manualForm}>
+              <form onSubmit={manualForm.handleSubmit(onManualSubmit)}>
                 <CardHeader>
                   <CardTitle>Ръчно добавяне</CardTitle>
                   <CardDescription>Създайте нова, персонализирана услуга.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Име на услугата</FormLabel>
-                        <FormControl>
-                          <Input placeholder="напр. Терапия за коса" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Описание (по избор)</FormLabel>
-                        <FormControl>
-                          <Textarea placeholder="Кратко описание..." {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <FormField control={manualForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Име на услугата</FormLabel><FormControl><Input placeholder="напр. Терапия за коса" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                  <FormField control={manualForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Описание (по избор)</FormLabel><FormControl><Textarea placeholder="Кратко описание..." {...field} /></FormControl><FormMessage /></FormItem>)} />
                   <div className="grid grid-cols-2 gap-4">
-                     <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Цена (лв.)</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="50" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                     <FormField
-                      control={form.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Продълж. (мин.)</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="60" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                     <FormField control={manualForm.control} name="price" render={({ field }) => (<FormItem><FormLabel>Цена (лв.)</FormLabel><FormControl><Input type="number" placeholder="50" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                     <FormField control={manualForm.control} name="duration" render={({ field }) => (<FormItem><FormLabel>Продълж. (мин.)</FormLabel><FormControl><Input type="number" placeholder="60" {...field} /></FormControl><FormMessage /></FormItem>)} />
                   </div>
                 </CardContent>
                 <CardFooter>
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Добави услуга
-                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>{isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}Добави услуга</Button>
                 </CardFooter>
               </form>
             </Form>
@@ -339,10 +287,7 @@ export default function ServicesManagementPage() {
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <Scissors className="mr-2 h-5 w-5 text-primary" />
-                Списък с услуги ({salon.services?.length || 0})
-              </CardTitle>
+              <CardTitle className="flex items-center"><Scissors className="mr-2 h-5 w-5 text-primary" />Списък с услуги ({salon.services?.length || 0})</CardTitle>
             </CardHeader>
             <CardContent>
               {salon.services && salon.services.length > 0 ? (
@@ -353,7 +298,7 @@ export default function ServicesManagementPage() {
                         <TableHead>Име</TableHead>
                         <TableHead>Цена</TableHead>
                         <TableHead>Продълж.</TableHead>
-                        <TableHead>Действия</TableHead>
+                        <TableHead className="text-right">Действия</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -365,16 +310,9 @@ export default function ServicesManagementPage() {
                           </TableCell>
                           <TableCell>{formatPrice(service.price)}</TableCell>
                           <TableCell>{service.duration} мин.</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteService(service.id)}
-                              disabled={isSubmitting}
-                              title="Изтрий услугата"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                          <TableCell className="text-right space-x-2">
+                            <Button variant="outline" size="icon" onClick={() => handleEditService(service)} disabled={isSubmitting} title="Редактирай услугата"><Edit className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteService(service.id)} disabled={isSubmitting} title="Изтрий услугата"><Trash2 className="h-4 w-4 text-destructive" /></Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -389,5 +327,33 @@ export default function ServicesManagementPage() {
         </div>
       </div>
     </div>
+    
+    {/* Edit Service Dialog */}
+    <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Редактиране на услуга</DialogTitle>
+                <DialogDescription>Променете детайлите за "{editingService?.name}" и запазете промените.</DialogDescription>
+            </DialogHeader>
+            {editingService && (
+                <Form {...editForm}>
+                    <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="space-y-4 py-4">
+                        <FormField control={editForm.control} name="name" render={({ field }) => (<FormItem><FormLabel>Име на услугата</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <FormField control={editForm.control} name="description" render={({ field }) => (<FormItem><FormLabel>Описание</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <FormField control={editForm.control} name="price" render={({ field }) => (<FormItem><FormLabel>Цена (лв.)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                            <FormField control={editForm.control} name="duration" render={({ field }) => (<FormItem><FormLabel>Продължителност (мин.)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Отказ</Button>
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Запази промените</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            )}
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
+
