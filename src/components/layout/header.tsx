@@ -8,8 +8,9 @@ import { useState, useEffect, type ReactNode, useCallback } from 'react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
 import { Menu, Sparkles as AppIcon, User, LogOut, Bell, LogIn, Sun, Moon, LayoutDashboard, Laptop, Smartphone } from 'lucide-react';
-import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead } from '@/lib/firebase';
+import { auth, getUserProfile, getUserNotifications, markAllUserNotificationsAsRead, markNotificationAsRead, firestore } from '@/lib/firebase';
 import { onAuthStateChanged, signOut, type User as FirebaseUser } from 'firebase/auth';
+import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
 import type { Notification } from '@/types';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,6 +21,7 @@ import { setCookie, getCookie, deleteCookie } from '@/lib/cookies';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { mapNotification } from '@/utils/mappers';
 // DropdownMenu components are no longer needed here for profile
 
 const navItems = [
@@ -92,9 +94,16 @@ export function Header() {
   }, [toast]);
 
 
-  // Auth initialization
+  // Auth and real-time notifications listener
   useEffect(() => {
+    let unsubscribeNotifications: () => void = () => {};
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      // Clean up previous notification listener
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+
       setCurrentUser(user);
       if (user) {
         try {
@@ -103,7 +112,25 @@ export function Header() {
           if (typeof window !== 'undefined') {
             localStorage.setItem('isUserLoggedIn', 'true');
           }
-          fetchNotificationsContent(user.uid); // fetch notifications
+          
+          // Set up real-time listener for notifications
+          const notificationsQuery = query(
+            collection(firestore, 'notifications'),
+            where('userId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+          );
+          
+          unsubscribeNotifications = onSnapshot(notificationsQuery, (querySnapshot) => {
+              const userNotifications = querySnapshot.docs.map(doc => mapNotification({ id: doc.id, ...doc.data() }));
+              setNotifications(userNotifications);
+              setUnreadCount(userNotifications.filter(n => !n.read).length);
+          }, (error) => {
+              console.error("Error with real-time notifications listener:", error);
+              setNotifications([]);
+              setUnreadCount(0);
+          });
+
         } catch (error) {
             console.error("Error fetching user profile in Header:", error);
             setUserRole(null);
@@ -122,27 +149,13 @@ export function Header() {
       setIsLoading(false);
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeNotifications) {
+        unsubscribeNotifications();
+      }
+    };
   }, []);
-
-  const fetchNotificationsContent = async (userId: string) => {
-    if (!userId) return;
-    try {
-        const userNotifications = await getUserNotifications(userId);
-        setNotifications(userNotifications);
-        setUnreadCount(userNotifications.filter(n => !n.read).length);
-    } catch (error) {
-        console.error("Error fetching notifications:", error);
-        setNotifications([]);
-        setUnreadCount(0);
-    }
-  };
-
-  useEffect(() => {
-    if (currentUser?.uid) {
-      fetchNotificationsContent(currentUser.uid);
-    }
-  }, [currentUser?.uid]);
 
 
   const isLoggedIn = !!currentUser;
@@ -169,7 +182,7 @@ export function Header() {
     if (unreadCount > 0 && currentUser?.uid) {
       try {
         await markAllUserNotificationsAsRead(currentUser.uid);
-        fetchNotificationsContent(currentUser.uid);
+        // No need to manually fetch, the listener will update the UI
       } catch (error) {
           console.error("Error marking notifications as read:", error);
       }
@@ -181,7 +194,7 @@ export function Header() {
     if (!notification.read) {
         try {
             await markNotificationAsRead(notification.id);
-            fetchNotificationsContent(currentUser.uid);
+            // No need to manually fetch, the listener will update the UI
         } catch (error) {
             console.error("Error marking single notification as read:", error);
         }
@@ -424,3 +437,4 @@ export function Header() {
     </header>
   );
 }
+
