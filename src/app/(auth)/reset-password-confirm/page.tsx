@@ -39,7 +39,7 @@ export default function ResetPasswordConfirmPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const oobCode = searchParams.get('oobCode');
+  const oobCode = searchParams ? searchParams.get('oobCode') : null;
 
   useEffect(() => {
     if (!oobCode) {
