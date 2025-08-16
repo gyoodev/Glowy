@@ -11,6 +11,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/hooks/use-toast';
 import { KeySquare, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { auth } from '@/lib/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { useState } from 'react';
 
 const resetPasswordSchema = z.object({
   email: z.string().email('Невалиден имейл адрес.'),
@@ -20,6 +23,7 @@ type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
 export default function ResetPasswordPage() {
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
@@ -28,12 +32,24 @@ export default function ResetPasswordPage() {
   });
 
   const onSubmit: SubmitHandler<ResetPasswordFormValues> = async (data) => {
-    console.log('Reset password data:', data);
-    toast({
-      title: 'Заявка за нулиране е изпратена',
-      description: 'Ако съществува акаунт с този имейл, ще получите инструкции за нулиране.',
-    });
-     // Here you would typically handle the reset logic
+    setIsSubmitting(true);
+    try {
+      await sendPasswordResetEmail(auth, data.email);
+      toast({
+        title: 'Заявка за нулиране е изпратена',
+        description: 'Ако съществува акаунт с този имейл, ще получите инструкции за нулиране на паролата. Моля, проверете и папката си за спам.',
+      });
+      form.reset();
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      toast({
+        title: 'Грешка при изпращане',
+        description: 'Възникна грешка при изпращането на заявката. Моля, опитайте отново.',
+        variant: 'destructive',
+      });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -63,8 +79,8 @@ export default function ResetPasswordPage() {
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full text-lg py-6" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Изпращане...' : 'Изпрати инструкции'}
+            <Button type="submit" className="w-full text-lg py-6" disabled={isSubmitting}>
+              {isSubmitting ? 'Изпращане...' : 'Изпрати инструкции'}
             </Button>
             <div className="text-center text-sm text-muted-foreground">
               Спомнихте си паролата?{' '}
