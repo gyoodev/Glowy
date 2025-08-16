@@ -21,6 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(500).json({ success: false, message: 'Server configuration error: Admin email recipient not set.' });
     }
 
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
     const subject = `Нов салон за одобрение: ${salonName}`;
     const htmlBody = `
       <h2 style="color: #8c59f2; margin-top: 0;">Нов салон е регистриран и очаква одобрение.</h2>
@@ -28,7 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       <p><strong>Собственик:</strong> ${ownerName}</p>
       <p><strong>Имейл на собственика:</strong> ${ownerEmail}</p>
       <p style="margin: 30px 0;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/business" style="background-color: #8c59f2; color: #ffffff; padding: 12px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">
+        <a href="${appUrl}/admin/business" style="background-color: #8c59f2; color: #ffffff; padding: 12px 20px; border-radius: 5px; text-decoration: none; display: inline-block;">
           Преглед в Админ Панела
         </a>
       </p>
